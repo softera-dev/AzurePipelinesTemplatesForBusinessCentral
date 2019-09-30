@@ -29,11 +29,8 @@ steps:
       }
       Write-Host "PullRequest = $($pr | ConvertTo-Json -Depth 100)"
     } catch {
-      $_.ErrorDetails | ConvertTo-Json -Depth 3 | Out-Host
-      $_.Exception.Response.StatusDescription | Out-Host
-      $_ | Format-List -Force | Out-Host
-      $_.Exception | Format-List -Force | Out-Host
-      switch ($_.Exception.InnerException.Message) {
+      $ServerErrorMessage = $_.ErrorDetails.Message | ConvertFrom-Json 
+      switch ($ServerErrorMessage.message) {
         'TF401179: An active pull request for the source and target branch already exists.' {
           Write-Warning -Message 'PR already exists.'
           Write-Host -Object '##vso[task.logissue type=warning]PR already exists.'
