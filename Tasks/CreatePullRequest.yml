@@ -1,0 +1,35 @@
+# IMPORTANT!
+#
+#  Build Service user needs to have Contribute to Pull Requests permission for this task to work. It can be added in repository settings.
+
+parameters:
+  taskName: CreatePullRequest
+  sourceRefName: ''
+  targetRefName: ''
+  title: ''
+  description: ''
+
+steps:
+- powershell: |
+    $url = "${env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${env:SYSTEM_TEAMPROJECTID}/_apis/git/repositories/${env:BUILD_REPOSITORY_ID}/pullrequests?api-version=5.1"
+    Write-Host -Object "URL: $url"
+
+    $body = [pscustomobject]@{
+      sourceRefName = $env:PR_SOURCE_REF_NAME
+      targetRefName = $env:PR_TARGET_REF_NAME
+      title = $env:PR_TITLE
+      description = $env:PR_DESCRIPTION
+      reviewers = @()
+    } | ConvertTo-Json
+
+    $pr = Invoke-RestMethod -Method POST -Uri $url -ContentType 'application/json' -Body $body -Headers @{
+      Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
+    }
+    Write-Host "PullRequest = $($pr | ConvertTo-Json -Depth 100)"
+  env:
+    SYSTEM_ACCESSTOKEN: $(System.AccessToken)
+    PR_SOURCE_REF_NAME: ${{ parameters.sourceRefName }}
+    PR_TARGET_REF_NAME: ${{ parameters.targetRefName }}
+    PR_TITLE: ${{ parameters.title }}
+    PR_DESCRIPTION: ${{ parameters.description }}
+  displayName: Creating PR from ${{ parameters.sourceRefName }} to ${{ parameters.targetRefName }}
