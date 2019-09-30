@@ -21,7 +21,7 @@ steps:
 - powershell: |
     $url = "${env:SYSTEM_TEAMFOUNDATIONCOLLECTIONURI}${env:SYSTEM_TEAMPROJECTID}/_apis/git/repositories/${env:BUILD_REPOSITORY_ID}/pullrequests?api-version=5.1"
     Write-Host -Object "URL: $url"
-
+    
     $body = [pscustomobject]@{
       sourceRefName = $env:PR_SOURCE_REF_NAME
       targetRefName = $env:PR_TARGET_REF_NAME
@@ -30,27 +30,9 @@ steps:
       reviewers = @()
     }
     
-    if ([bool]::Parse($env:PR_AUTOCOMPLETE)) {
-      $body | Add-Member -MemberType NoteProperty -Name autoCompleteSetBy  -Value ([pscustomobject]@{
-        id = $env:BUILD_QUEUEDBYID
-      })
-      
-      $completionOptions = [pscustomobject]@{
-        mergeStrategy = $env:PR_MERGE_STRATEGY
-        deleteSourceBranch = [bool]::Parse($env:PR_DELETE_SOURCE_BRANCH)
-        bypassReason = ''
-        transitionWorkItems = $true
-      }
-      if ($env:PR_MERGE_COMMIT_MESSAGE -ne '') {
-        $completionOptions | Add-Member -MemberType NoteProperty -Name mergeCommitMessage -Value $env:PR_MERGE_COMMIT_MESSAGE
-      }
-      $body | Add-Member -MemberType NoteProperty -Name completionOptions -Value $completionOptions
-    }
+    $bodyJson = $body | ConvertTo-Json    
+    Write-Host -Object "Body (Create Pull Request): $bodyJson"
     
-    $bodyJson = $body | ConvertTo-Json
-
-    Write-Host -Object "Body: $bodyJson"
-
     try {
       $pr = Invoke-RestMethod -Method POST -Uri $url -ContentType 'application/json' -Body $bodyJson -Headers @{
         Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
@@ -62,12 +44,41 @@ steps:
         'TF401179: An active pull request for the source and target branch already exists.' {
           Write-Warning -Message 'PR already exists.'
           Write-Host -Object '##vso[task.logissue type=warning]PR already exists.'
+          return
         }
         default {
           throw
         }
       }
     }
+    
+    if ([bool]::Parse($env:PR_AUTOCOMPLETE)) {
+      # NOTE: AFAIK PR auto-completion must be set using separate request
+      $body = [pscustomobject]@{
+        autoCompleteSetBy = [pscustomobject]@{
+          id = $pr.createdBy.id
+        }
+        completionOptions = [pscustomobject]@{
+          mergeStrategy = $env:PR_MERGE_STRATEGY
+          deleteSourceBranch = [bool]::Parse($env:PR_DELETE_SOURCE_BRANCH)
+          bypassReason = ''
+          transitionWorkItems = $true
+        }
+      }
+      if ($env:PR_MERGE_COMMIT_MESSAGE -ne '') {
+        $body.completionOptions | Add-Member -MemberType NoteProperty -Name mergeCommitMessage -Value $env:PR_MERGE_COMMIT_MESSAGE
+      }
+      
+      $bodyJson = $body | ConvertTo-Json    
+      Write-Host -Object "Body (Update Pull Request): $bodyJson"
+      
+      $pr = Invoke-RestMethod -Method PATCH -Uri $url -ContentType 'application/json' -Body $bodyJson -Headers @{
+        Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
+      }
+      Write-Host "PullRequest = $($pr | ConvertTo-Json -Depth 100)"
+    }
+
+    Write-Host -Object "Body: $bodyJson"
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
     PR_SOURCE_REF_NAME: ${{ parameters.sourceRefName }}
