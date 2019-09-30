@@ -22,10 +22,18 @@ steps:
       reviewers = @()
     } | ConvertTo-Json
 
-    $pr = Invoke-RestMethod -Method POST -Uri $url -ContentType 'application/json' -Body $body -Headers @{
-      Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
+    try {
+      $pr = Invoke-RestMethod -Method POST -Uri $url -ContentType 'application/json' -Body $body -Headers @{
+        Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
+      }
+      Write-Host "PullRequest = $($pr | ConvertTo-Json -Depth 100)"
+    } catch {
+      switch ($_.Exception.Message) {
+        'TF401179: An active pull request for the source and target branch already exists.' {
+          Write-Warning -Message 'PR already exists.'
+        }
+      }
     }
-    Write-Host "PullRequest = $($pr | ConvertTo-Json -Depth 100)"
   env:
     SYSTEM_ACCESSTOKEN: $(System.AccessToken)
     PR_SOURCE_REF_NAME: ${{ parameters.sourceRefName }}
