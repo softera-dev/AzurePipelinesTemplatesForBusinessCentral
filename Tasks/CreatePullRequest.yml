@@ -2,6 +2,7 @@
 #
 #  Build Service user needs to have Contribute to Pull Requests permission for this task to work. It can be added in repository settings.
 
+# NOTE: It creates pull request even when there are no changes to pull - such PR can be closed.
 # TODO: Auto-completion of pull request (e.g. when reviewers approved and build passes)
 
 parameters:
