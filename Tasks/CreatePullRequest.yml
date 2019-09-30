@@ -29,6 +29,7 @@ steps:
       }
       Write-Host "PullRequest = $($pr | ConvertTo-Json -Depth 100)"
     } catch {
+      $_ | ConvertTo-Json -Depth 10 | Out-Host
       $_.Exception.Response.StatusDescription | Out-Host
       $_ | Format-List -Force | Out-Host
       $_.Exception | Format-List -Force | Out-Host
