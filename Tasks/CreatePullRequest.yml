@@ -71,6 +71,6 @@ steps:
     PR_AUTOCOMPLETE: ${{ parameters.autoComplete }}
     PR_MERGE_COMMIT_MESSAGE: ${{ parameters.mergeCommitMessage }}
     PR_MERGE_STRATEGY: ${{ parameters.mergeStrategy }}
-    PR_DELETE_SOURCE_BRACH: ${{ parameters.deleteSourceBranch }}
+    PR_DELETE_SOURCE_BRANCH: ${{ parameters.deleteSourceBranch }}
   condition: ${{ parameters.condition }}
   displayName: Creating PR from ${{ parameters.sourceRefName }} to ${{ parameters.targetRefName }}
