@@ -38,6 +38,8 @@ steps:
       $completionOptions = [pscustomobject]@{
         mergeStrategy = $env:PR_MERGE_STRATEGY
         deleteSourceBranch = [bool]::Parse($env:PR_DELETE_SOURCE_BRANCH)
+        bypassReason = ''
+        transitionWorkItems = $true
       }
       if ($env:PR_MERGE_COMMIT_MESSAGE -ne '') {
         $completionOptions | Add-Member -MemberType NoteProperty -Name mergeCommitMessage -Value $env:PR_MERGE_COMMIT_MESSAGE
