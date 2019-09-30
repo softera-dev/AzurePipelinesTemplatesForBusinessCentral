@@ -8,6 +8,7 @@ parameters:
   targetRefName: ''
   title: ''
   description: ''
+  condition: succeededOrFailed()
 
 steps:
 - powershell: |
@@ -40,4 +41,5 @@ steps:
     PR_TARGET_REF_NAME: ${{ parameters.targetRefName }}
     PR_TITLE: ${{ parameters.title }}
     PR_DESCRIPTION: ${{ parameters.description }}
+  condition: ${{ parameters.condition }}
   displayName: Creating PR from ${{ parameters.sourceRefName }} to ${{ parameters.targetRefName }}
