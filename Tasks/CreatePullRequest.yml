@@ -31,6 +31,8 @@ steps:
     }
     
     if ([bool]::Parse($env:PR_AUTOCOMPLETE)) {
+      $body | Add-Member -MemberType NoteProperty -Name autoCompleteSetBy  -Value $env:BUILD_QUEUEDBYID
+      
       $completionOptions = [pscustomobject]@{
         mergeStrategy = $env:PR_MERGE_STRATEGY
         deleteSourceBranch = [bool]::Parse($env:PR_DELETE_SOURCE_BRANCH)
