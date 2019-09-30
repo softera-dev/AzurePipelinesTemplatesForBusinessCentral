@@ -11,6 +11,10 @@ parameters:
   targetRefName: ''
   title: ''
   description: ''
+  autoComplete: false
+  mergeCommitMessage: ''
+  mergeStrategy: noFastForward
+  deleteSourceBranch: false
   condition: succeededOrFailed()
 
 steps:
@@ -24,10 +28,25 @@ steps:
       title = $env:PR_TITLE
       description = $env:PR_DESCRIPTION
       reviewers = @()
-    } | ConvertTo-Json
+    }
+    
+    if ([bool]::Parse($env:PR_AUTOCOMPLETE)) {
+      $completionOptions = [pscustomobject]@{
+        mergeStrategy = $env:PR_MERGE_STRATEGY
+        deleteSourceBranch = [bool]::Parse($env:PR_DELETE_SOURCE_BRANCH)
+      }
+      if ($env:PR_MERGE_COMMIT_MESSAGE -ne '') {
+        $completionOptions | Add-Member -MemberType NoteProperty -Name mergeCommitMessage -Value $env:PR_MERGE_COMMIT_MESSAGE
+      }
+      $body | Add-Member -MemberType NoteProperty -Name completionOptions -Value $completionOptions
+    }
+    
+    $bodyJson = $body | ConvertTo-Json
+
+    Write-Host -Object "Body: $bodyJson"
 
     try {
-      $pr = Invoke-RestMethod -Method POST -Uri $url -ContentType 'application/json' -Body $body -Headers @{
+      $pr = Invoke-RestMethod -Method POST -Uri $url -ContentType 'application/json' -Body $bodyJson -Headers @{
         Authorization = "Bearer $env:SYSTEM_ACCESSTOKEN"
       }
       Write-Host "PullRequest = $($pr | ConvertTo-Json -Depth 100)"
@@ -49,5 +68,9 @@ steps:
     PR_TARGET_REF_NAME: ${{ parameters.targetRefName }}
     PR_TITLE: ${{ parameters.title }}
     PR_DESCRIPTION: ${{ parameters.description }}
+    PR_AUTOCOMPLETE: ${{ parameters.autoComplete }}
+    PR_MERGE_COMMIT_MESSAGE: ${{ parameters.mergeCommitMessage }}
+    PR_MERGE_STRATEGY: ${{ parameters.mergeStrategy }}
+    PR_DELETE_SOURCE_BRACH: ${{ parameters.deleteSourceBranch }}
   condition: ${{ parameters.condition }}
   displayName: Creating PR from ${{ parameters.sourceRefName }} to ${{ parameters.targetRefName }}
