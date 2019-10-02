@@ -1,0 +1,12 @@
+parameters:
+  taskName: RemoveBCContainer
+  containerName: $(CreateBCContainer.containerName)
+
+steps:
+- powershell: |
+    Set-StrictMode -Version Latest
+    Remove-BCContainer -containerName $env:ContainerName
+  env:
+    ContainerName: ${{ parameters.containerName }}
+  condition: always()
+  displayName: Remove BC container
