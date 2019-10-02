@@ -1,0 +1,49 @@
+parameters:
+  taskName: CreateBCContainer
+  containerLabel: ''
+  imageName: ''
+  licenseFile: ''
+  auth: NavUserPassword
+  userName: ciuser
+  userPassword: P@ssw0rd
+
+steps:
+- powershell: |
+    Set-StrictMode -Version Latest
+
+    $SecurePassword = ConvertTo-SecureString -String $env:ContainerPassword -AsPlainText -Force
+    $Credential = New-Object -TypeName pscredential -ArgumentList $env:ContainerUserName, $SecurePassword
+
+    $ContainerName = [datetime]::Now.ToString('''ci''ddhhmmssffff')
+    Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.ContainerName;]$ContainerName"
+
+    $Label = "az.tag=""$env:ContainerTag"""
+
+    New-BCContainer `
+      -accept_eula `
+      -containerName $ContainerName `
+      -imageName $env:ImageName `
+      -licenseFile $env:LicenseFile `
+      -shortcuts None `
+      -auth $env:Auth `
+      -Credential $Credential `
+      -additionalParameters `
+        "--label=$Label"
+
+    if ($env:TaskName) {
+      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.containerName;]$ContainerName"
+
+      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.auth;]$env:Auth"
+      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.userName;]$env:ContainerUserName"
+      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.userPassword; issecret=true;]$env:ContainerPassword"
+    }
+  env:
+    TaskName: ${{ parameters.taskName }}
+    ContainerLabel: ${{ parameters.containerLabel }}
+    ContainerTag: Build $(Build.BuildId)
+    ImageName: ${{ parameters.imageName }}
+    LicenseFile: ${{ parameters.licenseFile }}
+    Auth: ${{ parameters.auth }}
+    ContainerUserName: ${{ parameters.userName }}
+    ContainerPassword: ${{ parameters.userPassword }}
+  displayName: Create BC container
