@@ -5,7 +5,7 @@ parameters:
   userName: $(CreateBCContainer.userName)
   userPassword: $(CreateBCContainer.userPassword)
   outputFolder: $(Build.ArtifactStagingDirectory)
-  certificateFilePath: $(DownloadBCAppCertificate.SecureFilePath)
+  certificateFilePath: ''
   certificatePassword: ''
 
 steps:
