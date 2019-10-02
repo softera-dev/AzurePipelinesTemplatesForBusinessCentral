@@ -1,0 +1,74 @@
+parameters:
+  taskName: CompileBCApp
+  appFolder: '.'
+  containerName: $(CreateBCContainer.containerName)
+  userName: $(CreateBCContainer.userName)
+  userPassword: $(CreateBCContainer.userPassword)
+  outputFolder: $(Build.ArtifactStagingDirectory)
+  certificateFilePath: $(DownloadBCAppCertificate.SecureFilePath)
+  certificatePassword: ''
+
+steps:
+- powershell: |
+    Set-StrictMode -Version Latest
+
+    $ContainerFolder = `
+      (Get-BCContainerSharedFolders -containerName $ContainerName).GetEnumerator() |
+      Where-Object -Property Value -EQ -Value 'C:\Run\my' |
+      Select-Object -ExpandProperty Name
+
+    $BuildFolder = Join-Path -Path $ContainerFolder -ChildPath ([guid]::NewGuid().ToString())
+    
+    $SymbolsFolder = Join-Path -Path $ContainerFolder -ChildPath 'Symbols'
+    $OutputFolder = Join-Path -Path $ContainerFolder -ChildPath 'Output'
+    
+    $AppFolder = Join-Path -Path $BuildFolder -ChildPath 'App'
+    Write-Host -Object "Copy source to container shared folder ($AppFolder)"
+    Copy-Item -LiteralPath $env:AppFolder -Destination $AppFolder -Recurse
+
+    $SecurePassword = ConvertTo-SecureString -String $env:ContainerUserPassword -AsPlainText -Force
+    $Credential = New-Object -TypeName pscredential -ArgumentList $env:ContainerUserName, $SecurePassword
+
+    Compile-AppInBCContainer `
+      -containerName $env:ContainerName `
+      -appSymbolsFolder $SymbolsFolder `
+      -appProjectFolder $AppFolder `
+      -appOutputFolder $env:OutputFolder `
+      -EnableCodeCop `
+      -EnableUICop `
+      -EnableAppSourceCop `
+      -AzureDevOps `
+      -credential $Credential
+ 
+    $AppFilePath = `
+      Get-ChildItem -LiteralPath $env:OutputFolder -Filter '*.app' |
+      Sort-Object -Property LastWriteTime -Descending |
+      Select-Object -First 1 -ExpandProperty FullName
+    
+    if ($env:CertificateFilePath) {
+      Sign-BCContainerApp `
+        -containerName $env:ContainerName `
+        -appFile $AppFilePath `
+        -pfxFile $env:CertificateFilePath `
+        -pfxPassword $env:CertificatePassword
+    }
+
+    Copy-Item -LiteralPath $AppFilePath -Destination $env:OutputFolder
+
+    Publish-BCContainerApp `
+      -containerName $env:ContainerName `
+      -appFile $AppFilePath `
+      -skipVerification `
+      -credential $Credential `
+      -sync `
+      -syncMode Add `
+      -install
+  env:
+    AppFolder: ${{ parameters.appFolder }}
+    ContainerName: ${{ parameters.containerName }}
+    ContainerUserName: ${{ parameters.userName }}
+    ContainerUserPassword: ${{ parameters.userPassword }}
+    OutputFolder: ${{ parameters.outputFolder }}
+    CertificateFilePath: ${{ parameters.certificateFilePath }}
+    CertificatePassword: ${{ parameters.certificatePassword }}
+  displayName: Compile, sign and publish AL app
