@@ -41,7 +41,7 @@ steps:
       -credential $Credential
  
     $AppFilePath = `
-      Get-ChildItem -LiteralPath $env:OutputFolder -Filter '*.app' |
+      Get-ChildItem -LiteralPath $OutputFolder -Filter '*.app' |
       Sort-Object -Property LastWriteTime -Descending |
       Select-Object -First 1 -ExpandProperty FullName
     
