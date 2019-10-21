@@ -1,0 +1,32 @@
+resources:
+  repositories:
+  - repository: softeraDevTasks
+    type: github
+    name: softera-dev/AzurePipelinesTemplatesForBusinessCentral
+    ref: 'refs/heads/master'
+    endpoint: github_softera_dev # Add GitHub service connection to project
+
+pool:
+  name: MultipleReleases # Choose pool name
+  demand:
+  - Agent.OS -equals WindowsNT
+  - docker
+
+variables:
+  ImageName: bcinsider.azurecr.io/bcsandbox-master:base
+
+steps:
+- task: DownloadSecureFile@1
+  name: DownloadBCLicense
+  inputs:
+    secureFile: $(BCLicense.SecureFileName)
+  displayName: Download BC license
+
+- template: Templates/CreateBCContainer.yml@softeraDevTasks
+  parameters:
+    imageName: $(ImageName)
+    licenseFile: $(DownloadBCLicense.SecureFilePath)
+
+- template: Templates/CompileSignPublishBCApp.yml@softeraDevTasks
+
+- template: Templates\RemoveBCContainer.yml@softeraDevTasks
