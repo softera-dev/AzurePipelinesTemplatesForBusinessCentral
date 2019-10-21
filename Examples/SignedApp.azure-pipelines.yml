@@ -1,0 +1,41 @@
+resources:
+  repositories:
+  - repository: softeraDevTasks
+    type: github
+    name: softera-dev/AzurePipelinesTemplatesForBusinessCentral
+    ref: 'refs/heads/master'
+    endpoint: github_softera_dev
+
+pool:
+  name: BC-Build
+  demand:
+  - Agent.OS -equals WindowsNT
+  - docker
+
+variables:
+  ImageName: bcinsider.azurecr.io/bcsandbox-master:lt
+
+steps:
+- task: DownloadSecureFile@1
+  name: DownloadBCLicense
+  inputs:
+    secureFile: $(BCLicense.SecureFileName)
+  displayName: Download BC license
+
+- task: DownloadSecureFile@1
+  name: DownloadBCAppSigningCertificate
+  inputs:
+    secureFile: $(BCAppSigningCertificate.SecureFileName)
+  displayName: Download certificate for BC app signing
+
+- template: Templates/CreateBCContainer.yml@softeraDevTasks
+  parameters:
+    imageName: $(ImageName)
+    licenseFile: $(DownloadBCLicense.SecureFilePath)
+
+- template: Templates/CompileSignPublishBCApp.yml@softeraDevTasks
+  parameters:
+    certificateFilePath: $(DownloadBCAppSigningCertificate.SecureFilePath)
+    certificatePassword: $(BCAppSigningCertificate.Password)
+
+- template: Templates\RemoveBCContainer.yml@softeraDevTasks
