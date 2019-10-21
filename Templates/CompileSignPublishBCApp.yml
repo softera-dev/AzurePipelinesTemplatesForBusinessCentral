@@ -13,7 +13,7 @@ steps:
     Set-StrictMode -Version Latest
 
     $ContainerFolder = `
-      (Get-BCContainerSharedFolders -containerName $ContainerName).GetEnumerator() |
+      (Get-BCContainerSharedFolders -containerName $env:ContainerName).GetEnumerator() |
       Where-Object -Property Value -EQ -Value 'C:\Run\my' |
       Select-Object -ExpandProperty Name
 
