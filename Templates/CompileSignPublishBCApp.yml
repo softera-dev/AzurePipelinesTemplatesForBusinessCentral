@@ -46,11 +46,12 @@ steps:
       Select-Object -First 1 -ExpandProperty FullName
     
     if ($env:CertificateFilePath) {
+      $SecureCertificatePassword = ConvertTo-SecureString -String $env:CertificatePassword -AsPlainText -Force
       Sign-BCContainerApp `
         -containerName $env:ContainerName `
         -appFile $AppFilePath `
         -pfxFile $env:CertificateFilePath `
-        -pfxPassword $env:CertificatePassword
+        -pfxPassword $SecureCertificatePassword
     }
 
     Copy-Item -LiteralPath $AppFilePath -Destination $env:OutputFolder
