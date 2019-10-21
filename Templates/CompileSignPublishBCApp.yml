@@ -33,7 +33,7 @@ steps:
       -containerName $env:ContainerName `
       -appSymbolsFolder $SymbolsFolder `
       -appProjectFolder $AppFolder `
-      -appOutputFolder $env:OutputFolder `
+      -appOutputFolder $OutputFolder `
       -EnableCodeCop `
       -EnableUICop `
       -EnableAppSourceCop `
