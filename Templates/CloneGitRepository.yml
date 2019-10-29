@@ -11,6 +11,7 @@ steps:
       throw "Git clone folder is not set."
     }
    
+    Write-Host -Object ("git clone $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER".ToUpper())
     git clone $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
   env:
     TaskName: ${{ parameters.taskName }}
