@@ -7,7 +7,7 @@ steps:
 - powershell: |
     Set-StrictMode -Version Latest
     
-    if (-not (Test-Path -LiteralPath $env:GIT_CLONE_FOLDER)) {
+    if (-not (Test-Path -LiteralPath env:GIT_CLONE_FOLDER)) {
       throw "Git clone folder is not set."
     }
    
