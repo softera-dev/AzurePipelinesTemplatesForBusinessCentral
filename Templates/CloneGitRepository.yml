@@ -16,4 +16,4 @@ steps:
     TaskName: ${{ parameters.taskName }}
     GIT_CLONE_URL: ${{ parameters.url }}
     GIT_CLONE_FOLDER: ${{ parameters.folder }}
-  displayName: Clone Git Repository
+  displayName: Clone Git Repository ${{ parameters.url }}
