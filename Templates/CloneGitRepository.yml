@@ -12,8 +12,7 @@ steps:
     }
    
     Write-Host -Object ("git clone $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER".ToUpper())
-    git clone $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER > err.txt
-    type err.txt
+    git clone --progress $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
   env:
     TaskName: ${{ parameters.taskName }}
     GIT_CLONE_URL: ${{ parameters.url }}
