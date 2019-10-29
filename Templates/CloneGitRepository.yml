@@ -13,6 +13,7 @@ steps:
    
     Write-Host -Object ("git clone $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER".ToUpper())
     git clone --progress $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
+  errorActionPreference: Continue
   failOnStderr: false
   ignoreLASTEXITCODE: true
   env:
