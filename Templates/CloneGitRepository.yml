@@ -13,7 +13,7 @@ steps:
    
     git clone --quiet $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
   errorActionPreference: Continue
-  failOnStderr: false
+  #failOnStderr: false
   ignoreLASTEXITCODE: true
   env:
     TaskName: ${{ parameters.taskName }}
