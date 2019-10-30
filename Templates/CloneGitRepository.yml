@@ -11,7 +11,6 @@ steps:
       throw "Git clone folder is not set."
     }
    
-    Write-Host -Object ("git clone $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER".ToUpper())
     git clone --porcelain $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
   errorActionPreference: Continue
   failOnStderr: false
