@@ -1,6 +1,6 @@
 parameters:
   taskName: CompileBCApp
-  displayAppName: 'App'
+  appDisplayName: 'App'
   appFolder: '.'
   containerName: $(CreateBCContainer.containerName)
   userName: $(CreateBCContainer.userName)
@@ -73,7 +73,7 @@ steps:
     OutputFolder: ${{ parameters.outputFolder }}
     CertificateFilePath: ${{ parameters.certificateFilePath }}
     CertificatePassword: ${{ parameters.certificatePassword }}
-  displayName: Compile, sign and publish AL app [${{ parameters.displayAppName }}]
+  displayName: Compile, sign and publish AL app [${{ parameters.appDisplayName }}]
 
 - task: PublishBuildArtifacts@1
   displayName: 'Publish Artifact: App'
