@@ -11,7 +11,7 @@ steps:
       throw "Git clone folder is not set."
     }
    
-    git clone --porcelain $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
+    git clone --quiet $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
   errorActionPreference: Continue
   failOnStderr: false
   ignoreLASTEXITCODE: true
