@@ -25,7 +25,7 @@ steps:
     }
     
     $ContainerFolder = `
-      (Get-BCContainerSharedFolders -containerName $ContainerName).GetEnumerator() |
+      (Get-BCContainerSharedFolders -containerName $env:BC_CONTAINER_NAME).GetEnumerator() |
       Where-Object -Property Value -EQ -Value 'C:\Run\my' |
       Select-Object -ExpandProperty Name
    
@@ -47,6 +47,7 @@ steps:
     BC_CONTAINER_TEST_SUITE: ${{ parameters.testSuite }}
     OUTPUT_FOLDER: ${{ parameters.outputFolder }}
     OUTPUT_FILENAME: ${{ parameters.outputFileName }}
+  displayName: Run tests in BC container
     
 - task: PublishTestResults@2
   displayName: 'Publish Test Results **/TEST-*.xml'
