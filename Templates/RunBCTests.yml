@@ -30,6 +30,8 @@ steps:
       Select-Object -ExpandProperty Name
    
     $TestFolder = Join-Path -Path $ContainerFolder -ChildPath ([guid]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $TestFolder -Force
+    
     $TestResultsFilePath = Join-Path -Path $TestFolder -ChildPath $env:OUTPUT_FILENAME
 
     Run-TestsInBCContainer `
@@ -39,7 +41,7 @@ steps:
       -AzureDevOps error `
       -XUnitResultFileName $TestResultsFilePath
       
-    Copy-File -LiteralPath $TestResultsFilePath
+    Copy-File -LiteralPath $TestResultsFilePath -Destination $env:OUTPUT_FOLDER
   env:
     BC_CONTAINER_NAME: ${{ parameters.containerName }}
     BC_CONTAINER_USER_NAME: ${{ parameters.containerUserName }}
