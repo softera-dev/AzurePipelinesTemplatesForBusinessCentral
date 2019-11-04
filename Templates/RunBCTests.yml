@@ -30,7 +30,7 @@ steps:
       Select-Object -ExpandProperty Name
    
     $TestFolder = Join-Path -Path $ContainerFolder -ChildPath ([guid]::NewGuid().ToString())
-    New-Item -ItemType Directory -Path $TestFolder -Force
+    New-Item -ItemType Directory -Path $TestFolder -Force | Out-Null
     
     $TestResultsFilePath = Join-Path -Path $TestFolder -ChildPath $env:OUTPUT_FILENAME
 
