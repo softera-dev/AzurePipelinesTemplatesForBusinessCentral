@@ -20,7 +20,7 @@ steps:
 
     $Label = "az.tag=""$env:ContainerTag"""
     
-    echo "Test toolkit: '$env:TestToolkit'"
+    echo "Test toolkit: '$env:TestToolkit' $($env:TestToolkit -ne '') $($env:TestToolkit -eq 'libraries')"
 
     New-BCContainer `
       -accept_eula `
