@@ -55,5 +55,6 @@ steps:
   displayName: 'Publish Test Results **/TEST-*.xml'
   inputs:
     testResultsFormat: XUnit
+    searchFolder: ${{ parameters.outputFolder }}
     failTaskOnFailedTests: true
   condition: succeededOrFailed()
