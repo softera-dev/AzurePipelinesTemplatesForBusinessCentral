@@ -19,8 +19,6 @@ steps:
     Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.ContainerName;]$ContainerName"
 
     $Label = "az.tag=""$env:ContainerTag"""
-    
-    echo "Test toolkit: '$env:TestToolkit' $($env:TestToolkit -ne '') $($env:TestToolkit -eq 'libraries')"
 
     New-BCContainer `
       -accept_eula `
