@@ -3,6 +3,7 @@ parameters:
   containerLabel: ''
   imageName: ''
   licenseFile: ''
+  testToolkit: '' # valid options are '', full, libraries
   auth: NavUserPassword
   userName: ciuser
   userPassword: P@ssw0rd
@@ -24,6 +25,8 @@ steps:
       -containerName $ContainerName `
       -imageName $env:ImageName `
       -licenseFile $env:LicenseFile `
+      -includeTestToolkit:($env:TestToolkit -ne '') `
+      -includeTestLibrariesOnly:($env:TestToolkit -eq 'libraries') `
       -shortcuts None `
       -auth $env:Auth `
       -Credential $Credential `
@@ -43,6 +46,7 @@ steps:
     ContainerTag: Build $(Build.BuildId)
     ImageName: ${{ parameters.imageName }}
     LicenseFile: ${{ parameters.licenseFile }}
+    TestToolkit: ${{ parameter.testToolkit }}
     Auth: ${{ parameters.auth }}
     ContainerUserName: ${{ parameters.userName }}
     ContainerPassword: ${{ parameters.userPassword }}
