@@ -46,7 +46,7 @@ steps:
     ContainerTag: Build $(Build.BuildId)
     ImageName: ${{ parameters.imageName }}
     LicenseFile: ${{ parameters.licenseFile }}
-    TestToolkit: ${{ parameter.testToolkit }}
+    TestToolkit: ${{ parameters.testToolkit }}
     Auth: ${{ parameters.auth }}
     ContainerUserName: ${{ parameters.userName }}
     ContainerPassword: ${{ parameters.userPassword }}
