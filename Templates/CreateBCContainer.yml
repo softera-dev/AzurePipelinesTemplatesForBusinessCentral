@@ -25,7 +25,7 @@ steps:
       -containerName $ContainerName `
       -imageName $env:ImageName `
       -licenseFile $env:LicenseFile `
-      -includeTestToolkit:($env:TestToolkit -ne '') `
+      -includeTestToolkit:(($env:TestToolkit -eq 'full') -or ($env:TestToolkit -eq 'libraries')) `
       -includeTestLibrariesOnly:($env:TestToolkit -eq 'libraries') `
       -shortcuts None `
       -auth $env:Auth `
