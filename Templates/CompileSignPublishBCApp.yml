@@ -3,6 +3,7 @@ parameters:
   appDisplayName: 'App'
   appFolder: '.'
   containerName: $(CreateBCContainer.containerName)
+  useAppSourceCop: true
   userName: $(CreateBCContainer.userName)
   userPassword: $(CreateBCContainer.userPassword)
   outputFolder: $(Build.ArtifactStagingDirectory)
@@ -14,7 +15,7 @@ steps:
     Set-StrictMode -Version Latest
 
     $ContainerFolder = `
-      (Get-BCContainerSharedFolders -containerName $env:ContainerName).GetEnumerator() |
+      (Get-BCContainerSharedFolders -containerName $env:BC_CONTAINER_NAME).GetEnumerator() |
       Where-Object -Property Value -EQ -Value 'C:\Run\my' |
       Select-Object -ExpandProperty Name
 
@@ -25,13 +26,13 @@ steps:
     
     $AppFolder = Join-Path -Path $BuildFolder -ChildPath 'App'
     Write-Host -Object "Copy source to container shared folder ($AppFolder)"
-    Copy-Item -LiteralPath $env:AppFolder -Destination $AppFolder -Recurse
+    Copy-Item -LiteralPath $env:BC_APP_FOLDER -Destination $AppFolder -Recurse
 
-    $SecurePassword = ConvertTo-SecureString -String $env:ContainerUserPassword -AsPlainText -Force
-    $Credential = New-Object -TypeName pscredential -ArgumentList $env:ContainerUserName, $SecurePassword
+    $SecurePassword = ConvertTo-SecureString -String $env:BC_CONTAINER_USER_PASSWORD -AsPlainText -Force
+    $Credential = New-Object -TypeName pscredential -ArgumentList $env:BC_CONTAINER_USER_NAME, $SecurePassword
 
     Compile-AppInBCContainer `
-      -containerName $env:ContainerName `
+      -containerName $env:BC_CONTAINER_NAME `
       -appSymbolsFolder $SymbolsFolder `
       -appProjectFolder $AppFolder `
       -appOutputFolder $OutputFolder `
@@ -46,19 +47,19 @@ steps:
       Sort-Object -Property LastWriteTime -Descending |
       Select-Object -First 1 -ExpandProperty FullName
     
-    if ($env:CertificateFilePath) {
-      $SecureCertificatePassword = ConvertTo-SecureString -String $env:CertificatePassword -AsPlainText -Force
+    if ($env:BC_CERTIFICATE_FILE_PATH) {
+      $SecureCertificatePassword = ConvertTo-SecureString -String $env:BC_CERTIFICATE_PASSWORD -AsPlainText -Force
       Sign-BCContainerApp `
-        -containerName $env:ContainerName `
+        -containerName $env:BC_CONTAINER_NAME `
         -appFile $AppFilePath `
-        -pfxFile $env:CertificateFilePath `
+        -pfxFile $env:BC_CERTIFICATE_PATH `
         -pfxPassword $SecureCertificatePassword
     }
 
-    Copy-Item -LiteralPath $AppFilePath -Destination $env:OutputFolder
+    Copy-Item -LiteralPath $AppFilePath -Destination $env:BC_OUTPUT_FOLDER
 
     Publish-BCContainerApp `
-      -containerName $env:ContainerName `
+      -containerName $env:BC_CONTAINER_NAME `
       -appFile $AppFilePath `
       -skipVerification `
       -credential $Credential `
@@ -66,13 +67,14 @@ steps:
       -syncMode Add `
       -install
   env:
-    AppFolder: ${{ parameters.appFolder }}
-    ContainerName: ${{ parameters.containerName }}
-    ContainerUserName: ${{ parameters.userName }}
-    ContainerUserPassword: ${{ parameters.userPassword }}
-    OutputFolder: ${{ parameters.outputFolder }}
-    CertificateFilePath: ${{ parameters.certificateFilePath }}
-    CertificatePassword: ${{ parameters.certificatePassword }}
+    BC_APP_FOLDER: ${{ parameters.appFolder }}
+    BC_CONTAINER_NAME: ${{ parameters.containerName }}
+    BC_USE_APPSOURCE_COP: ${{ parameters.useAppSourceCop }}
+    BC_CONTAINER_USER_NAME: ${{ parameters.userName }}
+    BC_CONTAINER_USER_PASSWORD: ${{ parameters.userPassword }}
+    BC_OUTPUT_FOLDER: ${{ parameters.outputFolder }}
+    BC_CERTIFICATE_FILE_PATH: ${{ parameters.certificateFilePath }}
+    BC_CERTIFICATE_PASSWORD: ${{ parameters.certificatePassword }}
   displayName: Compile, sign and publish AL app [${{ parameters.appDisplayName }}]
 
 - task: PublishBuildArtifacts@1
