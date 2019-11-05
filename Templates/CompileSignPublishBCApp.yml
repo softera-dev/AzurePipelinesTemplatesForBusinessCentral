@@ -52,7 +52,7 @@ steps:
       Sign-BCContainerApp `
         -containerName $env:BC_CONTAINER_NAME `
         -appFile $AppFilePath `
-        -pfxFile $env:BC_CERTIFICATE_PATH `
+        -pfxFile $env:BC_CERTIFICATE_FILE_PATH `
         -pfxPassword $SecureCertificatePassword
     }
 
