@@ -2,6 +2,7 @@ parameters:
   taskName: CloneGitRepository
   url: ''
   folder: ''
+  singleBranch: ''
 
 steps:
 - powershell: |
@@ -10,8 +11,14 @@ steps:
     if (-not (Test-Path -LiteralPath env:GIT_CLONE_FOLDER)) {
       throw "Git clone folder is not set."
     }
-   
-    git clone --quiet $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER
+    
+    $Expression = 'git clone --quiet $env:GIT_CLONE_URL $env:GIT_CLONE_FOLDER'
+    
+    if ($env:GIT_CLONE_SINGLE_BRANCH) {
+      $Expression += ' --single-branch --branch $env:GIT_CLONE_SINGLE_BRANCH'
+    }
+    
+    Invoke-Expression -Command $Expression
   errorActionPreference: Continue
   #failOnStderr: false
   ignoreLASTEXITCODE: true
@@ -19,4 +26,5 @@ steps:
     TaskName: ${{ parameters.taskName }}
     GIT_CLONE_URL: ${{ parameters.url }}
     GIT_CLONE_FOLDER: ${{ parameters.folder }}
+    GIT_CLONE_SINGLE_BRANCH: ${{ parameters.singleBranch }}
   displayName: Clone Git Repository ${{ parameters.url }}
