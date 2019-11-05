@@ -1,0 +1,52 @@
+parameters:
+  taskName: PublishBCApp
+  appDisplayName: App
+  appFile: ''
+  containerName: $(CreateBCContainer.containerName)
+  doNotSkipVerification: false
+  syncMode: Add
+  userName: $(CreateBCContainer.userName)
+  userPassword: $(CreateBCContainer.userPassword)
+  outputFolder: $(Build.ArtifactStagingDirectory)
+  doNotPublishArtifact: false
+
+steps:
+- powershell: |
+    Set-StrictMode -Version Latest
+    
+    $SecurePassword = ConvertTo-SecureString -String $env:BC_CONTAINER_USER_PASSWORD -AsPlainText -Force
+    $Credential = New-Object -TypeName pscredential -ArgumentList $env:BC_CONTAINER_USER_NAME, $SecurePassword
+    
+    if ($env:BC_DO_NOT_PUBLISH_ARTIFACT -ne 'true') {
+      Copy-Item -LiteralPath $env:BC_APP_FILEPATH -Destination $env:BC_OUTPUT_FOLDER
+    }
+    
+    $ExtraParameters = @{}
+    if ($env:BC_DO_NOT_SKIP_VERIFICATION -eq 'false') {
+      $ExtraParameters.skipVerification = $true
+    }
+    
+    Publish-BCContainerApp `
+      -containerName $env:BC_CONTAINER_NAME `
+      -appFile $BC_APP_FILEPATH `
+      -skipVerification `
+      -credential $Credential `
+      -sync `
+      -syncMode $env:BC_SYNC_MODE `
+      -install `
+      @ExtraParameters
+  env:
+    BC_APP_FILEPATH: ${{ parameters.appFile }}
+    BC_CONTAINER_NAME: ${{ parameters.containerName }}
+    BC_DO_NOT_SKIP_VERIFICATION: ${{ parameters.doNotSkipVerification }}
+    BC_SYNC_MODE: ${{ parameters.syncMode }}
+    BC_CONTAINER_USER_NAME: ${{ parameters.userName }}
+    BC_CONTAINER_USER_PASSWORD: ${{ parameters.userPassword }}
+    BC_OUTPUT_FOLDER: ${{ parameters.outputFolder }}
+    BC_DO_NOT_PUBLISH_ARTIFACT: ${{ parameters.doNotPublishArtifact }}
+  displayName: Publish AL app [${{ parameters.appDisplayName }}]
+
+- task: PublishBuildArtifacts@1
+  displayName: 'Publish Artifact: App'
+  inputs:
+    ArtifactName: App
