@@ -38,7 +38,7 @@ steps:
       -appOutputFolder $OutputFolder `
       -EnableCodeCop `
       -EnableUICop `
-      -EnableAppSourceCop `
+      -EnableAppSourceCop:($env:BC_USE_APPSOURCE_COP -eq 'true') `
       -AzureDevOps `
       -credential $Credential
  
