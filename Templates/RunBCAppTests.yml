@@ -1,0 +1,61 @@
+parameters:
+  containerName: $(CreateBCContainer.containerName)
+  appId: ''
+  appName: ''
+  containerUserName: $(CreateBCContainer.userName)
+  containerUserPassword: $(CreateBCContainer.userPassword)
+  outputFolder: $(Common.TestResultsDirectory)
+
+steps:
+- powershell: |
+    Set-StrictMode -Version Latest
+
+    $SecurePassword = ConvertTo-SecureString -String $env:BC_CONTAINER_USER_PASSWORD -AsPlainText -Force
+    $Credential = New-Object -TypeName pscredential -ArgumentList $env:BC_CONTAINER_USER_NAME, $SecurePassword
+    
+    $Tests = @(
+      Get-TestsFromBCContainer `
+        -containerName $env:BC_CONTAINER_NAME `
+        -Credential $Credential `
+        -extensionId $env:BC_APP_ID `
+        -ignoreGroups).GetEnumerator() |
+      Select-Object -ExpandProperty Tests
+        
+    if (-not $Tests) {
+      throw "There are no tests in extension suite $env:BC_CONTAINER_TEST_SUITE!"
+    }
+    
+    $ContainerFolder = `
+      (Get-BCContainerSharedFolders -containerName $env:BC_CONTAINER_NAME).GetEnumerator() |
+      Where-Object -Property Value -EQ -Value 'C:\Run\my' |
+      Select-Object -ExpandProperty Name
+   
+    $TestFolder = Join-Path -Path $ContainerFolder -ChildPath ([guid]::NewGuid().ToString())
+    New-Item -ItemType Directory -Path $TestFolder -Force | Out-Null
+    
+    $TestResultsFilePath = Join-Path -Path $TestFolder -ChildPath $env:OUTPUT_FILENAME
+
+    Run-TestsInBCContainer `
+      -containerName $env:BC_CONTAINER_NAME `
+      -credential $Credential `
+      -extensionID $env:BC_APP_ID `
+      -AzureDevOps error `
+      -XUnitResultFileName $TestResultsFilePath
+      
+    Copy-Item -LiteralPath $TestResultsFilePath -Destination $env:OUTPUT_FOLDER
+  env:
+    BC_CONTAINER_NAME: ${{ parameters.containerName }}
+    BC_APP_ID: ${{ parameters.appId }}
+    BC_CONTAINER_USER_NAME: ${{ parameters.containerUserName }}
+    BC_CONTAINER_USER_PASSWORD: ${{ parameters.containerUserPassword }}
+    OUTPUT_FOLDER: ${{ parameters.outputFolder }}
+    OUTPUT_FILENAME: TEST-${{ parameters.appName }}.xml
+  displayName: Test app in BC container [${{ parameters.appName }}]
+    
+- task: PublishTestResults@2
+  displayName: 'Publish Test Results **/TEST-*.xml'
+  inputs:
+    testResultsFormat: XUnit
+    searchFolder: ${{ parameters.outputFolder }}
+    failTaskOnFailedTests: true
+  condition: succeededOrFailed()
