@@ -1,8 +1,8 @@
 parameters:
   taskName: CreateBCContainer
-  containerLabel: ''
   imageName: ''
   licenseFile: ''
+  enableTaskScheduler: false
   testToolkit: '' # valid options are '', full, libraries
   auth: NavUserPassword
   userName: ciuser
@@ -12,42 +12,37 @@ steps:
 - powershell: |
     Set-StrictMode -Version Latest
 
-    $SecurePassword = ConvertTo-SecureString -String $env:ContainerPassword -AsPlainText -Force
-    $Credential = New-Object -TypeName pscredential -ArgumentList $env:ContainerUserName, $SecurePassword
+    $SecurePassword = ConvertTo-SecureString -String $env:BC_CONTAINER_USER_PASSWORD -AsPlainText -Force
+    $Credential = New-Object -TypeName pscredential -ArgumentList $env:BC_CONTAINER_USER_NAME, $SecurePassword
 
     $ContainerName = [datetime]::Now.ToString('''ci''ddhhmmssffff')
-    Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.ContainerName;]$ContainerName"
-
-    $Label = "az.tag=""$env:ContainerTag"""
+    Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.ContainerName;]$ContainerName"
 
     New-BCContainer `
       -accept_eula `
       -containerName $ContainerName `
-      -imageName $env:ImageName `
-      -licenseFile $env:LicenseFile `
-      -includeTestToolkit:(($env:TestToolkit -eq 'full') -or ($env:TestToolkit -eq 'libraries')) `
-      -includeTestLibrariesOnly:($env:TestToolkit -eq 'libraries') `
+      -imageName $env:BC_IMAGE_NAME `
+      -licenseFile $env:BC_LICENSE_FILE `
+      -includeTestToolkit:(($env:BC_TEST_TOOLKIT -eq 'full') -or ($env:BC_TEST_TOOLKIT -eq 'libraries')) `
+      -includeTestLibrariesOnly:($env:BC_TEST_TOOLKIT -eq 'libraries') `
+      -EnableTaskScheduler:($env:BC_ENABLE_TASK_SCHEDULER -eq 'true') `
       -shortcuts None `
-      -auth $env:Auth `
-      -Credential $Credential `
-      -additionalParameters `
-        "--label=$Label"
+      -auth $env:BC_CONTAINER_AUTH `
+      -Credential $Credential
 
     if ($env:TaskName) {
-      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.containerName;]$ContainerName"
-
-      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.auth;]$env:Auth"
-      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.userName;]$env:ContainerUserName"
-      Write-Host -Object "##vso[task.setvariable variable=$env:TaskName.userPassword; issecret=true;]$env:ContainerPassword"
+      Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.containerName;]$ContainerName"
+      Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.auth;]$env:BC_CONTAINER_AUTH"
+      Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.userName;]$env:BC_CONTAINER_USER_NAME"
+      Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.userPassword; issecret=true;]$env:BC_CONTAINER_USER_PASSWORD"
     }
   env:
-    TaskName: ${{ parameters.taskName }}
-    ContainerLabel: ${{ parameters.containerLabel }}
-    ContainerTag: Build $(Build.BuildId)
-    ImageName: ${{ parameters.imageName }}
-    LicenseFile: ${{ parameters.licenseFile }}
-    TestToolkit: ${{ parameters.testToolkit }}
-    Auth: ${{ parameters.auth }}
-    ContainerUserName: ${{ parameters.userName }}
-    ContainerPassword: ${{ parameters.userPassword }}
+    TASK_NAME: ${{ parameters.taskName }}
+    BC_IMAGE_NAME: ${{ parameters.imageName }}
+    BC_LICENSE_FILE: ${{ parameters.licenseFile }}
+    BC_ENABLE_TASK_SCHEDULER: ${{ parameters.enableTaskScheduler }}
+    BC_TEST_TOOLKIT: ${{ parameters.testToolkit }}
+    BC_CONTAINER_AUTH: ${{ parameters.auth }}
+    BC_CONTAINER_USER_NAME: ${{ parameters.userName }}
+    BC_CONTAINER_USER_PASSWORD: ${{ parameters.userPassword }}
   displayName: Create BC container
