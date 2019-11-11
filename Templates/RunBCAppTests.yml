@@ -13,7 +13,7 @@ steps:
     $SecurePassword = ConvertTo-SecureString -String $env:BC_CONTAINER_USER_PASSWORD -AsPlainText -Force
     $Credential = New-Object -TypeName pscredential -ArgumentList $env:BC_CONTAINER_USER_NAME, $SecurePassword
     
-    $Tests = @(
+    $Tests = (
       Get-TestsFromBCContainer `
         -containerName $env:BC_CONTAINER_NAME `
         -Credential $Credential `
