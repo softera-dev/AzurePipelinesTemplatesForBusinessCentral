@@ -30,7 +30,7 @@ steps:
       -auth $env:BC_CONTAINER_AUTH `
       -Credential $Credential
 
-    if ($env:TaskName) {
+    if ($env:TASK_NAME) {
       Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.containerName;]$ContainerName"
       Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.auth;]$env:BC_CONTAINER_AUTH"
       Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.userName;]$env:BC_CONTAINER_USER_NAME"
