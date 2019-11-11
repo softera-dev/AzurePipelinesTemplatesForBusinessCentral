@@ -50,7 +50,7 @@ steps:
     BC_CONTAINER_USER_PASSWORD: ${{ parameters.containerUserPassword }}
     OUTPUT_FOLDER: ${{ parameters.outputFolder }}
     OUTPUT_FILENAME: TEST-${{ parameters.appName }}.xml
-  displayName: Test app in BC container [${{ parameters.appName }}]
+  displayName: Run BC app tests [${{ parameters.appName }}]
     
 - task: PublishTestResults@2
   displayName: 'Publish Test Results **/TEST-*.xml'
