@@ -29,7 +29,7 @@ steps:
       -shortcuts None `
       -auth $env:BC_CONTAINER_AUTH `
       -Credential $Credential `
-      -useTraefik:False
+      -useTraefik:$false
 
     if ($env:TASK_NAME) {
       Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.containerName;]$ContainerName"
