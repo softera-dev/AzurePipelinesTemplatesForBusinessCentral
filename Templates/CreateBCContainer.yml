@@ -28,7 +28,8 @@ steps:
       -EnableTaskScheduler:($env:BC_ENABLE_TASK_SCHEDULER -eq 'true') `
       -shortcuts None `
       -auth $env:BC_CONTAINER_AUTH `
-      -Credential $Credential
+      -Credential $Credential `
+      -useTraefik:False
 
     if ($env:TASK_NAME) {
       Write-Host -Object "##vso[task.setvariable variable=$env:TASK_NAME.containerName;]$ContainerName"
