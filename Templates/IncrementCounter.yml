@@ -1,0 +1,70 @@
+parameters:
+  taskName: IncrementCounter
+  fileName: ''
+  counter: ''
+
+steps:
+- powershell: |
+    using namespace System.IO
+
+    Set-StrictMode -Version Latest
+
+    Add-Type -TypeDefinition @'
+        using System;
+        using System.IO;
+        using System.Text;
+
+        public static class UpdateFile
+        {
+            private static Encoding encoding = new UTF8Encoding(false);
+
+            public static void Update(string filePath, Func<string, string> update) {
+                using (FileStream fileStream = File.Open(filePath, FileMode.OpenOrCreate, FileAccess.ReadWrite, FileShare.Read)) {
+                    string text;
+                    using (StreamReader streamReader = new StreamReader(fileStream, encoding, false, 1024, leaveOpen: true)) {
+                        text = streamReader.ReadToEnd();
+                    }
+                    fileStream.Position = 0;
+
+                    string newText = update(text);
+
+                    using (StreamWriter streamWriter = new StreamWriter(fileStream, encoding)) {
+                        streamWriter.WriteLine(newText);
+                    }
+                }
+            }
+        }
+    '@
+
+    function Update($Text) {
+        if (-not [string]::IsNullOrWhiteSpace($Text)) {
+            $Counters = $Text | ConvertFrom-Json
+        } else {
+            $Counters = @{}
+        }
+
+        if ($IC_COUNTER -notin $Counters.psobject.Properties.Name) {
+            $Counters | Add-Member -MemberType NoteProperty -Name $IC_COUNTER -Value 0
+        }
+        $Counters.$IC_COUNTER += 1
+
+        $Counters | ConvertTo-Json  
+    }
+
+    $FilePath = $ExecutionContext.SessionState.Path.GetUnresolvedProviderPathFromPSPath($env:IC_FILENAME)
+    $Update = { param($Text) Update $Text }
+
+    for (;;) {
+        try {
+            [UpdateFile]::Update($FilePath, $Update)
+            break
+        } catch [IOException] {
+            Write-Error $_
+        }
+        Start-Sleep -Milliseconds 100
+    }
+  env:
+    TaskName: ${{ parameters.taskName }}
+    IC_FILENAME: ${{ parameters.fileName }}
+    IC_COUNTER: ${{ parameters.counter }}
+  displayName: Increment counter ${{ parameters.counter }}
