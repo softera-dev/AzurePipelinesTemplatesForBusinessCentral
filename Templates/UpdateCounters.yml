@@ -1,0 +1,63 @@
+parameters:
+- name: organization
+  type: string
+- name: project
+  type: string
+- name: repository
+  type: string
+- name: branch
+  type: string
+- name: task
+  type: string
+  default: Compile ALOps
+- name: connectionString
+  type: string
+  default: Data Source=counters\SQLEXPRESS; User=demo; Password=Password123.; Initial Catalog=Counters
+
+steps:
+- powershell: |
+    Add-Type -AssemblyName System.Data
+
+    try {
+        $SqlConnection = New-Object -TypeName System.Data.SqlClient.SqlConnection -ArgumentList $env:ConnectionString
+        $SqlConnection.Open()
+
+        $SqlTransaction = $SqlConnection.BeginTransaction()
+
+        $SqlCommand = New-Object -TypeName System.Data.SqlClient.SqlCommand
+        $SqlCommand.Connection = $SqlConnection
+        $SqlCommand.Transaction = $SqlTransaction
+        $SqlCommand.CommandText = @'
+    UPDATE counters SET [AlOpsPipelineCount] = [AlOpsPipelineCount] + 1
+    '@
+        $SqlCommand.ExecuteNonQuery()
+
+        $SqlCommand = New-Object -TypeName System.Data.SqlClient.SqlCommand
+        $SqlCommand.Connection = $SqlConnection
+        $SqlCommand.Transaction = $SqlTransaction
+        $SqlCommand.CommandText = @'
+    INSERT [log]
+    VALUES (@Organization, @Project, @Repository, @Branch, GETDATE(), @Task)
+    '@
+        $SqlCommand.Parameters.Add('Organization', $env:Organization) | Out-Null
+        $SqlCommand.Parameters.Add('Project', $env:Project) | Out-Null
+        $SqlCommand.Parameters.Add('Repository', $env:Repository) | Out-Null
+        $SqlCommand.Parameters.Add('Branch', $env:Branch) | Out-Null
+        $SqlCommand.Parameters.Add('Task', $env:Task) | Out-Null
+        $SqlCommand.ExecuteNonQuery() | Out-Null
+
+        $SqlTransaction.Commit()
+    } finally {
+        if ($SqlConnection -is [System.IDisposable]) {
+            $SqlConnection.Dispose()
+        }
+    }
+  condition: always()
+  env:
+    Organization: ${{ parameters.organization }}
+    Project: ${{ parameters.project }}
+    Repository: ${{ parameters.repository }}
+    Branch: ${{ parameters.branch }}
+    Task: ${{ parameters.task }}
+    ConnectionString: ${{ parameters.connectionString }}
+  displayName: Update Counters
