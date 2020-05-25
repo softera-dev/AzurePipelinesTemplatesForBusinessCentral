@@ -1,0 +1,4 @@
+extends:
+  template: Templates/Pipeline.yml
+  parameters:
+    organizationName: softera-baltic
