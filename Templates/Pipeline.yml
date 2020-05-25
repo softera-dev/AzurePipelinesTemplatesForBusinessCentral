@@ -51,149 +51,153 @@ parameters:
   - process
 
 
-variables:
-- group: sharedVariablesGroup
-- group: platformVariablesGroup
-- name: IsPullRequest
-  value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
-- name: OrganizationName
-  value: ${{ parameters.organizationName }}
-- name: MasterBranch
-  value: ${{ parameters.masterBranch }}
-- name: MainAppFolder
-  value: ${{ parameters.mainAppFolder }}
-- name: TestAppFolder
-  value: ${{ parameters.testAppFolder }}
-- name: AppVersion
-  value: ${{ parameters.appVersion }}
-- name: ImageName
-  value: ${{ parameters.imageName }}
-- name: AcceptOutdatedImages
-  value: ${{ parameters.acceptOutdatedImages }}
-- name: DockerIsolation
-  value: ${{ parameters.dockerIsolation }}
+stages:
+- stage: Main
+  displayName: Main
+  jobs:
+  - job: Main
+    displayName: Main
+    variables:
+    - group: sharedVariablesGroup
+    - group: platformVariablesGroup
+    - name: IsPullRequest
+      value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
+    - name: OrganizationName
+      value: ${{ parameters.organizationName }}
+    - name: MasterBranch
+      value: ${{ parameters.masterBranch }}
+    - name: MainAppFolder
+      value: ${{ parameters.mainAppFolder }}
+    - name: TestAppFolder
+      value: ${{ parameters.testAppFolder }}
+    - name: AppVersion
+      value: ${{ parameters.appVersion }}
+    - name: ImageName
+      value: ${{ parameters.imageName }}
+    - name: AcceptOutdatedImages
+      value: ${{ parameters.acceptOutdatedImages }}
+    - name: DockerIsolation
+      value: ${{ parameters.dockerIsolation }}
+    steps:
+    - checkout: self
+      clean: true
 
+    - template: UpdateCounters.yml
+      parameters:
+        organization: $(OrganizationName)
+        project: $(System.TeamProject)
+        repository: $(Build.RepositoryName)
+        branch: $(Build.SourceBranchName)
 
-steps:
-- checkout: self
-  clean: true
+    - task: DownloadSecureFile@1
+      name: DownloadBCLicense
+      inputs:
+        secureFile: $(BCLicense.SecureFileName)
+      displayName: Download BC license
 
-- template: UpdateCounters.yml
-  parameters:
-    organization: $(OrganizationName)
-    project: $(System.TeamProject)
-    repository: $(Build.RepositoryName)
-    branch: $(Build.SourceBranchName)
+    - task: DownloadSecureFile@1
+      name: DownloadBCAppSigningCertificate
+      inputs:
+        secureFile: $(BCAppSigningCertificateSecureFileName)
+      displayName: Download certificate for BC app signing
 
-- task: DownloadSecureFile@1
-  name: DownloadBCLicense
-  inputs:
-    secureFile: $(BCLicense.SecureFileName)
-  displayName: Download BC license
+    - powershell: |
+        $BestImageName = Get-BestBCContainerImageName -imageName $env:ImageName
+        docker pull $BestImageName
+      displayName: Pull new image
 
-- task: DownloadSecureFile@1
-  name: DownloadBCAppSigningCertificate
-  inputs:
-    secureFile: $(BCAppSigningCertificateSecureFileName)
-  displayName: Download certificate for BC app signing
+    - task: ALOpsDockerStart@1
+      inputs:
+        docker_image: $(ImageName)
+        accept_image_outdated: $(AcceptOutdatedImages)
+        memory_gb: 4
+        docker_parameters: |
+          --isolation=$(DockerIsolation)
+          --env ExitOnError=N
+          --memory 4g
+      timeoutInMinutes: 2
 
-- powershell: |
-    $BestImageName = Get-BestBCContainerImageName -imageName $env:ImageName
-    docker pull $BestImageName
-  displayName: Pull new image
+    - task: ALOpsDockerWait@1
+      inputs:
+        search_string: 'Ready for connections!'
 
-- task: ALOpsDockerStart@1
-  inputs:
-    docker_image: $(ImageName)
-    accept_image_outdated: $(AcceptOutdatedImages)
-    memory_gb: 4
-    docker_parameters: |
-      --isolation=$(DockerIsolation)
-      --env ExitOnError=N
-      --memory 4g
-  timeoutInMinutes: 2
+    - task: ALOpsLicenseImport@1
+      inputs:
+        usedocker: true
+        license_path: '$(DownloadBCLicense.SecureFilePath)'
+        print_license_info: true
 
-- task: ALOpsDockerWait@1
-  inputs:
-    search_string: 'Ready for connections!'
+    - powershell: Write-Host "##vso[task.setvariable variable=AppVersion;]$((Get-Content -Path $env:MainAppFolder/app.json | ConvertFrom-Json).version)"
+      displayName: Get App Version
 
-- task: ALOpsLicenseImport@1
-  inputs:
-    usedocker: true
-    license_path: '$(DownloadBCLicense.SecureFilePath)'
-    print_license_info: true
+    - task: ALOpsAppCompiler@1
+      displayName: 'Compile Extension'
+      inputs:
+        usedocker: true
+        targetproject: '$(MainAppFolder)/app.json'
+        failed_on_warnings: true
+        nav_app_version: $(AppVersion)
 
-- powershell: Write-Host "##vso[task.setvariable variable=AppVersion;]$((Get-Content -Path $env:MainAppFolder/app.json | ConvertFrom-Json).version)"
-  displayName: Get App Version
+    - task: ALOpsAppSign@1
+      displayName: 'ALOps App Sign'
+      env:
+        pfx_password: $(BCAppSigningCertificatePassword)
+      inputs:
+        usedocker: true
+        nav_artifact_app_filter: '*.app'
+        pfx_path: $(DownloadBCAppSigningCertificate.SecureFilePath)
+        timestamp_uri: 'http://timestamp.comodoca.com/authenticode'
 
-- task: ALOpsAppCompiler@1
-  displayName: 'Compile Extension'
-  inputs:
-    usedocker: true
-    targetproject: '$(MainAppFolder)/app.json'
-    failed_on_warnings: true
-    nav_app_version: $(AppVersion)
+    - task: ALOpsAppPublish@1
+      displayName: 'Publish AL-App'
+      inputs:
+        usedocker: true
+        nav_artifact_app_filter: '*.app'
 
-- task: ALOpsAppSign@1
-  displayName: 'ALOps App Sign'
-  env:
-    pfx_password: $(BCAppSigningCertificatePassword)
-  inputs:
-    usedocker: true
-    nav_artifact_app_filter: '*.app'
-    pfx_path: $(DownloadBCAppSigningCertificate.SecureFilePath)
-    timestamp_uri: 'http://timestamp.comodoca.com/authenticode'
+    - task: PublishTestResults@2
+      displayName: 'Publish Test Results **/TestResults.xml'
+      inputs:
+        testResultsFormat: XUnit
+        testResultsFiles: '**/TestResults.xml'
+        testRunTitle: 'BC Test Results: $(Build.BuildId)'
 
-- task: ALOpsAppPublish@1
-  displayName: 'Publish AL-App'
-  inputs:
-    usedocker: true
-    nav_artifact_app_filter: '*.app'
+    - task: ALOpsDockerRemove@1
+      displayName: 'Remove Docker Container'
+      enabled: true
+      condition: always()
 
-- task: PublishTestResults@2
-  displayName: 'Publish Test Results **/TestResults.xml'
-  inputs:
-    testResultsFormat: XUnit
-    testResultsFiles: '**/TestResults.xml'
-    testRunTitle: 'BC Test Results: $(Build.BuildId)'
+    - powershell: |
+        Set-StrictMode -Version Latest
+        $securepassword = convertto-securestring -string $env:BCInsider_Password -AsPlainText -force
+        $credential = [pscredential]::new($env:BCInsider_UserName, $securepassword)
+        $DockerVersion = (GET-NAVCONTAINERimagelabels $env:ImageName -registryCredential $credential).version
+        $BranchName = if($env:IsPullRequest -eq 'false') {$env:Build_SourceBranchName} else {$env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''}
+        $CommonPath = "\\filestorage\Projects\DevOps\$(OrganizationName)\$env:System_TeamProject\$env:Build_Repository_Name\$BranchName-$DockerVersion\$env:AppVersion"
+        $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+        if ([System.IO.Directory]::Exists($TempPath)) {
+            throw "TempPath ($TempPath) already exist"
+        }
 
-- task: ALOpsDockerRemove@1
-  displayName: 'Remove Docker Container'
-  enabled: true
-  condition: always()
+        New-Item -itemtype directory -path $TempPath -force
+        copy-item -path * -destination $TempPath -recurse
 
-- powershell: |
-    Set-StrictMode -Version Latest
-    $securepassword = convertto-securestring -string $env:BCInsider_Password -AsPlainText -force
-    $credential = [pscredential]::new($env:BCInsider_UserName, $securepassword)
-    $DockerVersion = (GET-NAVCONTAINERimagelabels $env:ImageName -registryCredential $credential).version
-    $BranchName = if($env:IsPullRequest -eq 'false') {$env:Build_SourceBranchName} else {$env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''}
-    $CommonPath = "\\filestorage\Projects\DevOps\$(OrganizationName)\$env:System_TeamProject\$env:Build_Repository_Name\$BranchName-$DockerVersion\$env:AppVersion"
-    $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-    if ([System.IO.Directory]::Exists($TempPath)) {
-        throw "TempPath ($TempPath) already exist"
-    }
+        $OldPath =  "$CommonPath-Old"
+        if([System.IO.Directory]::Exists($OldPath)) {
+            remove-item $OldPath -recurse -force
+        }
 
-    New-Item -itemtype directory -path $TempPath -force
-    copy-item -path * -destination $TempPath -recurse
-
-    $OldPath =  "$CommonPath-Old"
-    if([System.IO.Directory]::Exists($OldPath)) {
-        remove-item $OldPath -recurse -force
-    }
-
-    $Path = $CommonPath
-    if ([System.IO.Directory]::Exists($path)) {
-        new-item -itemtype directory -path $OldPath -force
-        copy-item -path $Path\* -destination $OldPath -recurse
-        remove-item $Path -Recurse -Force
-    }
-    if (-Not ([System.IO.Directory]::Exists($path))) {
-        copy-item -path $TempPath -destination $Path -recurse
-        remove-item  -path $TempPath -recurse -force
-    }
-  condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])))
-  env:
-    BCInsider_UserName: $(BCInsiderUserName)
-    BCInsider_Password: $(BCInsiderPassword)
-  displayName: Copy files to \\filestorage
+        $Path = $CommonPath
+        if ([System.IO.Directory]::Exists($path)) {
+            new-item -itemtype directory -path $OldPath -force
+            copy-item -path $Path\* -destination $OldPath -recurse
+            remove-item $Path -Recurse -Force
+        }
+        if (-Not ([System.IO.Directory]::Exists($path))) {
+            copy-item -path $TempPath -destination $Path -recurse
+            remove-item  -path $TempPath -recurse -force
+        }
+      condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])))
+      env:
+        BCInsider_UserName: $(BCInsiderUserName)
+        BCInsider_Password: $(BCInsiderPassword)
+      displayName: Copy files to \\filestorage
