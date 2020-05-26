@@ -30,7 +30,7 @@ steps:
         $SqlCommand.CommandText = @'
     UPDATE counters SET [AlOpsPipelineCount] = [AlOpsPipelineCount] + 1
     '@
-        $SqlCommand.ExecuteNonQuery()
+        $SqlCommand.ExecuteNonQuery() | Out-Null
 
         $SqlCommand = New-Object -TypeName System.Data.SqlClient.SqlCommand
         $SqlCommand.Connection = $SqlConnection
