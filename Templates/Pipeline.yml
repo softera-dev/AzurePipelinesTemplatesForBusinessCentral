@@ -162,7 +162,7 @@ stages:
         displayName: 'ALOps App Test'
         inputs:
           usedocker: true
-          import_testtoolkit: false
+          import_testtoolkit: true
           testfilter: ${{ parameters.testFilter }}
           failed_test_action: ${{ parameters.failedTestAction }} 
         continueOnError: true 
