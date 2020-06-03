@@ -14,6 +14,25 @@ parameters:
 - name: appVersion
   type: string
   default: ''
+- name: testType
+  type: string
+  default: none
+  values:
+  - none
+  - sameApp
+  - testApp
+- name: testFilter
+  type: string
+- name: installALTestTool   #bc14 ir žemesnėm nurodom false
+  type: boolean
+  default: true
+- name: failedTestAction
+  type: string
+  default: Warning
+  values:
+  - Warning
+  - Error
+  - Ignore
 
 stages:
 - stage: Main
@@ -105,7 +124,15 @@ stages:
       displayName: 'Publish AL-App'
       inputs:
         usedocker: true
-        nav_artifact_app_filter: '*.app'   
+        nav_artifact_app_filter: '*.app'  
+       
+    - task: ALOpsAppTest@1
+      displayName: 'ALOps App Test'
+      inputs:
+        usedocker: true
+        testfilter: ${{ parameters.testFilter }}
+        installaltesttool: ${{ parameters.installALTestTool }} 
+        failed_test_action: ${{ parameters.failedTestAction }}
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results **/TestResults.xml'
