@@ -55,12 +55,12 @@ stages:
     - checkout: self
       clean: true
       
-#    - template: UpdateCounters.yml
-#      parameters:
-#        organization: $(OrganizationName)
-#        project: $(System.TeamProject)
-#        repository: $(Build.RepositoryName)
-#        branch: $(Build.SourceBranchName)
+    - template: UpdateCounters.yml
+      parameters:
+        organization: $(OrganizationName)
+        project: $(System.TeamProject)
+        repository: $(Build.RepositoryName)
+        branch: $(Build.SourceBranchName)
 
     - task: DownloadSecureFile@1
       name: DownloadBCLicense
@@ -103,20 +103,20 @@ stages:
     - powershell: Write-Host "##vso[task.setvariable variable=AppVersion;]$((Get-Content -Path $env:MainAppFolder/app.json | ConvertFrom-Json).version)"
       displayName: Get App Version
       
-#    - ${{ if not(eq(parameters.testType, 'none')) }}:
-#      - task: ALOpsAppPublish@1
-#        displayName: 'ALOps Install AL TestTool'
-#        inputs:
-#          usedocker: true
-#          installaltesttool: true
-#          skip_verification: true
-#          install_al_app_names: |
-#           Tests-TestLibraries
-#           System Application Test
-#           System Application Test Library
-#           Any
-#           Library Assert
-#           Test Runner
+    - ${{ if not(eq(parameters.testType, 'none')) }}:
+      - task: ALOpsAppPublish@1
+        displayName: 'ALOps Install AL TestTool'
+        inputs:
+          usedocker: true
+          installaltesttool: true
+          skip_verification: true
+          install_al_app_names: |
+           Tests-TestLibraries
+           System Application Test
+           System Application Test Library
+           Any
+           Library Assert
+           Test Runner
 
     - task: ALOpsAppCompiler@1
       displayName: 'Compile Extension'
@@ -142,34 +142,35 @@ stages:
         usedocker: true
         nav_artifact_app_filter: '*.app'  
         
-#    - ${{ if eq(parameters.testType, 'testApp') }}:      
-#      - task: ALOpsAppCompiler@1
-#        displayName: 'Compile Test Extension'
-#        inputs:
-#          usedocker: true
-#          targetproject: '$(TestAppFolder)/app.json'
-#          failed_on_warnings: true
-#          nav_app_version: $(AppVersion)
-#      - task: ALOpsAppPublish@1
-#        displayName: 'Publish Test AL-App'
-#        inputs:
-#          usedocker: true
-#          nav_artifact_app_filter: '*.test*.app' 
-#          skip_verification: true
+    - ${{ if eq(parameters.testType, 'testApp') }}:      
+      - task: ALOpsAppCompiler@1
+        displayName: 'Compile Test Extension'
+        inputs:
+          usedocker: true
+          targetproject: '$(TestAppFolder)/app.json'
+          failed_on_warnings: true
+          nav_app_version: $(AppVersion)
+      - task: ALOpsAppPublish@1
+        displayName: 'Publish Test AL-App'
+        inputs:
+          usedocker: true
+          nav_artifact_app_filter: '*.test*.app' 
+          skip_verification: true
     
-#    - ${{ if not(eq(parameters.testType, 'none')) }}:
-#      - task: ALOpsAppTest@1
-#        displayName: 'ALOps App Test'
-#        inputs:
-#          usedocker: true
-#          testfilter: ${{ parameters.testFilter }}
-#          failed_test_action: ${{ parameters.failedTestAction }} 
-#      - task: PublishTestResults@2
-#        displayName: 'Publish Test Results **/TestResults.xml'
-#        inputs:
-#          testResultsFormat: XUnit
-#          testResultsFiles: '**/TestResults.xml'
-#          testRunTitle: 'BC Test Results: $(Build.BuildId)'
+    - ${{ if not(eq(parameters.testType, 'none')) }}:
+      - task: ALOpsAppTest@1
+        displayName: 'ALOps App Test'
+        inputs:
+          usedocker: true
+          testfilter: ${{ parameters.testFilter }}
+          failed_test_action: ${{ parameters.failedTestAction }} 
+        continueOnError: true 
+      - task: PublishTestResults@2
+        displayName: 'Publish Test Results **/TestResults.xml'
+        inputs:
+          testResultsFormat: XUnit
+          testResultsFiles: '**/TestResults.xml'
+          testRunTitle: 'BC Test Results: $(Build.BuildId)'
           
     - task: ALOpsDockerRemove@1
       displayName: 'Remove Docker Container'
