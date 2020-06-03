@@ -23,6 +23,7 @@ parameters:
   - testApp
 - name: testFilter
   type: string
+  default: ''
 - name: installALTestTool   #bc14 ir žemesnėm nurodom false
   type: boolean
   default: true
