@@ -14,6 +14,9 @@ parameters:
 - name: appVersion
   type: string
   default: ''
+- name: e-Invoice
+  type: boolean
+  default: false
 - name: testType
   type: string
   default: none
@@ -135,6 +138,11 @@ stages:
         nav_artifact_app_filter: '*.app'
         pfx_path: $(DownloadBCAppSigningCertificate.SecureFilePath)
         timestamp_uri: 'http://timestamp.comodoca.com/authenticode' 
+      
+    - ${{ if eq(parameters.e-Invoice, true) }}:  
+      - task: ALOpsDockerExec@1
+        inputs:
+          inline_script: 'Copy-Item -Path C:\edoc\MainApp\.netpackages\OmnivaConnector.dll -Destination (Resolve-Path -Path ''C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\'').ProviderPath'
 
     - task: ALOpsAppPublish@1
       displayName: 'Publish AL-App'
