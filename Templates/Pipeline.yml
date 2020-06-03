@@ -35,7 +35,7 @@ stages:
     steps:
     - checkout: self
       clean: true
-    - powershell: echo '$(BCAppSigningCertificateSecureFileName)'
+      
 #    - template: UpdateCounters.yml
 #      parameters:
 #        organization: $(OrganizationName)
@@ -49,11 +49,14 @@ stages:
 #        secureFile: $(BCLicense.SecureFileName)
 #      displayName: Download BC license
 #
-#    - task: DownloadSecureFile@1
-#      name: DownloadBCAppSigningCertificate
-#      inputs:
-#        secureFile: $(BCAppSigningCertificateSecureFileName)
-#      displayName: Download certificate for BC app signing
+    - task: DownloadSecureFile@1
+      name: DownloadBCAppSigningCertificate
+      inputs:
+        secureFile: $(BCAppSigningCertificateSecureFileName)
+      displayName: Download certificate for BC app signing
+      
+    - powershell: echo '$(DownloadBCAppSigningCertificate.SecureFilePath)' 
+      
 #
 #    - powershell: |
 #        $BestImageName = Get-BestBCContainerImageName -imageName $env:ImageName
