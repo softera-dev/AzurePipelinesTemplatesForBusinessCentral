@@ -140,7 +140,6 @@ stages:
       displayName: 'Publish AL-App'
       inputs:
         usedocker: true
-        installaltesttool: ${{ parameters.installALTestTool }}
         nav_artifact_app_filter: '*.app'  
         
     - ${{ if eq(parameters.testType, 'testApp') }}:      
