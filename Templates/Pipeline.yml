@@ -36,7 +36,7 @@ stages:
     - checkout: self
       clean: true
 
-    - template: Templates/UpdateCounters.yml
+    - template: UpdateCounters.yml
       parameters:
         organization: $(OrganizationName)
         project: $(System.TeamProject)
