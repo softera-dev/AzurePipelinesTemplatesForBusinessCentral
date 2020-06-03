@@ -102,6 +102,21 @@ stages:
 
     - powershell: Write-Host "##vso[task.setvariable variable=AppVersion;]$((Get-Content -Path $env:MainAppFolder/app.json | ConvertFrom-Json).version)"
       displayName: Get App Version
+      
+    - ${{ if not(eq(parameters.testType, 'none')) }}:
+      - task: ALOpsAppPublish@1
+        displayName: 'ALOps Install AL TestTool'
+        inputs:
+          usedocker: true
+          installaltesttool: true
+          skip_verification: true
+          install_al_app_names: |
+           Tests-TestLibraries
+           System Application Test
+           System Application Test Library
+           Any
+           Library Assert
+           Test Runner
 
     - task: ALOpsAppCompiler@1
       displayName: 'Compile Extension'
@@ -125,6 +140,7 @@ stages:
       displayName: 'Publish AL-App'
       inputs:
         usedocker: true
+        installaltesttool: ${{ parameters.installALTestTool }}
         nav_artifact_app_filter: '*.app'  
         
     - ${{ if eq(parameters.testType, 'testApp') }}:      
@@ -140,6 +156,7 @@ stages:
         inputs:
           usedocker: true
           nav_artifact_app_filter: '*.test*.app' 
+          skip_verification: true
     
     - ${{ if not(eq(parameters.testType, 'none')) }}:
       - task: ALOpsAppTest@1
