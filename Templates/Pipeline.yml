@@ -125,14 +125,15 @@ stages:
       inputs:
         usedocker: true
         nav_artifact_app_filter: '*.app'  
-       
-    - task: ALOpsAppTest@1
-      displayName: 'ALOps App Test'
-      inputs:
-        usedocker: true
-        testfilter: ${{ parameters.testFilter }}
-        installaltesttool: ${{ parameters.installALTestTool }} 
-        failed_test_action: ${{ parameters.failedTestAction }}
+    
+    - ${{ if not(eq(parameters.testType, 'none')) }}:
+      - task: ALOpsAppTest@1
+        displayName: 'ALOps App Test'
+        inputs:
+          usedocker: true
+          testfilter: ${{ parameters.testFilter }}
+          installaltesttool: ${{ parameters.installALTestTool }} 
+          failed_test_action: ${{ parameters.failedTestAction }}
 
     - task: PublishTestResults@2
       displayName: 'Publish Test Results **/TestResults.xml'
