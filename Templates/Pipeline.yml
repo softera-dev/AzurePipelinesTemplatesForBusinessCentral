@@ -29,6 +29,9 @@ parameters:
 - name: latestTimeEmployeeTimeAppPath 
   type: string
   default: ''
+- name: latestSalaryAppPath 
+  type: string
+  default: ''
 - name: testType
   type: string
   default: none
@@ -145,6 +148,14 @@ stages:
         inputs:
           usedocker: true
           artifact_path: ${{ parameters.latestTimeEmployeeTimeAppPath }}
+          nav_artifact_app_filter: '*.app'
+          
+    - ${{ if not(eq(parameters.latestSalaryAppPath, '')) }}:
+      - task: ALOpsAppPublish@1
+        displayName: 'Publish AL-App (Salary)'
+        inputs:
+          usedocker: true
+          artifact_path: ${{ parameters.latestSalaryAppPath }}
           nav_artifact_app_filter: '*.app'
 
     - powershell: Write-Host "##vso[task.setvariable variable=AppVersion;]$((Get-Content -Path $env:MainAppFolder/app.json | ConvertFrom-Json).version)"
