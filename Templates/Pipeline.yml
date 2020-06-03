@@ -163,7 +163,6 @@ stages:
         inputs:
           usedocker: true
           testfilter: ${{ parameters.testFilter }}
-          installaltesttool: ${{ parameters.installALTestTool }} 
           failed_test_action: ${{ parameters.failedTestAction }} 
       - task: PublishTestResults@2
         displayName: 'Publish Test Results **/TestResults.xml'
