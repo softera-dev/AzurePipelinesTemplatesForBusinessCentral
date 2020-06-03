@@ -14,7 +14,7 @@ parameters:
 - name: appVersion
   type: string
   default: ''
-- name: e-Invoice
+- name: eInvoice
   type: boolean
   default: false
 - name: latestCoreAppPath 
@@ -183,7 +183,7 @@ stages:
         pfx_path: $(DownloadBCAppSigningCertificate.SecureFilePath)
         timestamp_uri: 'http://timestamp.comodoca.com/authenticode' 
       
-    - ${{ if eq(parameters.e-Invoice, true) }}:  
+    - ${{ if eq(parameters.eInvoice, true) }}:  
       - task: ALOpsDockerExec@1
         inputs:
           inline_script: 'Copy-Item -Path C:\edoc\MainApp\.netpackages\OmnivaConnector.dll -Destination (Resolve-Path -Path ''C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\'').ProviderPath'
