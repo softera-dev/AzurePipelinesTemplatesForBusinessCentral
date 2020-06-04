@@ -2,6 +2,9 @@ parameters:
 - name: acceptOutdatedImages
   type: boolean
   default: true
+- name: dockerMemory
+  type: string
+  default: 4g
 - name: dockerIsolation
   type: string
   default: hyperv
@@ -14,6 +17,28 @@ parameters:
 - name: appVersion
   type: string
   default: ''
+ 
+- name: testType
+  type: string
+  default: none
+  values:
+  - none
+  - sameApp
+  - testApp
+- name: testFilter
+  type: string
+  default: ''
+- name: installALTestTool   #bc14 ir žemesnėm nurodom false
+  type: boolean
+  default: true
+- name: failedTestAction
+  type: string
+  default: Warning
+  values:
+  - Warning
+  - Error
+  - Ignore
+  
 - name: eInvoice
   type: boolean
   default: false
@@ -35,26 +60,7 @@ parameters:
 - name: latestSalaryAppPath 
   type: string
   default: ''
-- name: testType
-  type: string
-  default: none
-  values:
-  - none
-  - sameApp
-  - testApp
-- name: testFilter
-  type: string
-  default: ''
-- name: installALTestTool   #bc14 ir žemesnėm nurodom false
-  type: boolean
-  default: true
-- name: failedTestAction
-  type: string
-  default: Warning
-  values:
-  - Warning
-  - Error
-  - Ignore
+
 
 stages:
 - stage: Main
@@ -64,6 +70,8 @@ stages:
     variables:
     - name: AcceptOutdatedImages
       value: ${{ parameters.acceptOutdatedImages }}
+    - name: DockerMemory
+      value: ${{ parameters.dockerMemory }}
     - name: DockerIsolation
       value: ${{ parameters.dockerIsolation }}
     - name: MasterBranch
@@ -108,7 +116,7 @@ stages:
         docker_parameters: |
           --isolation=$(DockerIsolation)
           --env ExitOnError=N
-          --memory 4g
+          --memory $(DockerMemory)
       timeoutInMinutes: 2
 
     - task: ALOpsDockerWait@1
@@ -223,50 +231,40 @@ stages:
         usedocker: true
         nav_artifact_app_filter: '*.app'  
         
-#    - ${{ if eq(parameters.testType, 'testApp') }}:      
-#      - task: ALOpsAppCompiler@1
-#        displayName: 'Compile Test Extension'
-#        inputs:
-#          usedocker: true
-#          targetproject: '$(TestAppFolder)/app.json'
-#          failed_on_warnings: true
-#          nav_app_version: $(AppVersion)
-#      - task: ALOpsAppPublish@1
-#        displayName: 'Publish Test AL-App'
-#        inputs:
-#          usedocker: true
-#          nav_artifact_app_filter: '*.test*.app' 
-#          skip_verification: true
+    - ${{ if eq(parameters.testType, 'testApp') }}:      
+      - task: ALOpsAppCompiler@1
+        displayName: 'Compile Test Extension'
+        inputs:
+          usedocker: true
+          targetproject: '$(TestAppFolder)/app.json'
+          failed_on_warnings: true
+          nav_app_version: $(AppVersion)
+      - task: ALOpsAppPublish@1
+        displayName: 'Publish Test AL-App'
+        inputs:
+          usedocker: true
+          nav_artifact_app_filter: '*.test*.app' 
+          skip_verification: true
     
-#    - ${{ if not(eq(parameters.testType, 'none')) }}:
-#      - task: ALOpsAppTest@1
-#        displayName: 'ALOps App Test'
-#        inputs:
-#          usedocker: true
-#          testfilter: ${{ parameters.testFilter }}
-#          failed_test_action: ${{ parameters.failedTestAction }} 
-#        continueOnError: true 
-#      - task: PublishTestResults@2
-#        displayName: 'Publish Test Results **/TestResults.xml'
-#        inputs:
-#          testResultsFormat: XUnit
-#          testResultsFiles: '**/TestResults.xml'
-#          testRunTitle: 'BC Test Results: $(Build.BuildId)'
-      
-    # !!
-    
-    - task: ALOpsAppTest@1
-      displayName: 'ALOps Run TestSuite'
-      inputs:
-        usedocker: true
-        import_action: "Skip"
-        import_testtoolkit: false
-        testpage: '130455'
-        testsuite: 'DEFAULT'
-        failed_test_action: 'Ignore'
-      continueOnError: true   
-    
-    # !!
+    - ${{ if not(eq(parameters.testType, 'none')) }}:
+      - task: ALOpsAppTest@1
+        displayName: 'ALOps App Test'
+        inputs:
+          usedocker: true
+          testfilter: ${{ parameters.testFilter }}
+          failed_test_action: ${{ parameters.failedTestAction }} 
+        continueOnError: true 
+      - task: ALOpsAppTest@1
+        displayName: 'ALOps Run TestSuite'
+        inputs:
+          usedocker: true
+          import_action: "Skip"
+          import_testtoolkit: false
+          testpage: '130455'
+          testsuite: 'DEFAULT'
+          testfilter: ${{ parameters.testFilter }}
+          failed_test_action: ${{ parameters.failedTestAction }} 
+        continueOnError: true
           
     - task: ALOpsDockerRemove@1
       displayName: 'Remove Docker Container'
