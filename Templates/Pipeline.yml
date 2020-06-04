@@ -252,6 +252,21 @@ stages:
 #          testResultsFormat: XUnit
 #          testResultsFiles: '**/TestResults.xml'
 #          testRunTitle: 'BC Test Results: $(Build.BuildId)'
+      
+    # !!
+    
+    - task: ALOpsAppTest@1
+      displayName: 'ALOps Run TestSuite'
+      inputs:
+        usedocker: true
+        import_action: "Skip"
+        import_testtoolkit: false
+        testpage: '130455'
+        testsuite: 'DEFAULT'
+        failed_test_action: 'Ignore'
+      continueOnError: true   
+    
+    # !!
           
     - task: ALOpsDockerRemove@1
       displayName: 'Remove Docker Container'
