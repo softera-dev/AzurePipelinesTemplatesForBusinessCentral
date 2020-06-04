@@ -248,13 +248,6 @@ stages:
     
     - ${{ if not(eq(parameters.testType, 'none')) }}:
       - task: ALOpsAppTest@1
-        displayName: 'ALOps App Test'
-        inputs:
-          usedocker: true
-          testfilter: ${{ parameters.testFilter }}
-          failed_test_action: ${{ parameters.failedTestAction }} 
-        continueOnError: true 
-      - task: ALOpsAppTest@1
         displayName: 'ALOps Run TestSuite'
         inputs:
           usedocker: true
@@ -265,6 +258,12 @@ stages:
           testfilter: ${{ parameters.testFilter }}
           failed_test_action: ${{ parameters.failedTestAction }} 
         continueOnError: true
+      - task: PublishTestResults@2
+        displayName: 'Publish Test Results **/TestResults.xml'
+        inputs:
+          testResultsFormat: XUnit
+          testResultsFiles: '**/TestResults.xml'
+          testRunTitle: 'BC Test Results: $(Build.BuildId)'
           
     - task: ALOpsDockerRemove@1
       displayName: 'Remove Docker Container'
