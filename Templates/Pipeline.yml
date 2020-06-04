@@ -247,17 +247,29 @@ stages:
           skip_verification: true
     
     - ${{ if not(eq(parameters.testType, 'none')) }}:
-      - task: ALOpsAppTest@1
-        displayName: 'ALOps Run TestSuite'
-        inputs:
-          usedocker: true
-          import_action: "Skip"
-          import_testtoolkit: false
-          testpage: '130455'
-          testsuite: 'DEFAULT'
-          testfilter: ${{ parameters.testFilter }}
-          failed_test_action: ${{ parameters.failedTestAction }} 
-        continueOnError: true
+      - ${{ if parameters.installALTestTool }}:
+        - task: ALOpsAppTest@1
+          displayName: 'ALOps Run TestSuite'
+          inputs:
+            usedocker: true
+            import_action: "Skip"
+            import_testtoolkit: false
+            testpage: '130455'
+            testsuite: 'DEFAULT'
+            failed_test_action: ${{ parameters.failedTestAction }} 
+          continueOnError: true
+      - ${{ if not(parameters.installALTestTool) }}:
+        - task: ALOpsAppTest@1
+          displayName: 'ALOps Run TestSuite'
+          inputs:
+            usedocker: true
+            import_action: "Skip"
+            import_testtoolkit: false
+            testpage: '130455'
+            testsuite: 'DEFAULT'
+            testfilter: ${{ parameters.testFilter }}
+            failed_test_action: ${{ parameters.failedTestAction }} 
+          continueOnError: true
       - task: PublishTestResults@2
         displayName: 'Publish Test Results **/TestResults.xml'
         inputs:
