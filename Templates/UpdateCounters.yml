@@ -12,7 +12,7 @@ parameters:
   default: Compile ALOps
 - name: connectionString
   type: string
-  default: Data Source=counters\SQLEXPRESS; User=demo; Password=Password123.; Initial Catalog=Counters
+  default: Data Source=SQL03\SQL2017; Integrated Security=True; Initial Catalog=AzureDevOpsCounter
 
 steps:
 - powershell: |
