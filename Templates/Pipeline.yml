@@ -84,12 +84,12 @@ stages:
     - checkout: self
       clean: true
       
-#    - template: UpdateCounters.yml
-#      parameters:
-#        organization: $(OrganizationName)
-#        project: $(System.TeamProject)
-#        repository: $(Build.RepositoryName)
-#        branch: $(Build.SourceBranchName)
+    - template: UpdateCounters.yml
+      parameters:
+        organization: $(OrganizationName)
+        project: $(System.TeamProject)
+        repository: $(Build.RepositoryName)
+        branch: $(Build.SourceBranchName)
 
     - task: DownloadSecureFile@1
       name: DownloadBCLicense
