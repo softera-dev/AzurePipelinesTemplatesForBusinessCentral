@@ -90,8 +90,8 @@ stages:
         }
         Add-Type -AssemblyName Microsoft.VisualBasic
         $ComputerInfo = [Microsoft.VisualBasic.Devices.ComputerInfo]::new()
-        if ($ComputerInfo.AvailablePhysicalMemory -lt 100gb) {
-            Write-Host -Object '##[error]There is no free memory space left. There must be atleast 100 GB.'
+        if ($ComputerInfo.AvailablePhysicalMemory -lt 4gb) {
+            Write-Host -Object '##[error]There is no free memory space left. There must be atleast 4 GB.'
             $ExitCode = 1
         }
         exit($ExitCode)
