@@ -81,6 +81,23 @@ stages:
     - name: AppVersion
       value: ${{ parameters.appVersion }}
     steps:
+    - powershell: |
+        $ExitCode = 0
+        $FreeDiskSpace = Get-PSDrive -Name C | Select-Object -ExpandProperty Free 
+        if ($FreeDiskSpace -lt 10gb) {
+            Write-Warning -Message 'There is no free disk space left. There must be atleast 10 GB.'
+            $ExitCode = 1
+        }
+        Add-Type -AssemblyName Microsoft.VisualBasic
+        $ComputerInfo = [Microsoft.VisualBasic.Devices.ComputerInfo]::new()
+        if ($ComputerInfo.AvailablePhysicalMemory -lt 100gb) {
+            Write-Warning -Message 'There is no free memory space left. There must be atleast 100 GB.'
+            $ExitCode = 1
+        }
+        exit($ExitCode)
+      condition: always()
+      displayName: Checking free disk and ram space
+    
     - checkout: self
       clean: true
       
