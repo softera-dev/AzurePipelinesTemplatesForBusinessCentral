@@ -17,6 +17,10 @@ parameters:
 - name: appVersion
   type: string
   default: ''
+  
+- name: failCompilationOnWarnings
+  type: boolean
+  default: false
  
 - name: testType
   type: string
@@ -219,7 +223,7 @@ stages:
       inputs:
         usedocker: true
         targetproject: '$(MainAppFolder)/app.json'
-        failed_on_warnings: true
+        failed_on_warnings: ${{ parameters.failCompilationOnWarnings }}
         nav_app_version: $(AppVersion)
 
     - task: ALOpsAppSign@1
@@ -264,7 +268,7 @@ stages:
         inputs:
           usedocker: true
           targetproject: '$(TestAppFolder)/app.json'
-          failed_on_warnings: true
+          failed_on_warnings: ${{ parameters.failCompilationOnWarnings }}
           nav_app_version: $(AppVersion)
       - task: ALOpsAppPublish@1
         displayName: 'Publish Test AL-App'
