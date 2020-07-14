@@ -20,7 +20,7 @@ parameters:
   
 - name: failCompilationOnWarnings
   type: boolean
-  default: false
+  default: true
  
 - name: testType
   type: string
