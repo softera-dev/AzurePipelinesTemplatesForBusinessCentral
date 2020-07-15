@@ -49,7 +49,7 @@ parameters:
 - name: S4LESSEE
   type: boolean
   default: false
-- name: latestSofteraBalticLoggingPath
+- name: latestSofteraBalticLoggingAppPath
   type: string
   default: ''
 - name: latestCoreAppPath 
