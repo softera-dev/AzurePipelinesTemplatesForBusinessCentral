@@ -162,12 +162,12 @@ stages:
         license_path: '$(DownloadBCLicense.SecureFilePath)'
         print_license_info: true
 
-    - ${{ if not(eq(parameters.latestSofteraBalticLoggingPath, '')) }}:
+    - ${{ if not(eq(parameters.latestSofteraBalticLoggingAppPath, '')) }}:
       - task: ALOpsAppPublish@1
         displayName: 'Publish AL-App (Softera Baltic Logging)'
         inputs:
           usedocker: true
-          artifact_path: ${{ parameters.latestSofteraBalticLoggingPath }}
+          artifact_path: ${{ parameters.latestSofteraBalticLoggingAppPath }}
           nav_artifact_app_filter: '*.app'
 
     - ${{ if not(eq(parameters.latestCoreAppPath, '')) }}:
