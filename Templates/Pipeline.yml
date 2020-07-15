@@ -43,15 +43,15 @@ parameters:
   - Error
   - Ignore
   
-- name: latestSofteraBalticLoggingPath
-  type: string
-  default: ''
 - name: eInvoice
   type: boolean
   default: false
 - name: S4LESSEE
   type: boolean
   default: false
+- name: latestSofteraBalticLoggingPath
+  type: string
+  default: ''
 - name: latestCoreAppPath 
   type: string
   default: ''
