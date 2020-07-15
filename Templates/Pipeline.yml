@@ -43,6 +43,9 @@ parameters:
   - Error
   - Ignore
   
+- name: latestSofteraBalticLoggingPath
+  type: string
+  default: ''
 - name: eInvoice
   type: boolean
   default: false
@@ -64,7 +67,6 @@ parameters:
 - name: latestSalaryAppPath 
   type: string
   default: ''
-
 
 stages:
 - stage: Main
@@ -159,6 +161,14 @@ stages:
         usedocker: true
         license_path: '$(DownloadBCLicense.SecureFilePath)'
         print_license_info: true
+
+    - ${{ if not(eq(parameters.latestSofteraBalticLoggingPath, '')) }}:
+      - task: ALOpsAppPublish@1
+        displayName: 'Publish AL-App (Softera Baltic Logging)'
+        inputs:
+          usedocker: true
+          artifact_path: ${{ parameters.latestSofteraBalticLoggingPath }}
+          nav_artifact_app_filter: '*.app'
 
     - ${{ if not(eq(parameters.latestCoreAppPath, '')) }}:
       - task: ALOpsAppPublish@1
