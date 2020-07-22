@@ -260,7 +260,8 @@ stages:
             $SelectedAppVersion = $CustomAppVersion
           }
         }
-        Write-Host "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
+        Write-Host -Object "Selected app version: $SelectedAppVersion."
+        Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
       env:
         AppVersionSelection: ${{ parameters.appVersionSelection }}
         CustomAppVersion: ${{ parameters.appVersion }}
