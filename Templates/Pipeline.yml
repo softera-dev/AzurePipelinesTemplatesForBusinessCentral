@@ -241,12 +241,12 @@ stages:
           'dockerImageMajorMinorAndManifestMajorMinor' {
             $SelectedAppVersion = '{0}.{1}.{2}.{3}' -f
               $DockerImageVersion.Major, $DockerImageVersion.Minor,
-              $ManifestVersion.Major, $ManifestVersion.Minor
+              $ManifestAppVersion.Major, $ManifestAppVersion.Minor
           }
           'dockerImageMajorMinorAndManifestBuildRevision' {
             $SelectedAppVersion = '{0}.{1}.{2}.{3}' -f
               $DockerImageVersion.Major, $DockerImageVersion.Minor,
-              $ManifestVersion.Build, $ManifestVersion.Revision
+              $ManifestAppVersion.Build, $ManifestAppVersion.Revision
           }
           'custom' {
             $SelectedAppVersion = $CustomAppVersion
