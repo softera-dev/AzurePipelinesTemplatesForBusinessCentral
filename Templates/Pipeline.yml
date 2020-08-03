@@ -277,7 +277,7 @@ stages:
         Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
         
         $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
-        Write-Host -Object "Custom app release version: $CustomAppReleaseVersion
+        Write-Host -Object "Custom app release version: $CustomAppReleaseVersion"
         $SelectedAppReleaseVersion = `
           switch ($env:AppReleaseVersionSelection) {
             'manifestMajorMinor' {
