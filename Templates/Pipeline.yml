@@ -25,7 +25,17 @@ parameters:
 - name: appVersion
   type: string
   default: '0.0.0.0'
-  
+- name: appReleaseVersionSelection
+  type: string
+  default: manifestBuildRevision
+  values:
+  - manifestMajorMinor
+  - manifestBuildRevision
+  - manual
+- name: appReleaseVersion
+  type: string
+  default: ''
+
 - name: failCompilationOnWarnings
   type: boolean
   default: true
@@ -93,6 +103,8 @@ stages:
     - name: IsPullRequest
       value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
     - name: AppVersion
+      value: ''
+    - name: AppReleaseVersion
       value: ''
     steps:
     - powershell: |
@@ -255,16 +267,39 @@ stages:
               $DockerImageVersion.Major, $DockerImageVersion.Minor,
               $ManifestAppVersion.Build, $ManifestAppVersion.Revision
           }
-          'custom' {
+          'manual' {
             Write-Host -Object "Using custom app version."
             $SelectedAppVersion = $CustomAppVersion
           }
         }
         Write-Host -Object "Selected app version: $SelectedAppVersion."
         Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
+        
+        $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
+        Write-Host -Object "Custom app release version: $CustomAppReleaseVersion
+        switch ($env:AppReleaseVersionSelection) {
+          'manifestMajorMinor' {
+            Write-Host -Object "Creating app release version using app manifest major-minor version."
+            $SelectedAppReleaseVersion = '{0}.{1}' -f
+              $ManifestAppVersion.Major, $ManifestAppVersion.Minor
+          }
+          'manifestBuildRevision' {
+            Write-Host -Object "Creating app release version using app manifest build-revision version."
+            $SelectedAppReleaseVersion = '{0}.{1}' -f
+              $ManifestAppVersion.Build, $ManifestAppVersion.Revision
+          }
+          'manual' {
+            Write-Host -Object "Using custom app release version."
+            $SelectedAppReleaseVersion = $CustomAppReleaseVersion
+          }
+        }
+        Write-Host -Object "Selected app release version: $SelectedAppReleaseVersion."
+        Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
       env:
         AppVersionSelection: ${{ parameters.appVersionSelection }}
         CustomAppVersion: ${{ parameters.appVersion }}
+        AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
+        CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
         BCInsider_UserName: $(BCInsiderUserName)
         BCInsider_Password: $(BCInsiderPassword)
       displayName: Get App Version
@@ -381,36 +416,43 @@ stages:
 
     - powershell: |
         Set-StrictMode -Version Latest
-        $securepassword = convertto-securestring -string $env:BCInsider_Password -AsPlainText -force
-        $credential = [pscredential]::new($env:BCInsider_UserName, $securepassword)
-        $DockerVersion = (GET-NAVCONTAINERimagelabels $env:ImageName -registryCredential $credential).version
-        $BranchName = if($env:IsPullRequest -eq 'false') {$env:Build_SourceBranchName} else {$env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''}
-        $CommonPath = "\\filestorage\Projects\DevOps\$(OrganizationName)\$env:System_TeamProject\$env:Build_Repository_Name\$BranchName-$DockerVersion\$env:AppVersion"
+        $SecurePassword = ConvertTo-SecureString -String $env:BCInsider_Password -AsPlainText -Force
+        $Credential = New-Object -TypeName pscredential -ArgumentList $env:BCInsider_UserName, $SecurePassword
+        $DockerVersion = (Get-BCContainerImageLabels -imageName $env:ImageName -registryCredential $Credential).version
+        $BranchName = `
+            if ($env:IsPullRequest -eq 'false') {
+                $env:Build_SourceBranchName
+            } else {
+                $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+            }
+
+        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
         if ([System.IO.Directory]::Exists($TempPath)) {
             throw "TempPath ($TempPath) already exist"
         }
 
-        New-Item -itemtype directory -path $TempPath -force
-        copy-item -path * -destination $TempPath -recurse
+        New-Item -ItemType Directory -Path $TempPath -Force
+        Copy-Item -Path * -Destination $TempPath -Recurse
 
-        $OldPath =  "$CommonPath-Old"
-        if([System.IO.Directory]::Exists($OldPath)) {
-            remove-item $OldPath -recurse -force
+        $OldPath = "$CommonPath-Old"
+        if ([System.IO.Directory]::Exists($OldPath)) {
+            Remove-Item -Path $OldPath -Recurse -Force
         }
-        
+
         $Path = $CommonPath
-        if ([System.IO.Directory]::Exists($path)) {
-            new-item -itemtype directory -path $OldPath -force
-            copy-item -path $Path\* -destination $OldPath -recurse
-            remove-item $Path -Recurse -Force
+        if ([System.IO.Directory]::Exists($Path)) {
+            New-Item -ItemType Directory -Path $OldPath -Force
+            Copy-Item -Path $Path\* -Destination $OldPath -Recurse
+            Remove-Item -Path $Path -Recurse -Force
         }
-        if (-Not ([System.IO.Directory]::Exists($path))) {
-            copy-item -path $TempPath -destination $Path -recurse
-            remove-item  -path $TempPath -recurse -force
+        if (-not ([System.IO.Directory]::Exists($path))) {
+            Copy-Item -Path $TempPath -Destination $Path -Recurse
+            Remove-Item  -Path $TempPath -Recurse -Force
         }
       condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])))
       env:
         BCInsider_UserName: $(BCInsiderUserName)
         BCInsider_Password: $(BCInsiderPassword)
+        AppReleaseVersion: $(AppReleaseVersion)
       displayName: Copy files to \\filestorage
