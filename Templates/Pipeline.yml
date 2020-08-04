@@ -29,6 +29,7 @@ parameters:
   type: string
   default: error
   values:
+  - error
   - warning
   - none
 - name: appReleaseVersionSelection
