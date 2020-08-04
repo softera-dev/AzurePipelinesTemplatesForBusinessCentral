@@ -25,9 +25,12 @@ parameters:
 - name: appVersion
   type: string
   default: '0.0.0.0'
-- name: skipManifestVersionCheck
-  type: boolean
-  default: false
+- name: manifestVersionMismatchAction
+  type: string
+  default: error
+  values:
+  - warning
+  - none
 - name: appReleaseVersionSelection
   type: string
   default: manifestBuildRevision
@@ -279,13 +282,17 @@ stages:
         Write-Host -Object "Selected app version: $SelectedAppVersion."
         Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
         
-        if ($env:SkipManifestVersionCheck -eq 'false') {
-          if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
-            $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
-            $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
-            $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision) {
-              Write-Warning -Message "Manifest app version does not match selected app version."
-            }
+        if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
+          $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
+          $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
+          $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision)
+        {
+          if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
+            Write-Warning -Message "Manifest app version does not match selected app version."
+          }
+          if ($ManifestVersionMismatchAction -eq 'error') {
+            exit(1)
+          }
         }
         
         $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
@@ -312,7 +319,7 @@ stages:
       env:
         AppVersionSelection: ${{ parameters.appVersionSelection }}
         CustomAppVersion: ${{ parameters.appVersion }}
-        SkipManifestVersionCheck: ${{ parameters.skipManifestVersionCheck }}
+        manifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
         AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
         CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
         BCInsider_UserName: $(BCInsiderUserName)
