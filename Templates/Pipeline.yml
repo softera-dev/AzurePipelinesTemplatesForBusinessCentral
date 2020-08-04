@@ -25,6 +25,9 @@ parameters:
 - name: appVersion
   type: string
   default: '0.0.0.0'
+- name: skipManifestVersionCheck
+  type: boolean
+  default: false
 - name: appReleaseVersionSelection
   type: string
   default: manifestBuildRevision
@@ -250,7 +253,7 @@ stages:
         Write-Host -Object "Docker image version: $DockerImageVersion"
         Write-Host -Object "Manifest app version: $ManifestAppVersion"
         
-        $SelectedAppVersion = `
+        [version]$SelectedAppVersion = `
           switch ($env:AppVersionSelection) {
             'manifest' {
               Write-Host -Object "Using app version from app manifest."
@@ -276,6 +279,15 @@ stages:
         Write-Host -Object "Selected app version: $SelectedAppVersion."
         Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
         
+        if ($env:SkipManifestVersionCheck -eq 'false') {
+          if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
+            $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
+            $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
+            $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision) {
+              Write-Warning -Message "Manifest app version does not match selected app version."
+            }
+        }
+        
         $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
         Write-Host -Object "Custom app release version: $CustomAppReleaseVersion"
         $SelectedAppReleaseVersion = `
@@ -300,6 +312,7 @@ stages:
       env:
         AppVersionSelection: ${{ parameters.appVersionSelection }}
         CustomAppVersion: ${{ parameters.appVersion }}
+        SkipManifestVersionCheck: ${{ parameters.skipManifestVersionCheck }}
         AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
         CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
         BCInsider_UserName: $(BCInsiderUserName)
