@@ -375,7 +375,7 @@ stages:
     - ${{ if eq(parameters.eInvoice, true) }}:  
       - task: ALOpsDockerExec@1
         inputs:
-          inline_script: 'Copy-Item -Path C:\edoc\MainApp\.netpackages\OmnivaConnector.dll -Destination (Resolve-Path -Path ''C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\'').ProviderPath'
+          inline_script: 'Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll -Destination (Resolve-Path -Path ''C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\'').ProviderPath'
 
     - ${{ if eq(parameters.S4LESSEE, true) }}: 
       - task: ALOpsDockerExec@1
