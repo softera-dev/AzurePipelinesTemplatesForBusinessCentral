@@ -92,6 +92,9 @@ parameters:
 - name: latestSalaryAppPath 
   type: string
   default: ''
+- name: latestLBCAlnaCoreAppPath
+  type: string
+  default: ''
 
 stages:
 - stage: Main
@@ -236,6 +239,14 @@ stages:
           usedocker: true
           artifact_path: ${{ parameters.latestSalaryAppPath }}
           nav_artifact_app_filter: '*.app'
+    
+    - ${{ if not(eq(parameters.latestLBCAlnaCoreAppPath, '')) }}:
+      - task: ALOpsAppPublish@1
+        displayName: 'Publish AL-App (Core)'
+        inputs:
+          usedocker: true
+          artifact_path: ${{ parameters.latestLBCAlnaCoreAppPath }}
+          nav_artifact_app_filter: '*.app'
 
     - powershell: |
         Set-StrictMode -Version Latest
@@ -342,6 +353,24 @@ stages:
            Library Assert
            Test Runner
     
+    - task: ALOpsAppCompiler@1
+      displayName: 'Compile Extension'
+      inputs:
+        usedocker: true
+        targetproject: '$(MainAppFolder)/app.json'
+        failed_on_warnings: ${{ parameters.failCompilationOnWarnings }}
+        nav_app_version: $(AppVersion)
+
+    - task: ALOpsAppSign@1
+      displayName: 'ALOps App Sign'
+      env:
+        pfx_password: $(BCAppSigningCertificatePassword)
+      inputs:
+        usedocker: true
+        nav_artifact_app_filter: '*.app'
+        pfx_path: $(DownloadBCAppSigningCertificate.SecureFilePath)
+        timestamp_uri: 'http://timestamp.comodoca.com/authenticode' 
+      
     - ${{ if eq(parameters.eInvoice, true) }}:  
       - task: ALOpsDockerExec@1
         inputs:
@@ -362,25 +391,6 @@ stages:
 
             #Copy-Item -Path C:\edoc\MainApp\.netpackages\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
     
-    - task: ALOpsAppCompiler@1
-      displayName: 'Compile Extension'
-      inputs:
-        usedocker: true
-        targetproject: '$(MainAppFolder)/app.json'
-        failed_on_warnings: ${{ parameters.failCompilationOnWarnings }}
-        nav_app_version: $(AppVersion)
-
-    - task: ALOpsAppSign@1
-      displayName: 'ALOps App Sign'
-      env:
-        pfx_password: $(BCAppSigningCertificatePassword)
-      inputs:
-        usedocker: true
-        nav_artifact_app_filter: '*.app'
-        pfx_path: $(DownloadBCAppSigningCertificate.SecureFilePath)
-        timestamp_uri: 'http://timestamp.comodoca.com/authenticode' 
-      
-  
     - task: ALOpsAppPublish@1
       displayName: 'Publish AL-App'
       inputs:
