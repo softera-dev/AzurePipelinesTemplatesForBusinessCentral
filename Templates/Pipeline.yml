@@ -11,6 +11,15 @@ parameters:
   values: 
   - hyperv
   - process
+- name: organizationName
+  type: string
+  default: ''
+- name: mainAppFolder
+  type: string
+  default: MainApp
+- name: testAppFolder
+  type: string
+  default: TestApp
 - name: masterBranch
   type: string
   default: WIP
@@ -116,6 +125,12 @@ stages:
       value: ''
     - name: AppReleaseVersion
       value: ''
+    - name: MainAppFolder
+      value: ${{ parameters.mainAppFolder }}
+    - name: TestAppFolder
+      value: ${{ parameters.testAppFolder }}
+    - name: OrganizationName
+      value: ${{ parameters.organizationName }}
     steps:
     - powershell: |
         $ExitCode = 0
@@ -258,7 +273,7 @@ stages:
         # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
         [version]$CustomAppVersion = $env:CustomAppVersion
         [version]$ManifestAppVersion = `
-          Get-Content -Path $env:MainAppFolder/app.json |
+          Get-Content -Path $(MainAppFolder)/app.json |
           ConvertFrom-Json |
           Select-Object -ExpandProperty version
         [version]$DockerImageVersion = `
