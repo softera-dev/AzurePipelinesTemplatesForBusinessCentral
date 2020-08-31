@@ -500,7 +500,7 @@ stages:
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
-      condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']))), and(succeeded(), not(eq(variables['Build.Reason'], 'PullRequest')))
+      condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])), not(eq(variables['Build.Reason'], 'PullRequest')))
       env:
         BCInsider_UserName: $(BCInsiderUserName)
         BCInsider_Password: $(BCInsiderPassword)
