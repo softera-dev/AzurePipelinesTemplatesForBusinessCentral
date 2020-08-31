@@ -506,3 +506,4 @@ stages:
         BCInsider_Password: $(BCInsiderPassword)
         AppReleaseVersion: $(AppReleaseVersion)
       displayName: Copy files to \\filestorage
+    condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
