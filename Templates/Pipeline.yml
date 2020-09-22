@@ -189,11 +189,8 @@ stages:
     - task: ALOpsDockerCreate@1
       displayName: 'ALOps Docker Create'
       inputs:
-        artifactspecification: Specific       # Set Artifact resolve method. $(artifactspecification)
-        artifactversion: 16.5                 # BC/NAV Version, eg: 9, 10.4, NAV2016, 16.4.24524. $(artifactversion)
-        artifacttype: OnPrem                  # Set Artifact Type. $(artifacttype)
-        artifactcountry: w1                   # The Country for the Artifact. $(artifactcountry)
-        imageprefix: ImageName                  # New image name, tag defined by $(imagenametemplate). $(imageprefix)
+        artifactspecification: 'Hint'
+        artifacthint:          $(ImageName)
         
     - task: ALOpsDockerStart@1
       inputs:
