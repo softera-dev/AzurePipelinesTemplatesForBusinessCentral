@@ -190,7 +190,7 @@ stages:
       displayName: 'ALOps Docker Create'
       inputs:
         artifactspecification: 'Hint'
-        artifacthint:          $(ImageName)
+        artifacthint: $(ImageName)
         
     - task: ALOpsDockerStart@1
       inputs:
