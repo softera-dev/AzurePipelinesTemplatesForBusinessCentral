@@ -189,8 +189,7 @@ stages:
     - task: ALOpsDockerCreate@1
       displayName: 'ALOps Docker Create'
       inputs:
-        artifactspecification: 'Hint'
-        artifacthint: $(ImageName)
+        dockerregistry: $(ImageName)
         
     - task: ALOpsDockerStart@1
       inputs:
