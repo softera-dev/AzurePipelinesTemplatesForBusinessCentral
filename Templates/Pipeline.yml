@@ -189,7 +189,11 @@ stages:
     - task: ALOpsDockerCreate@1
       displayName: 'ALOps Docker Create'
       inputs:
-        dockerregistry: $(ImageName)
+        dockerregistry: $(ImageName)    
+        artifactversion: ''                     
+        artifacttype: ''
+        artifactcountry: ''                      
+        imageprefix: ''  
         
     - task: ALOpsDockerStart@1
       inputs:
