@@ -189,11 +189,11 @@ stages:
     - task: ALOpsDockerCreate@1
       displayName: 'ALOps Docker Create'
       inputs:
-        dockerregistry: $(ImageName)    
+        dockerregistry: 'bcinsider.azurecr.io'    
         artifactversion: ''                     
         artifacttype: ''
-        artifactcountry: ''                      
-        imageprefix: ''  
+        artifactcountry: 'lt'                      
+        imageprefix: 'bcsandbox'  
         
     - task: ALOpsDockerStart@1
       inputs:
