@@ -218,14 +218,6 @@ stages:
         usedocker: true
         license_path: '$(DownloadBCLicense.SecureFilePath)'
         print_license_info: true
-
-    - ${{ if not(eq(parameters.latestIntegrationCoreAppPath, '')) }}:
-      - task: ALOpsAppPublish@1
-        displayName: 'Publish AL-App (Integration Core)'
-        inputs:
-          usedocker: true
-          artifact_path: ${{ parameters.latestIntegrationCoreAppPath }}
-          nav_artifact_app_filter: '*.app'
     
     - ${{ if not(eq(parameters.latestSofteraBalticLoggingAppPath, '')) }}:
       - task: ALOpsAppPublish@1
@@ -233,6 +225,15 @@ stages:
         inputs:
           usedocker: true
           artifact_path: ${{ parameters.latestSofteraBalticLoggingAppPath }}
+          nav_artifact_app_filter: '*.app'
+
+    
+    - ${{ if not(eq(parameters.latestIntegrationCoreAppPath, '')) }}:
+      - task: ALOpsAppPublish@1
+        displayName: 'Publish AL-App (Integration Core)'
+        inputs:
+          usedocker: true
+          artifact_path: ${{ parameters.latestIntegrationCoreAppPath }}
           nav_artifact_app_filter: '*.app'
 
     - ${{ if not(eq(parameters.latestCoreAppPath, '')) }}:
