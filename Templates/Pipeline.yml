@@ -83,6 +83,9 @@ parameters:
 - name: S4LESSEE
   type: boolean
   default: false
+- name: latestIntegrationCoreAppPath
+  type: string
+  default: ''
 - name: latestSofteraBalticLoggingAppPath
   type: string
   default: ''
@@ -216,6 +219,14 @@ stages:
         license_path: '$(DownloadBCLicense.SecureFilePath)'
         print_license_info: true
 
+    - ${{ if not(eq(parameters.latestIntegrationCoreAppPath, '')) }}:
+      - task: ALOpsAppPublish@1
+        displayName: 'Publish AL-App (Integration Core)'
+        inputs:
+          usedocker: true
+          artifact_path: ${{ parameters.latestIntegrationCoreAppPath }}
+          nav_artifact_app_filter: '*.app'
+    
     - ${{ if not(eq(parameters.latestSofteraBalticLoggingAppPath, '')) }}:
       - task: ALOpsAppPublish@1
         displayName: 'Publish AL-App (Softera Baltic Logging)'
