@@ -191,8 +191,7 @@ stages:
 #       inputs:
 #         dockerregistry: 'bcinsider.azurecr.io'                    
 #         artifacttype: 'sandbox'
-#         artifactcountry: 'lt'                      
-#         imageprefix: 'bcsandbox'  
+#         artifactcountry: 'lt'
         
     - task: ALOpsDockerStart@1
       inputs:
