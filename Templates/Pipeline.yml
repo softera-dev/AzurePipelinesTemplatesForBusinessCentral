@@ -171,27 +171,27 @@ stages:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
       
-    - powershell: |
-        $BestImageName = Get-BestBCContainerImageName -imageName $env:ImageName
+#     - powershell: |
+#         $BestImageName = Get-BestBCContainerImageName -imageName $env:ImageName
         
-        # 2004 is both name for image tag and for windows build
-        if ($BestImageName -notlike '*:*ltsc2019') {
-          if ($BestImageName -like '*:*') {
-            $BestImageName += '-ltsc2019'
-          } else {
-            $BestImageName += ':ltsc2019'
-          }
-        }
+#         # 2004 is both name for image tag and for windows build
+#         if ($BestImageName -notlike '*:*ltsc2019') {
+#           if ($BestImageName -like '*:*') {
+#             $BestImageName += '-ltsc2019'
+#           } else {
+#             $BestImageName += ':ltsc2019'
+#           }
+#         }
         
-        docker pull $BestImageName
-      displayName: Pull new image
+#         docker pull $BestImageName
+#       displayName: Pull new image
 
-#     - task: ALOpsDockerCreate@1
-#       displayName: 'ALOps Docker Create'
-#       inputs:
-#         dockerregistry: 'bcinsider.azurecr.io'                    
-#         artifacttype: 'sandbox'
-#         artifactcountry: 'lt'
+    - task: ALOpsDockerCreate@1
+      displayName: 'ALOps Docker Create'
+      inputs:
+        dockerregistry: 'bcinsider.azurecr.io'                    
+        artifacttype: 'sandbox'
+        artifactcountry: 'lt'
         
     - task: ALOpsDockerStart@1
       inputs:
