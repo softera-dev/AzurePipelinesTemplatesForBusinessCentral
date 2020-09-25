@@ -51,6 +51,9 @@ parameters:
 - name: appReleaseVersion
   type: string
   default: ''
+- name: imagePrefix
+  type: string
+  default: ''
 
 - name: failCompilationOnWarnings
   type: boolean
@@ -191,12 +194,13 @@ stages:
 
     - task: ALOpsDockerCreate@1
       displayName: 'ALOps Docker Create'
-      inputs:                
+      inputs:             
+        imageprefix: imagePrefix
         forcecreateimage: true
         
     - task: ALOpsDockerStart@1
       inputs:
-        docker_image: $(ImageName)
+        docker_image: ${{ parameters.imagePrefix }}
         accept_image_outdated: $(AcceptOutdatedImages)
         memory_gb: 4
         docker_parameters: |
