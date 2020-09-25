@@ -195,7 +195,7 @@ stages:
     - task: ALOpsDockerCreate@1
       displayName: 'ALOps Docker Create'
       inputs:             
-        imageprefix: imagePrefix
+        imageprefix: ${{ parameters.imagePrefix }}
         forcecreateimage: true
         
     - task: ALOpsDockerStart@1
