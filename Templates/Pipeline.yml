@@ -512,6 +512,14 @@ stages:
         $SecurePassword = ConvertTo-SecureString -String $env:BCInsider_Password -AsPlainText -Force
         $Credential = New-Object -TypeName pscredential -ArgumentList $env:BCInsider_UserName, $SecurePassword
         $DockerVersion = (Get-BCContainerImageLabels -imageName $env:ImageName -registryCredential $Credential).version
+        
+        if ([string]::IsNullOrEmpty($DockerVersion)) {
+          $text = Get-BCArtifactUrl
+          $separator = "/"
+          $parts = $text.split($separator)
+          $DockerVersion = $parts[4]
+        }
+        
         $BranchName = `
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
