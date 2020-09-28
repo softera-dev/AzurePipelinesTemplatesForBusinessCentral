@@ -185,32 +185,9 @@ stages:
             $BestImageName += ':ltsc2019'
           }
         }
-      condition: not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming'))    
-        
-#         docker pull $BestImageName
-#       displayName: Pull new image
-
-#     - task: ALOpsDockerCreate@1
-#       displayName: 'ALOps Docker Create'
-#       inputs:             
-#         imageprefix: ${{ parameters.imagePrefix }}
-#         forcecreateimage: true
-        
-#     - task: ALOpsDockerStart@1
-#       inputs:
-#         docker_image: ${{ parameters.imagePrefix }}
-#         accept_image_outdated: $(AcceptOutdatedImages)
-#         memory_gb: 4
-#         docker_parameters: |
-#           --isolation=$(DockerIsolation)
-#           --env ExitOnError=N
-#           --memory $(DockerMemory)
-#           --volume="$(Build.SourcesDirectory):C:\Extension"
-#       timeoutInMinutes: 2
-
-#     - task: ALOpsDockerWait@1
-#       inputs:
-#         search_string: 'Ready for connections!'
+        docker pull $BestImageName
+      displayName: Pull new image
+      condition: not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) 
   
     - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMinor') }}: 
       - task: ALOpsDockerCreate@1
@@ -227,8 +204,22 @@ stages:
           sastoken: $(BCSasToken)
           artifacttype: Sandbox
 
-    - task: ALOpsDockerStart@1
-      displayName: 'ALOPS - Start Docker Container' # No need to provide any details - it will get the details from previous step
+    - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming') }}:
+      - task: ALOpsDockerStart@1
+        displayName: 'ALOPS - Start Docker Container' # No need to provide any details - it will get the details from previous step
+     
+    - ${{ if not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) }}:
+      - task: ALOpsDockerStart@1
+        inputs:
+          docker_image: ${{ parameters.imagePrefix }}
+          accept_image_outdated: $(AcceptOutdatedImages)
+          memory_gb: 4
+          docker_parameters: |
+            --isolation=$(DockerIsolation)
+            --env ExitOnError=N
+            --memory $(DockerMemory)
+            --volume="$(Build.SourcesDirectory):C:\Extension"
+        timeoutInMinutes: 2
 
     - task: ALOpsDockerWait@1
       displayName: 'ALOPS - Wait for Docker Container to start'
