@@ -185,7 +185,7 @@ stages:
             $BestImageName += ':ltsc2019'
           }
         }
-    condition: not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming'))    
+      condition: not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming'))    
         
 #         docker pull $BestImageName
 #       displayName: Pull new image
