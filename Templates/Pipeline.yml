@@ -211,7 +211,7 @@ stages:
     - ${{ if not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) }}:
       - task: ALOpsDockerStart@1
         inputs:
-          docker_image: ${{ parameters.imagePrefix }}
+          docker_image: $(ImageName)
           accept_image_outdated: $(AcceptOutdatedImages)
           memory_gb: 4
           docker_parameters: |
