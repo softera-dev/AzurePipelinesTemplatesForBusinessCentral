@@ -512,12 +512,10 @@ stages:
         if (-not [string]::IsNullOrEmpty($env:ImageName)) {
           $DockerVersion = (Get-BCContainerImageLabels -imageName $env:ImageName -registryCredential $Credential).version
         } else {
-          if ([string]::IsNullOrEmpty($DockerVersion)) {
-            $text = Get-BCArtifactUrl
-            $separator = "/"
-            $parts = $text.split($separator)
-            $DockerVersion = $parts[4]
-          }
+          $text = Get-BCArtifactUrl
+          $separator = "/"
+          $parts = $text.split($separator)
+          $DockerVersion = $parts[4]
         }
         
         $BranchName = `
