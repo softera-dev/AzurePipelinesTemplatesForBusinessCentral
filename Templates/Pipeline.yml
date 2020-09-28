@@ -192,25 +192,40 @@ stages:
 #         docker pull $BestImageName
 #       displayName: Pull new image
 
-    - task: ALOpsDockerCreate@1
-      displayName: 'ALOps Docker Create'
-      inputs:             
-        imageprefix: ${{ parameters.imagePrefix }}
-        forcecreateimage: true
+#     - task: ALOpsDockerCreate@1
+#       displayName: 'ALOps Docker Create'
+#       inputs:             
+#         imageprefix: ${{ parameters.imagePrefix }}
+#         forcecreateimage: true
         
-    - task: ALOpsDockerStart@1
+#     - task: ALOpsDockerStart@1
+#       inputs:
+#         docker_image: ${{ parameters.imagePrefix }}
+#         accept_image_outdated: $(AcceptOutdatedImages)
+#         memory_gb: 4
+#         docker_parameters: |
+#           --isolation=$(DockerIsolation)
+#           --env ExitOnError=N
+#           --memory $(DockerMemory)
+#           --volume="$(Build.SourcesDirectory):C:\Extension"
+#       timeoutInMinutes: 2
+
+#     - task: ALOpsDockerWait@1
+#       inputs:
+#         search_string: 'Ready for connections!'
+  
+    - task: ALOpsDockerCreate@1
+      displayName: 'ALOPS - Create Docker Image' # It will reuse the image if already exists, or build one if it doesn't.
       inputs:
-        docker_image: ${{ parameters.imagePrefix }}
-        accept_image_outdated: $(AcceptOutdatedImages)
-        memory_gb: 4
-        docker_parameters: |
-          --isolation=$(DockerIsolation)
-          --env ExitOnError=N
-          --memory $(DockerMemory)
-          --volume="$(Build.SourcesDirectory):C:\Extension"
-      timeoutInMinutes: 2
+        sastoken: $(bc.sasToken)
+        artifactversion: 16
+        artifacttype: Sandbox
+
+    - task: ALOpsDockerStart@1
+      displayName: 'ALOPS - Start Docker Container' # No need to provide any details - it will get the details from previous step
 
     - task: ALOpsDockerWait@1
+      displayName: 'ALOPS - Wait for Docker Container to start'
       inputs:
         search_string: 'Ready for connections!'
 
