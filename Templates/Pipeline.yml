@@ -316,6 +316,13 @@ stages:
           Get-BCContainerImageLabels -imageName $env:ImageName -registryCredential $credential |
           Select-Object -ExpandProperty version
           
+        if ([string]::IsNullOrEmpty($DockerImageVersion)) {
+          $text = Get-BCArtifactUrl
+          $separator = "/"
+          $parts = $text.split($separator)
+          $DockerImageVersion = $parts[4]
+        }
+          
         Write-Host -Object "Custom app version:   $CustomAppVersion"
         Write-Host -Object "Docker image version: $DockerImageVersion"
         Write-Host -Object "Manifest app version: $ManifestAppVersion"
