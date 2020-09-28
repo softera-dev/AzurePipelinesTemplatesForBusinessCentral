@@ -51,9 +51,6 @@ parameters:
 - name: appReleaseVersion
   type: string
   default: ''
-- name: imagePrefix
-  type: string
-  default: ''
 
 - name: failCompilationOnWarnings
   type: boolean
@@ -511,13 +508,16 @@ stages:
         Set-StrictMode -Version Latest
         $SecurePassword = ConvertTo-SecureString -String $env:BCInsider_Password -AsPlainText -Force
         $Credential = New-Object -TypeName pscredential -ArgumentList $env:BCInsider_UserName, $SecurePassword
-        $DockerVersion = (Get-BCContainerImageLabels -imageName $env:ImageName -registryCredential $Credential).version
         
-        if ([string]::IsNullOrEmpty($DockerVersion)) {
-          $text = Get-BCArtifactUrl
-          $separator = "/"
-          $parts = $text.split($separator)
-          $DockerVersion = $parts[4]
+        if (-not [string]::IsNullOrEmpty($env:ImageName)) {
+          $DockerVersion = (Get-BCContainerImageLabels -imageName $env:ImageName -registryCredential $Credential).version
+        } else {
+          if ([string]::IsNullOrEmpty($DockerVersion)) {
+            $text = Get-BCArtifactUrl
+            $separator = "/"
+            $parts = $text.split($separator)
+            $DockerVersion = $parts[4]
+          }
         }
         
         $BranchName = `
