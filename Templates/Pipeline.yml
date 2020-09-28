@@ -217,6 +217,14 @@ stages:
         sastoken: $(BCSasToken)
         artifactversion: 16
         artifacttype: Sandbox
+    condition: or(startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMinor'))
+        
+    - task: ALOpsDockerCreate@1
+      displayName: 'ALOPS - Create Docker Image' # It will reuse the image if already exists, or build one if it doesn't.
+      inputs:
+        sastoken: $(BCSasToken)
+        artifacttype: Sandbox
+    condition: or(startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMajor'))
 
     - task: ALOpsDockerStart@1
       displayName: 'ALOPS - Start Docker Container' # No need to provide any details - it will get the details from previous step
