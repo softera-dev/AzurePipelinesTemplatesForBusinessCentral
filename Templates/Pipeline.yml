@@ -190,23 +190,20 @@ stages:
       condition: not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) 
   
     - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMinor') }}: 
-      - task: ALOpsDockerCreate@1
-        displayName: 'ALOPS - Create Docker Image' # It will reuse the image if already exists, or build one if it doesn't.
+      - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
         inputs:
           sastoken: $(BCSasToken)
           artifactversion: 16
           artifacttype: Sandbox
 
     - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMajor') }}: 
-      - task: ALOpsDockerCreate@1
-        displayName: 'ALOPS - Create Docker Image' # It will reuse the image if already exists, or build one if it doesn't.
+      - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
         inputs:
           sastoken: $(BCSasToken)
           artifacttype: Sandbox
 
     - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming') }}:
-      - task: ALOpsDockerStart@1
-        displayName: 'ALOPS - Start Docker Container' # No need to provide any details - it will get the details from previous step
+      - task: ALOpsDockerStart@1 # No need to provide any details - it will get the details from previous step
      
     - ${{ if not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) }}:
       - task: ALOpsDockerStart@1
