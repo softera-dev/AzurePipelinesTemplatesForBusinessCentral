@@ -187,25 +187,25 @@ stages:
         }
         docker pull $BestImageName
       displayName: Pull new image
-      condition: not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) 
+      condition: and(not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')), not(startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-Upcoming')))
   
-    - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMinor') }}: 
+    - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMinor') or startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-UpcomingMinor') }}: 
       - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
         inputs:
           sastoken: $(BCSasToken)
           artifactversion: 16
           artifacttype: Sandbox
 
-    - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMajor') }}: 
+    - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMajor') or startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-UpcomingMajor')}}: 
       - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
         inputs:
           sastoken: $(BCSasToken)
           artifacttype: Sandbox
 
-    - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming') }}:
+    - ${{ if startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming') or startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-Upcoming') }}: 
       - task: ALOpsDockerStart@1 # No need to provide any details - it will get the details from previous step
      
-    - ${{ if not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) }}:
+    - ${{ if not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')) and not(startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-Upcoming'))}}:
       - task: ALOpsDockerStart@1
         inputs:
           docker_image: $(ImageName)
