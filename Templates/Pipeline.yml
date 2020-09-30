@@ -195,12 +195,14 @@ stages:
           sastoken: $(BCSasToken)
           artifactversion: 16
           artifacttype: Sandbox
+          storageaccount: 'bcinsider'
 
     - ${{ if or(startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMajor'),startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-UpcomingMajor'))}}: 
       - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
         inputs:
           sastoken: $(BCSasToken)
           artifacttype: Sandbox
+          storageaccount: 'bcinsider'
 
     - ${{ if or(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming'),startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-Upcoming')) }}: 
       - task: ALOpsDockerStart@1 # No need to provide any details - it will get the details from previous step
