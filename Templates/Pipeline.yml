@@ -266,7 +266,6 @@ stages:
       timeoutInMinutes: 2
 
     - task: ALOpsDockerWait@1
-      displayName: 'ALOPS - Wait for Docker Container to start'
       inputs:
         search_string: 'Ready for connections!'
 
