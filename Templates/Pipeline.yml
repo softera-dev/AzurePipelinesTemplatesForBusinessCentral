@@ -1,16 +1,7 @@
 parameters:
-- name: acceptOutdatedImages
-  type: boolean
-  default: true
-- name: dockerMemory
+- name: bcVersion
   type: string
-  default: 4g
-- name: dockerIsolation
-  type: string
-  default: hyperv
-  values: 
-  - hyperv
-  - process
+
 - name: organizationName
   type: string
   default: ''
@@ -41,6 +32,7 @@ parameters:
   - error
   - warning
   - none
+  
 - name: appReleaseVersionSelection
   type: string
   default: manifestBuildRevision
@@ -51,6 +43,16 @@ parameters:
 - name: appReleaseVersion
   type: string
   default: ''
+    
+- name: dockerMemory
+  type: string
+  default: 4g
+- name: dockerIsolation
+  type: string
+  default: hyperv
+  values: 
+  - hyperv
+  - process
 
 - name: failCompilationOnWarnings
   type: boolean
@@ -114,16 +116,16 @@ stages:
   jobs:
   - job: Main
     variables:
-    - name: AcceptOutdatedImages
-      value: ${{ parameters.acceptOutdatedImages }}
-    - name: DockerMemory
-      value: ${{ parameters.dockerMemory }}
-    - name: DockerIsolation
-      value: ${{ parameters.dockerIsolation }}
-    - name: MasterBranch
-      value: ${{ parameters.masterBranch }}
-    - name: IsPullRequest
-      value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
+    - name: BcArtifactType
+      value: ''
+    - name: BcArtifactVersion
+      value: ''
+    - name: BcArtifactCountry
+      value: ''
+    - name: BcArtifactStorageAccount
+      value: ''
+    - name: BcArtifactSasToken
+      value: ''
     - name: AppVersion
       value: ''
     - name: AppReleaseVersion
@@ -134,6 +136,18 @@ stages:
       value: ${{ parameters.testAppFolder }}
     - name: OrganizationName
       value: ${{ parameters.organizationName }}
+      
+    - name: DockerMemory
+      value: ${{ parameters.dockerMemory }}
+    - name: DockerIsolation
+      value: ${{ parameters.dockerIsolation }}
+      
+    - name: IsPullRequest
+      value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
+    - name: MasterBranch
+      value: ${{ parameters.masterBranch }}
+    - name: IsReleasePRCommit
+      value: $[ startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-') ]
     steps:
     - powershell: |
         $ExitCode = 0
@@ -152,6 +166,62 @@ stages:
       condition: always()
       displayName: Checking free disk and ram space
     
+    - powershell: |
+        Set-StrictMode -Version Latest
+        Write-Host -Object "BC version given $env:BcVersion"
+
+        $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
+        if ($env:BcVersion -notmatch $Pattern) {
+          Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
+          throw 'BC version doesn''t match pattern. '
+        }
+
+        Write-Host
+        Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
+        Write-Host -Object "Parsed artifact version: $($Matches.Version)"
+        Write-Host -Object "Parsed artifact country: $($Matches.Country)"
+
+        $Type = $Matches.Type
+        $Version = $Matches.Version
+        $Country = $Matches.Country
+        $StorageAccount = 'bcartifacts'
+        $SasToken = ''
+        switch ($Version) {
+          'Current' {
+            $Version = ''
+            break
+          }
+          'NextMinor' {
+            #TODO change version
+            $Version = '17'
+            $StorageAccount = 'bcinsider'
+            $SasToken = $env:BcInsiderSasToken
+            break
+          }
+          'NextMajor' {
+            $Version = ''
+            $StorageAccount = 'bcinsider'
+            $SasToken = $env:BcInsiderSasToken
+            break
+          }
+        }
+
+        Write-Host
+        Write-Host -Object "Artifact type:            $Type"
+        Write-Host -Object "Artifact version:         $($Version -creplace '^$', $Matches.Version)"
+        Write-Host -Object "Artifact country:         $Country"
+        Write-Host -Object "Artifact storage account: $StorageAccount"
+
+        Write-Host -Object "##vso[task.setvariable variable=BcArtifactType;]$Type"
+        Write-Host -Object "##vso[task.setvariable variable=BcArtifactVersion;]$Version"
+        Write-Host -Object "##vso[task.setvariable variable=BcArtifactCountry;]$Country"
+        Write-Host -Object "##vso[task.setvariable variable=BcArtifactStorageAccount;]$StorageAccount"
+        Write-Host -Object "##vso[task.setvariable variable=BcArtifactSasToken;isSecret=true]$SasToken"
+      env: 
+        BcVersion: ${{ parameters.bcVersion }}
+        BcInsiderSasToken: $(BCSasToken)
+      displayName: Select BC artifact version
+
     - checkout: self
       clean: true
       
@@ -174,51 +244,23 @@ stages:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
       
-    - powershell: |
-        $BestImageName = Get-BestBCContainerImageName -imageName $env:ImageName
-        
-        # 2004 is both name for image tag and for windows build
-        if ($BestImageName -notlike '*:*ltsc2019') {
-          if ($BestImageName -like '*:*') {
-            $BestImageName += '-ltsc2019'
-          } else {
-            $BestImageName += ':ltsc2019'
-          }
-        }
-        docker pull $BestImageName
-      displayName: Pull new image
-      condition: and(not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')), not(startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-Upcoming')))
-  
-    - ${{ if or(startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMinor'),startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-UpcomingMinor')) }}: 
-      - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
-        inputs:
-          sastoken: $(BCSasToken)
-          artifactversion: 16
-          artifacttype: Sandbox
-          storageaccount: 'bcinsider'
+    - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
+      inputs:
+        sastoken: $(BcArtifactSasToken)
+        artifactversion: $(BcArtifactVersion)
+        artifacttype: $(BcArtifactType)
+        storageaccount: $(BcArtifactStorageAccount)
+        artifactcountry: $(BcArtifactCountry)
 
-    - ${{ if or(startsWith(variables['Build.SourceBranchName'], 'Release-UpcomingMajor'),startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-UpcomingMajor'))}}: 
-      - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
-        inputs:
-          sastoken: $(BCSasToken)
-          artifacttype: Sandbox
-          storageaccount: 'bcinsider'
-
-    - ${{ if or(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming'),startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-Upcoming')) }}: 
-      - task: ALOpsDockerStart@1 # No need to provide any details - it will get the details from previous step
-     
-    - ${{ if and(not(startsWith(variables['Build.SourceBranchName'], 'Release-Upcoming')),not(startsWith(variables['Build.SourceVersionMessage'], 'Moving changes from WIP to Release-Upcoming')))}}:
-      - task: ALOpsDockerStart@1
-        inputs:
-          docker_image: $(ImageName)
-          accept_image_outdated: $(AcceptOutdatedImages)
-          memory_gb: 4
-          docker_parameters: |
-            --isolation=$(DockerIsolation)
-            --env ExitOnError=N
-            --memory $(DockerMemory)
-            --volume="$(Build.SourcesDirectory):C:\Extension"
-        timeoutInMinutes: 2
+    - task: ALOpsDockerStart@1
+      inputs:
+        memory_gb: 4
+        docker_parameters: |
+          --isolation=$(DockerIsolation)
+          --env ExitOnError=N
+          --memory $(DockerMemory)
+          --volume="$(Build.SourcesDirectory):C:\Extension"
+      timeoutInMinutes: 2
 
     - task: ALOpsDockerWait@1
       displayName: 'ALOPS - Wait for Docker Container to start'
@@ -548,10 +590,10 @@ stages:
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
-      condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])), not(eq(variables['Build.Reason'], 'PullRequest')), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
+      condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])), not(eq(variables['Build.Reason'], 'PullRequest')), variables['IsReleasePRCommit'])
       env:
         BCInsider_UserName: $(BCInsiderUserName)
         BCInsider_Password: $(BCInsiderPassword)
         AppReleaseVersion: $(AppReleaseVersion)
       displayName: Copy files to \\filestorage
-    condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
+    condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), variables['IsReleasePRCommit'])
