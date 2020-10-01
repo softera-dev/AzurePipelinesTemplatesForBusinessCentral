@@ -250,7 +250,7 @@ stages:
         sastoken: $(BcArtifactSasToken)
         artifactversion: $(BcArtifactVersion)
         artifacttype: $(BcArtifactType)
-        storageaccount: $(BcArtifactStorageAccount)
+#         storageaccount: $(BcArtifactStorageAccount)
         artifactcountry: $(BcArtifactCountry)
 
     - task: ALOpsDockerStart@1
