@@ -351,9 +351,6 @@ stages:
     - powershell: |
         Set-StrictMode -Version Latest
         
-        $SecurePassword = ConvertTo-SecureString -String $env:BCInsider_Password -AsPlainText -Force
-        $Credential = New-Object -TypeName pscredential -ArgumentList $env:BCInsider_UserName, $SecurePassword
-        
         # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
         [version]$CustomAppVersion = $env:CustomAppVersion
         [version]$ManifestAppVersion = `
@@ -432,8 +429,6 @@ stages:
         manifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
         AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
         CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
-        BCInsider_UserName: $(BCInsiderUserName)
-        BCInsider_Password: $(BCInsiderPassword)
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Get App Version
       
@@ -549,8 +544,6 @@ stages:
 
     - powershell: |
         Set-StrictMode -Version Latest
-        $SecurePassword = ConvertTo-SecureString -String $env:BCInsider_Password -AsPlainText -Force
-        $Credential = New-Object -TypeName pscredential -ArgumentList $env:BCInsider_UserName, $SecurePassword
         $DockerVersion = $env:BcApplicationVersion      
         $BranchName = `
             if ($env:IsPullRequest -eq 'false') {
@@ -583,10 +576,8 @@ stages:
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
-      condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])), not(eq(variables['Build.Reason'], 'PullRequest')), variables['IsReleasePRCommit'])
+      condition: variables['IsReleasePRCommit']
       env:
-        BCInsider_UserName: $(BCInsiderUserName)
-        BCInsider_Password: $(BCInsiderPassword)
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Copy files to \\filestorage
