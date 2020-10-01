@@ -279,10 +279,9 @@ stages:
       displayName: Get BC application version
       inputs:
         inline_script: |
-          $BcApplicationVersion = Get-NAVApplication -ServerInstance $ServerInstance | Select-Object -ExpandProperty ApplicationVersion
+          $BcApplicationVersion = Get-NAVApplication -ServerInstance $env:ALOPS_DOCKER_NAVSERVERINSTANCE | Select-Object -ExpandProperty ApplicationVersion
           Write-Host -Object "BC application version: $BcApplicationVersion"
           Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
-          
     
     - ${{ if not(eq(parameters.latestSofteraBalticLoggingAppPath, '')) }}:
       - task: ALOpsAppPublish@1
