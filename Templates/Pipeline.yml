@@ -189,7 +189,7 @@ stages:
         $SasToken = ''
         switch ($Version) {
           'Current' {
-            $Version = ''
+            $Version = '17'
             break
           }
           'NextMinor' {
