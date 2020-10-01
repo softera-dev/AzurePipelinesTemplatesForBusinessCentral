@@ -149,6 +149,8 @@ stages:
       value: ${{ parameters.masterBranch }}
     - name: IsReleasePRCommit
       value: $[ startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-') ]
+    - name: BcApplicationVersion
+      value: ''
     steps:
     - powershell: |
         $ExitCode = 0
@@ -273,6 +275,15 @@ stages:
         usedocker: true
         license_path: '$(DownloadBCLicense.SecureFilePath)'
         print_license_info: true
+        
+    - task: ALOpsDockerExec@1
+      displayName: Get BC application version
+      inputs:
+        inline_script: |
+          $BcApplicationVersion = Get-NAVApplication -ServerInstance $ServerInstance | Select-Object -ExpandProperty ApplicationVersion
+          Write-Host -Object "BC application version: $BcApplicationVersion"
+          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
+          
     
     - ${{ if not(eq(parameters.latestSofteraBalticLoggingAppPath, '')) }}:
       - task: ALOpsAppPublish@1
@@ -539,45 +550,46 @@ stages:
       enabled: true
       condition: always()
 
-#     - powershell: |
-#         Set-StrictMode -Version Latest
-#         $SecurePassword = ConvertTo-SecureString -String $env:BCInsider_Password -AsPlainText -Force
-#         $Credential = New-Object -TypeName pscredential -ArgumentList $env:BCInsider_UserName, $SecurePassword
-#         $DockerVersion = (Get-BCContainerImageLabels -imageName $env:ImageName -registryCredential $Credential).version      
-#         $BranchName = `
-#             if ($env:IsPullRequest -eq 'false') {
-#                 $env:Build_SourceBranchName
-#             } else {
-#                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
-#             }
+    - powershell: |
+        Set-StrictMode -Version Latest
+        $SecurePassword = ConvertTo-SecureString -String $env:BCInsider_Password -AsPlainText -Force
+        $Credential = New-Object -TypeName pscredential -ArgumentList $env:BCInsider_UserName, $SecurePassword
+        $DockerVersion = $env:BcApplicationVersion      
+        $BranchName = `
+            if ($env:IsPullRequest -eq 'false') {
+                $env:Build_SourceBranchName
+            } else {
+                $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+            }
 
-#         $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
-#         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-#         if ([System.IO.Directory]::Exists($TempPath)) {
-#             throw "TempPath ($TempPath) already exist"
-#         }
+        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
+        $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+        if ([System.IO.Directory]::Exists($TempPath)) {
+            throw "TempPath ($TempPath) already exist"
+        }
 
-#         New-Item -ItemType Directory -Path $TempPath -Force
-#         Copy-Item -Path * -Destination $TempPath -Recurse
+        New-Item -ItemType Directory -Path $TempPath -Force
+        Copy-Item -Path * -Destination $TempPath -Recurse
 
-#         $OldPath = "$CommonPath-Old"
-#         if ([System.IO.Directory]::Exists($OldPath)) {
-#             Remove-Item -Path $OldPath -Recurse -Force
-#         }
+        $OldPath = "$CommonPath-Old"
+        if ([System.IO.Directory]::Exists($OldPath)) {
+            Remove-Item -Path $OldPath -Recurse -Force
+        }
 
-#         $Path = $CommonPath
-#         if ([System.IO.Directory]::Exists($Path)) {
-#             New-Item -ItemType Directory -Path $OldPath -Force
-#             Copy-Item -Path $Path\* -Destination $OldPath -Recurse
-#             Remove-Item -Path $Path -Recurse -Force
-#         }
-#         if (-not ([System.IO.Directory]::Exists($path))) {
-#             Copy-Item -Path $TempPath -Destination $Path -Recurse
-#             Remove-Item  -Path $TempPath -Recurse -Force
-#         }
-#       condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])), not(eq(variables['Build.Reason'], 'PullRequest')), variables['IsReleasePRCommit'])
-#       env:
-#         BCInsider_UserName: $(BCInsiderUserName)
-#         BCInsider_Password: $(BCInsiderPassword)
-#         AppReleaseVersion: $(AppReleaseVersion)
-#       displayName: Copy files to \\filestorage
+        $Path = $CommonPath
+        if ([System.IO.Directory]::Exists($Path)) {
+            New-Item -ItemType Directory -Path $OldPath -Force
+            Copy-Item -Path $Path\* -Destination $OldPath -Recurse
+            Remove-Item -Path $Path -Recurse -Force
+        }
+        if (-not ([System.IO.Directory]::Exists($path))) {
+            Copy-Item -Path $TempPath -Destination $Path -Recurse
+            Remove-Item  -Path $TempPath -Recurse -Force
+        }
+      condition: and(succeeded(), not(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch'])), not(eq(variables['Build.Reason'], 'PullRequest')), variables['IsReleasePRCommit'])
+      env:
+        BCInsider_UserName: $(BCInsiderUserName)
+        BCInsider_Password: $(BCInsiderPassword)
+        AppReleaseVersion: $(AppReleaseVersion)
+        BcApplicationVersion: $(BcApplicationVersion)
+      displayName: Copy files to \\filestorage
