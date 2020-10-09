@@ -542,42 +542,42 @@ stages:
       enabled: true
       condition: always()
 
-    - powershell: |
-        Set-StrictMode -Version Latest
-        $DockerVersion = $env:BcApplicationVersion      
-        $BranchName = `
-            if ($env:IsPullRequest -eq 'false') {
-                $env:Build_SourceBranchName
-            } else {
-                $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
-            }
+#     - powershell: |
+#         Set-StrictMode -Version Latest
+#         $DockerVersion = $env:BcApplicationVersion      
+#         $BranchName = `
+#             if ($env:IsPullRequest -eq 'false') {
+#                 $env:Build_SourceBranchName
+#             } else {
+#                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+#             }
 
-        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
-        $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-        if ([System.IO.Directory]::Exists($TempPath)) {
-            throw "TempPath ($TempPath) already exist"
-        }
+#         $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
+#         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+#         if ([System.IO.Directory]::Exists($TempPath)) {
+#             throw "TempPath ($TempPath) already exist"
+#         }
 
-        New-Item -ItemType Directory -Path $TempPath -Force
-        Copy-Item -Path * -Destination $TempPath -Recurse
+#         New-Item -ItemType Directory -Path $TempPath -Force
+#         Copy-Item -Path * -Destination $TempPath -Recurse
 
-        $OldPath = "$CommonPath-Old"
-        if ([System.IO.Directory]::Exists($OldPath)) {
-            Remove-Item -Path $OldPath -Recurse -Force
-        }
+#         $OldPath = "$CommonPath-Old"
+#         if ([System.IO.Directory]::Exists($OldPath)) {
+#             Remove-Item -Path $OldPath -Recurse -Force
+#         }
 
-        $Path = $CommonPath
-        if ([System.IO.Directory]::Exists($Path)) {
-            New-Item -ItemType Directory -Path $OldPath -Force
-            Copy-Item -Path $Path\* -Destination $OldPath -Recurse
-            Remove-Item -Path $Path -Recurse -Force
-        }
-        if (-not ([System.IO.Directory]::Exists($path))) {
-            Copy-Item -Path $TempPath -Destination $Path -Recurse
-            Remove-Item  -Path $TempPath -Recurse -Force
-        }
-      condition: variables['IsReleasePRCommit']
-      env:
-        AppReleaseVersion: $(AppReleaseVersion)
-        BcApplicationVersion: $(BcApplicationVersion)
-      displayName: Copy files to \\filestorage
+#         $Path = $CommonPath
+#         if ([System.IO.Directory]::Exists($Path)) {
+#             New-Item -ItemType Directory -Path $OldPath -Force
+#             Copy-Item -Path $Path\* -Destination $OldPath -Recurse
+#             Remove-Item -Path $Path -Recurse -Force
+#         }
+#         if (-not ([System.IO.Directory]::Exists($path))) {
+#             Copy-Item -Path $TempPath -Destination $Path -Recurse
+#             Remove-Item  -Path $TempPath -Recurse -Force
+#         }
+#       condition: variables['IsReleasePRCommit']
+#       env:
+#         AppReleaseVersion: $(AppReleaseVersion)
+#         BcApplicationVersion: $(BcApplicationVersion)
+#       displayName: Copy files to \\filestorage
