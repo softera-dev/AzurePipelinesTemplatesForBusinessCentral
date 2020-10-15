@@ -246,97 +246,6 @@ stages:
       inputs:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
-        
-#     - task: PowerShell@2
-#       displayName: 'Install BcContainerHelper'
-#       inputs:
-#         targetType: inline
-#         script: 'Install-Module -Name BcContainerHelper -Force'
-        
-#     - powershell: |
-#         Set-StrictMode -Version Latest
-        
-#         # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
-#         [version]$CustomAppVersion = $env:CustomAppVersion
-#         [version]$ManifestAppVersion = `
-#           Get-Content -Path $(MainAppFolder)/app.json |
-#           ConvertFrom-Json |
-#           Select-Object -ExpandProperty version
-#         [version]$DockerImageVersion = $env:BcApplicationVersion
-          
-#         Write-Host -Object "Custom app version:   $CustomAppVersion"
-#         Write-Host -Object "Docker image version: $DockerImageVersion"
-#         Write-Host -Object "Manifest app version: $ManifestAppVersion"
-        
-#         [version]$SelectedAppVersion = `
-#           switch ($env:AppVersionSelection) {
-#             'manifest' {
-#               Write-Host -Object "Using app version from app manifest."
-#               [string]$ManifestAppVersion
-#             }
-#             'dockerImageMajorMinorAndManifestMajorMinor' {
-#               Write-Host -Object "Creating app version using Docker image major-minor version and app manifest major-minor version."
-#               '{0}.{1}.{2}.{3}' -f
-#                 $DockerImageVersion.Major, $DockerImageVersion.Minor,
-#                 $ManifestAppVersion.Major, $ManifestAppVersion.Minor
-#             }
-#             'dockerImageMajorMinorAndManifestBuildRevision' {
-#               Write-Host -Object "Creating app version using Docker image major-minor version and app manifest build-revision version."
-#               '{0}.{1}.{2}.{3}' -f
-#                 $DockerImageVersion.Major, $DockerImageVersion.Minor,
-#                 $ManifestAppVersion.Build, $ManifestAppVersion.Revision
-#             }
-#             'manual' {
-#               Write-Host -Object "Using custom app version."
-#               $CustomAppVersion
-#             }
-#           }
-#         Write-Host -Object "Selected app version: $SelectedAppVersion."
-#         Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
-        
-#         if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
-#           $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
-#           $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
-#           $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision)
-#         {
-#           if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
-#             Write-Warning -Message "Manifest app version does not match selected app version."
-#           }
-#           if ($ManifestVersionMismatchAction -eq 'error') {
-#             exit(1)
-#           }
-#         }
-        
-#         $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
-#         Write-Host -Object "Custom app release version: $CustomAppReleaseVersion"
-#         $SelectedAppReleaseVersion = `
-#           switch ($env:AppReleaseVersionSelection) {
-#             'manifestMajorMinor' {
-#               Write-Host -Object "Creating app release version using app manifest major-minor version."
-#               '{0}.{1}' -f
-#                 $ManifestAppVersion.Major, $ManifestAppVersion.Minor
-#             }
-#             'manifestBuildRevision' {
-#               Write-Host -Object "Creating app release version using app manifest build-revision version."
-#               '{0}.{1}' -f
-#                 $ManifestAppVersion.Build, $ManifestAppVersion.Revision
-#             }
-#             'manual' {
-#               Write-Host -Object "Using custom app release version."
-#               $CustomAppReleaseVersion
-#             }
-#           }
-#         Write-Host -Object "Selected app release version: $SelectedAppReleaseVersion."
-#         Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-#       env:
-#         AppVersionSelection: ${{ parameters.appVersionSelection }}
-#         CustomAppVersion: ${{ parameters.appVersion }}
-#         manifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
-#         AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
-#         CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
-#         BcApplicationVersion: $(BcApplicationVersion)
-#       displayName: Get App Version
- 
 
     - powershell: |
         $params = @{}
@@ -378,6 +287,97 @@ stages:
         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
         BcArtifactCountry: $(BcArtifactCountry)
       displayName: Run Pipeline
+
+
+    - task: PowerShell@2
+      displayName: 'Install BcContainerHelper'
+      inputs:
+        targetType: inline
+        script: 'Install-Module -Name BcContainerHelper -Force'
+        
+    - powershell: |
+        Set-StrictMode -Version Latest
+        
+        # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
+        [version]$CustomAppVersion = $env:CustomAppVersion
+        [version]$ManifestAppVersion = `
+          Get-Content -Path $(MainAppFolder)/app.json |
+          ConvertFrom-Json |
+          Select-Object -ExpandProperty version
+        [version]$DockerImageVersion = $env:BcApplicationVersion
+          
+        Write-Host -Object "Custom app version:   $CustomAppVersion"
+        Write-Host -Object "Docker image version: $DockerImageVersion"
+        Write-Host -Object "Manifest app version: $ManifestAppVersion"
+        
+        [version]$SelectedAppVersion = `
+          switch ($env:AppVersionSelection) {
+            'manifest' {
+              Write-Host -Object "Using app version from app manifest."
+              [string]$ManifestAppVersion
+            }
+            'dockerImageMajorMinorAndManifestMajorMinor' {
+              Write-Host -Object "Creating app version using Docker image major-minor version and app manifest major-minor version."
+              '{0}.{1}.{2}.{3}' -f
+                $DockerImageVersion.Major, $DockerImageVersion.Minor,
+                $ManifestAppVersion.Major, $ManifestAppVersion.Minor
+            }
+            'dockerImageMajorMinorAndManifestBuildRevision' {
+              Write-Host -Object "Creating app version using Docker image major-minor version and app manifest build-revision version."
+              '{0}.{1}.{2}.{3}' -f
+                $DockerImageVersion.Major, $DockerImageVersion.Minor,
+                $ManifestAppVersion.Build, $ManifestAppVersion.Revision
+            }
+            'manual' {
+              Write-Host -Object "Using custom app version."
+              $CustomAppVersion
+            }
+          }
+        Write-Host -Object "Selected app version: $SelectedAppVersion."
+        Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
+        
+        if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
+          $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
+          $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
+          $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision)
+        {
+          if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
+            Write-Warning -Message "Manifest app version does not match selected app version."
+          }
+          if ($ManifestVersionMismatchAction -eq 'error') {
+            exit(1)
+          }
+        }
+        
+        $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
+        Write-Host -Object "Custom app release version: $CustomAppReleaseVersion"
+        $SelectedAppReleaseVersion = `
+          switch ($env:AppReleaseVersionSelection) {
+            'manifestMajorMinor' {
+              Write-Host -Object "Creating app release version using app manifest major-minor version."
+              '{0}.{1}' -f
+                $ManifestAppVersion.Major, $ManifestAppVersion.Minor
+            }
+            'manifestBuildRevision' {
+              Write-Host -Object "Creating app release version using app manifest build-revision version."
+              '{0}.{1}' -f
+                $ManifestAppVersion.Build, $ManifestAppVersion.Revision
+            }
+            'manual' {
+              Write-Host -Object "Using custom app release version."
+              $CustomAppReleaseVersion
+            }
+          }
+        Write-Host -Object "Selected app release version: $SelectedAppReleaseVersion."
+        Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
+      env:
+        AppVersionSelection: ${{ parameters.appVersionSelection }}
+        CustomAppVersion: ${{ parameters.appVersion }}
+        manifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
+        AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
+        CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
+        BcApplicationVersion: $(BcApplicationVersion)
+      displayName: Get App Version
 
     - powershell: |
         Write-Host -Object '$env:Build.SourceVersionMessage'
