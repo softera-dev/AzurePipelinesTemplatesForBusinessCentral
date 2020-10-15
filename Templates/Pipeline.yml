@@ -334,17 +334,16 @@ stages:
         $insiderSasToken = "$ENV:BcArtifactSasToken"
         $licenseFile = "$ENV:licenseFile"
         $codeSigncertPfxFile = "$ENV:CodeSignCertPfxFile"
-        if ($signapp -and $codeSigncertPfxFile) {
-            if ("$ENV:CodeSignCertPfxPassword" -ne "") {
-                $codeSignCertPfxPassword = try { "$ENV:CodeSignCertPfxPassword" | ConvertTo-SecureString } catch { ConvertTo-SecureString -String "$ENV:CodeSignCertPfxPassword" -AsPlainText -Force }
-                $params = @{
-                    "codeSignCertPfxFile" = $codeSignCertPfxFile
-                    "codeSignCertPfxPassword" = $codeSignCertPfxPassword
-                }
+        
+        if ("$ENV:CodeSignCertPfxPassword" -ne "") {
+            $codeSignCertPfxPassword = try { "$ENV:CodeSignCertPfxPassword" | ConvertTo-SecureString } catch { ConvertTo-SecureString -String "$ENV:CodeSignCertPfxPassword" -AsPlainText -Force }
+            $params = @{
+                "codeSignCertPfxFile" = $codeSignCertPfxFile
+                "codeSignCertPfxPassword" = $codeSignCertPfxPassword
             }
-            else {
-                $codeSignCertPfxPassword = $null
-            }
+        }
+        else {
+            $codeSignCertPfxPassword = $null
         }
         
         $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry
