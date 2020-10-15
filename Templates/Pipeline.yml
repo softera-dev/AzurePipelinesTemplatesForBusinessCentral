@@ -294,7 +294,7 @@ stages:
       displayName: Run Pipeline
       
     - powershell: |
-        $BcApplicationVersion = Get-NAVApplication -ServerInstance $(ALOPS_DOCKER_NAVSERVERINSTANCE) | Select-Object -ExpandProperty ApplicationVersion
+        $BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
         Write-Host -Object "BC application version: $BcApplicationVersion"
         Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
       displayName: Get BC application version
