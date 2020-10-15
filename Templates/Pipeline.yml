@@ -333,10 +333,15 @@ stages:
 #         }
 #       displayName: Install BcContainerHelper
 
+    - task: DownloadSecureFile@1
+      name: DownloadBCLicense
+      inputs:
+        secureFile: $(BCLicense.SecureFileName)
+      displayName: Download BC license
+
     - powershell: |
         $params = @{}
         $insiderSasToken = "$ENV:BcArtifactSasToken"
-        $licenseFile = "$ENV:licenseFile"
         $codeSigncertPfxFile = "$ENV:CodeSignCertPfxFile"
         
         if ("$ENV:CodeSignCertPfxPassword" -ne "") {
@@ -358,14 +363,13 @@ stages:
             -containerName $containerName `
             -artifact $artifact `
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
-            -licenseFile $env:LicenseFile `
+            -licenseFile $(DownloadBCLicense.SecureFilePath) `
             -appFolders $(MainAppFolder) `
             -testFolders $(TestAppFolder) `
             -tenant None
          
         Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
       env:
-        LicenseFile: $(BCLicense.SecureFileName)
         CodeSignCertPfxFile: $(BCAppSigningCertificateSecureFileName)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         BcArtifactSasToken: $(BcArtifactSasToken)
