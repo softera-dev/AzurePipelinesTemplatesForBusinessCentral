@@ -247,6 +247,12 @@ stages:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
 
+#     - task: PowerShell@2
+#       displayName: 'Install BcContainerHelper'
+#       inputs:
+#         targetType: inline
+#         script: 'Install-Module -Name BcContainerHelper -Force'
+        
     - powershell: |
         $params = @{}
         $insiderSasToken = "$ENV:BcArtifactSasToken"
@@ -287,13 +293,6 @@ stages:
         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
         BcArtifactCountry: $(BcArtifactCountry)
       displayName: Run Pipeline
-
-
-    - task: PowerShell@2
-      displayName: 'Install BcContainerHelper'
-      inputs:
-        targetType: inline
-        script: 'Install-Module -Name BcContainerHelper -Force'
         
     - powershell: |
         Set-StrictMode -Version Latest
