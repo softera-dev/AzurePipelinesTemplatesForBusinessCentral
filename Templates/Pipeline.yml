@@ -369,13 +369,14 @@ stages:
             -containerName $containerName `
             -artifact $artifact `
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
-            -licenseFile $(DownloadBCLicense.SecureFilePath) `
+            -licenseFile $env:LicenseFile `
             -appFolders $(MainAppFolder) `
             -testFolders $(TestAppFolder) `
             -tenant None
          
         Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
       env:
+        LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(BCAppSigningCertificateSecureFileName)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         BcArtifactSasToken: $(BcArtifactSasToken)
