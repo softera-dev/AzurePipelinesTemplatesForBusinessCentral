@@ -380,7 +380,7 @@ stages:
       displayName: Get App Version
 
     - powershell: |
-        Write-Host -Object '$env:Build.SourceVersionMessage'
+        Write-Host -Object $env:Build.SourceVersionMessage
     
         Set-StrictMode -Version Latest
         $DockerVersion = $env:BcApplicationVersion      
