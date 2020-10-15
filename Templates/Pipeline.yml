@@ -353,6 +353,7 @@ stages:
             -containerName 'test' `
             -artifact $artifact `
             -licenseFile $env:LicenseFile `
+            -tenant 'default'
       env:
         LicenseFile: $(BCLicense.SecureFileName)
         CodeSignCertPfxFile: $(BCAppSigningCertificateSecureFileName)
