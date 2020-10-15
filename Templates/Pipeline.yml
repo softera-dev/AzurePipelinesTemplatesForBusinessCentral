@@ -350,6 +350,7 @@ stages:
             $codeSignCertPfxPassword = $null
         }
         
+        $containerName = 'test'
         $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry
 
         Run-AlPipeline @params `
