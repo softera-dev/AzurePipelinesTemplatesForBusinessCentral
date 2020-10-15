@@ -329,8 +329,6 @@ stages:
 
     - powershell: |
         $buildArtifactFolder = $ENV:BUILD_ARTIFACTSTAGINGDIRECTORY
-        $baseFolder = (Get-Item (Join-Path $PSScriptRoot "..")).FullName
-        . (Join-Path $PSScriptRoot "Read-Settings.ps1") -version $env:BcArtifactVersion
 
         $params = @{}
         $insiderSasToken = "$ENV:BcArtifactSasToken"
@@ -348,11 +346,6 @@ stages:
                 $codeSignCertPfxPassword = $null
             }
         }
-
-        $testResultsFile = Join-Path $baseFolder "TestResults.xml"
-        if (Test-Path $testResultsFile) {
-            Remove-Item $testResultsFile -Force
-        }
         
         $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry
 
@@ -361,10 +354,6 @@ stages:
             -containerName 'test' `
             -artifact $artifact.replace('{INSIDERSASTOKEN}',$env:BcArtifactSasToken) `
             -licenseFile $env:LicenseFile `
-
-        if (Test-Path $testResultsFile) {
-            Write-Host "##vso[task.setvariable variable=TestResultsAvailable]True"
-        }
       env:
         LicenseFile: $(BCLicense.SecureFileName)
         CodeSignCertPfxFile: $(BCAppSigningCertificateSecureFileName)
