@@ -292,7 +292,13 @@ stages:
         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
         BcArtifactCountry: $(BcArtifactCountry)
       displayName: Run Pipeline
-        
+      
+    - powershell: |
+        $BcApplicationVersion = Get-NAVApplication -ServerInstance $(ALOPS_DOCKER_NAVSERVERINSTANCE) | Select-Object -ExpandProperty ApplicationVersion
+        Write-Host -Object "BC application version: $BcApplicationVersion"
+        Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
+      displayName: Get BC application version
+      
     - powershell: |
         Set-StrictMode -Version Latest
         
