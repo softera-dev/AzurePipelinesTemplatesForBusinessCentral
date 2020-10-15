@@ -279,8 +279,7 @@ stages:
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
             -licenseFile $env:LicenseFile `
             -appFolders $(MainAppFolder) `
-            -testFolders $(TestAppFolder) `
-            -tenant None
+            -testFolders $(TestAppFolder) 
          
         Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
       env:
