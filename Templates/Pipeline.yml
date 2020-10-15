@@ -237,18 +237,14 @@ stages:
         
     - task: DownloadSecureFile@1
       name: DownloadBCLicense
-      env:
-        BCLicense: '$(BCLicense.SecureFileName)'
       inputs:
-        secureFile: $env:BCLicense
+        secureFile: $(BCLicense.SecureFileName)
       displayName: Download BC license
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
-      env:
-        BCAppSigningCertificateSecureFileName: '$(BCAppSigningCertificateSecureFileName)'
       inputs:
-        secureFile: $env:BCAppSigningCertificateSecureFileName
+        secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
         
     - task: PowerShell@2
