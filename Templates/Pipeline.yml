@@ -235,6 +235,18 @@ stages:
         repository: $(Build.RepositoryName)
         branch: $(Build.SourceBranchName)
         
+    - task: DownloadSecureFile@1
+      name: DownloadBCLicense
+      inputs:
+        secureFile: $(BCLicense.SecureFileName)
+      displayName: Download BC license
+
+    - task: DownloadSecureFile@1
+      name: DownloadBCAppSigningCertificate
+      inputs:
+        secureFile: $(BCAppSigningCertificateSecureFileName)
+      displayName: Download certificate for BC app signing
+        
     - task: PowerShell@2
       displayName: 'Install BcContainerHelper'
       inputs:
@@ -332,12 +344,6 @@ stages:
 #             }
 #         }
 #       displayName: Install BcContainerHelper
-
-    - task: DownloadSecureFile@1
-      name: DownloadBCLicense
-      inputs:
-        secureFile: $(BCLicense.SecureFileName)
-      displayName: Download BC license
 
     - powershell: |
         $params = @{}
