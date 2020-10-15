@@ -252,98 +252,91 @@ stages:
       inputs:
         targetType: inline
         script: 'Install-Module -Name BcContainerHelper -Force'
-
-    
-#     - powershell: |
-#         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
-
-#         $bcContainerHelperVersion = "latest"
-#         if ($settings.PSObject.Properties.Name -eq 'bcContainerHelperVersion' -and $settings.bcContainerHelperVersion) {
-#             $bcContainerHelperVersion = $settings.bcContainerHelperVersion
-#         }
-#         Write-Host "Set bcContainerHelperVersion = $bcContainerHelperVersion"
-#         if (!$local) { Write-Host "##vso[task.setvariable variable=bcContainerHelperVersion]$bcContainerHelperVersion" }
-
-#         Write-Host "Version: $bcContainerHelperVersion"
-
-#         if ($bcContainerHelperVersion -like "https://*") {
+        
+    - powershell: |
+        Set-StrictMode -Version Latest
+        
+        # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
+        [version]$CustomAppVersion = $env:CustomAppVersion
+        [version]$ManifestAppVersion = `
+          Get-Content -Path $(MainAppFolder)/app.json |
+          ConvertFrom-Json |
+          Select-Object -ExpandProperty version
+        [version]$DockerImageVersion = $env:BcApplicationVersion
+          
+        Write-Host -Object "Custom app version:   $CustomAppVersion"
+        Write-Host -Object "Docker image version: $DockerImageVersion"
+        Write-Host -Object "Manifest app version: $ManifestAppVersion"
+        
+        [version]$SelectedAppVersion = `
+          switch ($env:AppVersionSelection) {
+            'manifest' {
+              Write-Host -Object "Using app version from app manifest."
+              [string]$ManifestAppVersion
+            }
+            'dockerImageMajorMinorAndManifestMajorMinor' {
+              Write-Host -Object "Creating app version using Docker image major-minor version and app manifest major-minor version."
+              '{0}.{1}.{2}.{3}' -f
+                $DockerImageVersion.Major, $DockerImageVersion.Minor,
+                $ManifestAppVersion.Major, $ManifestAppVersion.Minor
+            }
+            'dockerImageMajorMinorAndManifestBuildRevision' {
+              Write-Host -Object "Creating app version using Docker image major-minor version and app manifest build-revision version."
+              '{0}.{1}.{2}.{3}' -f
+                $DockerImageVersion.Major, $DockerImageVersion.Minor,
+                $ManifestAppVersion.Build, $ManifestAppVersion.Revision
+            }
+            'manual' {
+              Write-Host -Object "Using custom app version."
+              $CustomAppVersion
+            }
+          }
+        Write-Host -Object "Selected app version: $SelectedAppVersion."
+        Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
+        
+        if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
+          $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
+          $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
+          $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision)
+        {
+          if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
+            Write-Warning -Message "Manifest app version does not match selected app version."
+          }
+          if ($ManifestVersionMismatchAction -eq 'error') {
+            exit(1)
+          }
+        }
+        
+        $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
+        Write-Host -Object "Custom app release version: $CustomAppReleaseVersion"
+        $SelectedAppReleaseVersion = `
+          switch ($env:AppReleaseVersionSelection) {
+            'manifestMajorMinor' {
+              Write-Host -Object "Creating app release version using app manifest major-minor version."
+              '{0}.{1}' -f
+                $ManifestAppVersion.Major, $ManifestAppVersion.Minor
+            }
+            'manifestBuildRevision' {
+              Write-Host -Object "Creating app release version using app manifest build-revision version."
+              '{0}.{1}' -f
+                $ManifestAppVersion.Build, $ManifestAppVersion.Revision
+            }
+            'manual' {
+              Write-Host -Object "Using custom app release version."
+              $CustomAppReleaseVersion
+            }
+          }
+        Write-Host -Object "Selected app release version: $SelectedAppReleaseVersion."
+        Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
+      env:
+        AppVersionSelection: ${{ parameters.appVersionSelection }}
+        CustomAppVersion: ${{ parameters.appVersion }}
+        manifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
+        AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
+        CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
+        BcApplicationVersion: $(BcApplicationVersion)
+      displayName: Get App Version
  
-#             Remove-Module BcContainerHelper -ErrorAction SilentlyContinue
-#             UnInstall-Module BcContainerHelper -allVersions -ErrorAction SilentlyContinue
-  
-#             $modulesFolder = Join-Path $env:ProgramFiles "WindowsPowerShell\Modules"
-#             if (!(Test-Path $modulesFolder)) {
-#                 New-Item -Path $modulesFolder -ItemType Directory | Out-Null
-#             }
-#             $bcContainerHelperFolder = Join-Path $modulesFolder "bcContainerHelper"
-#             if (Test-Path $bcContainerHelperFolder) {
-#                 Remove-Item $bcContainerHelperFolder -recurse -force
-#             }
-#             $tempFolder = $env:TEMP
-#             $zipFileName = Join-Path $tempFolder "bccontainerhelper.zip"
-#             if (Test-Path $zipFileName) {
-#                 Remove-Item $zipFileName -Force
-#             }
-#             $bcContainerHelperTempFolder = Join-Path $tempFolder "bcContainerHelper"
-#             if (Test-Path $bcContainerHelperTempFolder) {
-#                 Remove-Item $bcContainerHelperTempFolder -recurse -force
-#             }
-
-#             Write-Host "Downloading $bcContainerHelperVersion"
-#             (New-Object System.Net.WebClient).DownloadFile($bcContainerHelperVersion, $zipFileName)
-#             Expand-Archive -Path $zipFileName -DestinationPath $bcContainerHelperTempFolder
-#             $modulePath = (Get-Item -Path (Join-Path $bcContainerHelperTempFolder "*\bcContainerHelper.psd1")).Directory
-#             Write-Host $modulePath
-#             Move-Item -Path $modulePath -Destination (Join-Path $modulesFolder "bcContainerHelper")
-#             Import-Module bcContainerHelper -DisableNameChecking
-#         }
-#         else {
-#             $module = Get-InstalledModule -Name bccontainerhelper -ErrorAction SilentlyContinue
-#             if ($module) {
-#                 $versionStr = $module.Version.ToString()
-#                 Write-Host "BcContainerHelper $VersionStr is installed"
-#                 if ($bcContainerHelperVersion -eq "preview") {
-#                     Write-Host "Determine latest BcContainerHelper preview version"
-#                     $latestVersion = (Find-Module -Name bccontainerhelper -AllowPrerelease).Version
-#                     $bcContainerHelperVersion = $latestVersion.ToString()
-#                     Write-Host "BcContainerHelper $bcContainerHelperVersion is the latest preview version"
-#                 }
-#                 elseif ($bcContainerHelperVersion -eq "latest") {
-#                     Write-Host "Determine latest BcContainerHelper version"
-#                     $latestVersion = (Find-Module -Name bccontainerhelper).Version
-#                     $bcContainerHelperVersion = $latestVersion.ToString()
-#                     Write-Host "BcContainerHelper $bcContainerHelperVersion is the latest version"
-#                 }
-#                 if ($bcContainerHelperVersion -ne $module.Version) {
-#                     Write-Host "Updating BcContainerHelper to $bcContainerHelperVersion"
-#                     Remove-Module bccontainerhelper -ErrorAction SilentlyContinue
-#                     Update-Module -Name bccontainerhelper -Force -RequiredVersion $bcContainerHelperVersion -AllowPrerelease
-#                     Write-Host "BcContainerHelper updated"
-#                 }
-#             }
-#             else {
-#                 if (!(Get-PackageProvider -Name NuGet -ListAvailable -ErrorAction SilentlyContinue)) {
-#                     Write-Host "Installing NuGet Package Provider"
-#                     Install-PackageProvider -Name NuGet -MinimumVersion 2.8.5.208 -Force -WarningAction SilentlyContinue | Out-Null
-#                 }
-#                 if ($bcContainerHelperVersion -eq "preview") {
-#                     Write-Host "Installing BcContainerHelper"
-#                     Install-Module -Name bccontainerhelper -Force -AllowPrerelease
-#                 }
-#                 elseif ($bcContainerHelperVersion -eq "latest") {
-#                     Write-Host "Installing BcContainerHelper"
-#                     Install-Module -Name bccontainerhelper -Force
-#                 }
-#                 else {
-#                     Write-Host "Installing BcContainerHelper version $bcContainerHelperVersion"
-#                     Install-Module -Name bccontainerhelper -Force -RequiredVersion $bcContainerHelperVersion
-#                 }
-#                 $module = Get-InstalledModule -Name bccontainerhelper -ErrorAction SilentlyContinue
-#                 $versionStr = $module.Version.ToString()
-#                 Write-Host "BcContainerHelper $VersionStr installed"
-#             }
-#         }
-#       displayName: Install BcContainerHelper
 
     - powershell: |
         $params = @{}
@@ -386,6 +379,47 @@ stages:
         BcArtifactCountry: $(BcArtifactCountry)
       displayName: Run Pipeline
 
+    - powershell: |
+        Set-StrictMode -Version Latest
+        $DockerVersion = $env:BcApplicationVersion      
+        $BranchName = `
+            if ($env:IsPullRequest -eq 'false') {
+                $env:Build_SourceBranchName
+            } else {
+                $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+            }
+
+        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
+        $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+        if ([System.IO.Directory]::Exists($TempPath)) {
+            throw "TempPath ($TempPath) already exist"
+        }
+
+        New-Item -ItemType Directory -Path $TempPath -Force
+        Copy-Item -Path * -Destination $TempPath -Recurse
+
+        $OldPath = "$CommonPath-Old"
+        if ([System.IO.Directory]::Exists($OldPath)) {
+            Remove-Item -Path $OldPath -Recurse -Force
+        }
+
+        $Path = $CommonPath
+        if ([System.IO.Directory]::Exists($Path)) {
+            New-Item -ItemType Directory -Path $OldPath -Force
+            Copy-Item -Path $Path\* -Destination $OldPath -Recurse
+            Remove-Item -Path $Path -Recurse -Force
+        }
+        if (-not ([System.IO.Directory]::Exists($path))) {
+            Copy-Item -Path $TempPath -Destination $Path -Recurse
+            Remove-Item  -Path $TempPath -Recurse -Force
+        }
+      condition: variables['IsReleasePRCommit']
+      env:
+        AppReleaseVersion: $(AppReleaseVersion)
+        BcApplicationVersion: $(BcApplicationVersion)
+      displayName: Copy files to \\filestorage
+
+
     - task: PowerShell@2
       displayName: 'Cleanup'
       condition: always()
@@ -393,433 +427,3 @@ stages:
         targetType: inline
         script: 'Remove-BcContainer -containerName $(containerName); Flush-ContainerHelperCache -KeepDays 7'
         failOnStderr: false
-        
-#     - powershell: |
-#         $ExitCode = 0
-#         $FreeDiskSpace = Get-PSDrive -Name C | Select-Object -ExpandProperty Free 
-#         if ($FreeDiskSpace -lt 10gb) {
-#             Write-Host -Object '##[error]There is no free disk space left. There must be atleast 10 GB.'
-#             $ExitCode = 1
-#         }
-#         Add-Type -AssemblyName Microsoft.VisualBasic
-#         $ComputerInfo = [Microsoft.VisualBasic.Devices.ComputerInfo]::new()
-#         if ($ComputerInfo.AvailablePhysicalMemory -lt 4gb) {
-#             Write-Host -Object '##[error]There is no free memory space left. There must be atleast 4 GB.'
-#             $ExitCode = 1
-#         }
-#         exit($ExitCode)
-#       condition: always()
-#       displayName: Checking free disk and ram space
-    
-#     - powershell: |
-#         Set-StrictMode -Version Latest
-#         Write-Host -Object "BC version given $env:BcVersion"
-
-#         $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
-#         if ($env:BcVersion -notmatch $Pattern) {
-#           Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
-#           throw 'BC version doesn''t match pattern. '
-#         }
-
-#         Write-Host
-#         Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
-#         Write-Host -Object "Parsed artifact version: $($Matches.Version)"
-#         Write-Host -Object "Parsed artifact country: $($Matches.Country)"
-
-#         $Type = $Matches.Type
-#         $Version = $Matches.Version
-#         $Country = $Matches.Country
-#         $StorageAccount = 'bcartifacts'
-#         $SasToken = ''
-#         switch ($Version) {
-#           'Current' {
-#             $Version = ''
-#             break
-#           }
-#           'NextMinor' {
-#             #TODO change version
-#             $Version = '17'
-#             $StorageAccount = 'bcinsider'
-#             $SasToken = $env:BcInsiderSasToken
-#             break
-#           }
-#           'NextMajor' {
-#             $Version = ''
-#             $StorageAccount = 'bcinsider'
-#             $SasToken = $env:BcInsiderSasToken
-#             break
-#           }
-#         }
-
-#         Write-Host
-#         Write-Host -Object "Artifact type:            $Type"
-#         Write-Host -Object "Artifact version:         $($Version -creplace '^$', $Matches.Version)"
-#         Write-Host -Object "Artifact country:         $Country"
-#         Write-Host -Object "Artifact storage account: $StorageAccount"
-
-#         Write-Host -Object "##vso[task.setvariable variable=BcArtifactType;]$Type"
-#         Write-Host -Object "##vso[task.setvariable variable=BcArtifactVersion;]$Version"
-#         Write-Host -Object "##vso[task.setvariable variable=BcArtifactCountry;]$Country"
-#         Write-Host -Object "##vso[task.setvariable variable=BcArtifactStorageAccount;]$StorageAccount"
-#         Write-Host -Object "##vso[task.setvariable variable=BcArtifactSasToken;isSecret=true]$SasToken"
-#       env: 
-#         BcVersion: ${{ parameters.bcVersion }}
-#         BcInsiderSasToken: $(BCSasToken)
-#       displayName: Select BC artifact version
-
-#     - checkout: self
-#       clean: true
-      
-#     - template: UpdateCounters.yml
-#       parameters:
-#         organization: $(OrganizationName)
-#         project: $(System.TeamProject)
-#         repository: $(Build.RepositoryName)
-#         branch: $(Build.SourceBranchName)
-
-#     - task: DownloadSecureFile@1
-#       name: DownloadBCLicense
-#       inputs:
-#         secureFile: $(BCLicense.SecureFileName)
-#       displayName: Download BC license
-
-#     - task: DownloadSecureFile@1
-#       name: DownloadBCAppSigningCertificate
-#       inputs:
-#         secureFile: $(BCAppSigningCertificateSecureFileName)
-#       displayName: Download certificate for BC app signing
-      
-#     - task: ALOpsDockerCreate@1 # It will reuse the image if already exists, or build one if it doesn't.
-#       inputs:
-#         sastoken: $(BcArtifactSasToken)
-#         artifactversion: $(BcArtifactVersion)
-#         artifacttype: $(BcArtifactType)
-#         storageaccount: $(BcArtifactStorageAccount)
-#         artifactcountry: $(BcArtifactCountry)
-
-#     - task: ALOpsDockerStart@1
-#       inputs:
-#         memory_gb: 4
-#         docker_parameters: |
-#           --isolation=$(DockerIsolation)
-#           --env ExitOnError=N
-#           --memory $(DockerMemory)
-#           --volume="$(Build.SourcesDirectory):C:\Extension"
-#       timeoutInMinutes: 2
-
-#     - task: ALOpsDockerWait@1
-#       inputs:
-#         search_string: 'Ready for connections!'
-
-#     - task: ALOpsLicenseImport@1
-#       inputs:
-#         usedocker: true
-#         license_path: '$(DownloadBCLicense.SecureFilePath)'
-#         print_license_info: true
-        
-#     - task: ALOpsDockerExec@1
-#       displayName: Get BC application version
-#       inputs:
-#         inline_script: |
-#           $BcApplicationVersion = Get-NAVApplication -ServerInstance $(ALOPS_DOCKER_NAVSERVERINSTANCE) | Select-Object -ExpandProperty ApplicationVersion
-#           Write-Host -Object "BC application version: $BcApplicationVersion"
-#           Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
-    
-#     - ${{ if not(eq(parameters.latestSofteraBalticLoggingAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (Softera Baltic Logging)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestSofteraBalticLoggingAppPath }}
-#           nav_artifact_app_filter: '*.app'
-
-    
-#     - ${{ if not(eq(parameters.latestIntegrationCoreAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (Integration Core)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestIntegrationCoreAppPath }}
-#           nav_artifact_app_filter: '*.app'
-
-#     - ${{ if not(eq(parameters.latestCoreAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (Core)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestCoreAppPath }}
-#           nav_artifact_app_filter: '*.app'
-
-#     - ${{ if not(eq(parameters.latestHRAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (HR)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestHRAppPath }}
-#           nav_artifact_app_filter: '*.app'
-
-#     - ${{ if not(eq(parameters.latestTimeScheduleAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (Time-Schedule)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestTimeScheduleAppPath }}
-#           nav_artifact_app_filter: '*.app'
-
-#     - ${{ if not(eq(parameters.latestTimeEmployeeTimeAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (Time-Employee-Time)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestTimeEmployeeTimeAppPath }}
-#           nav_artifact_app_filter: '*.app'
-          
-#     - ${{ if not(eq(parameters.latestSalaryAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (Salary)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestSalaryAppPath }}
-#           nav_artifact_app_filter: '*.app'
-    
-#     - ${{ if not(eq(parameters.latestLBCAlnaCoreAppPath, '')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish AL-App (Core)'
-#         inputs:
-#           usedocker: true
-#           artifact_path: ${{ parameters.latestLBCAlnaCoreAppPath }}
-#           nav_artifact_app_filter: '*.app'
-
-#     - powershell: |
-#         Set-StrictMode -Version Latest
-        
-#         # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
-#         [version]$CustomAppVersion = $env:CustomAppVersion
-#         [version]$ManifestAppVersion = `
-#           Get-Content -Path $(MainAppFolder)/app.json |
-#           ConvertFrom-Json |
-#           Select-Object -ExpandProperty version
-#         [version]$DockerImageVersion = $env:BcApplicationVersion
-          
-#         Write-Host -Object "Custom app version:   $CustomAppVersion"
-#         Write-Host -Object "Docker image version: $DockerImageVersion"
-#         Write-Host -Object "Manifest app version: $ManifestAppVersion"
-        
-#         [version]$SelectedAppVersion = `
-#           switch ($env:AppVersionSelection) {
-#             'manifest' {
-#               Write-Host -Object "Using app version from app manifest."
-#               [string]$ManifestAppVersion
-#             }
-#             'dockerImageMajorMinorAndManifestMajorMinor' {
-#               Write-Host -Object "Creating app version using Docker image major-minor version and app manifest major-minor version."
-#               '{0}.{1}.{2}.{3}' -f
-#                 $DockerImageVersion.Major, $DockerImageVersion.Minor,
-#                 $ManifestAppVersion.Major, $ManifestAppVersion.Minor
-#             }
-#             'dockerImageMajorMinorAndManifestBuildRevision' {
-#               Write-Host -Object "Creating app version using Docker image major-minor version and app manifest build-revision version."
-#               '{0}.{1}.{2}.{3}' -f
-#                 $DockerImageVersion.Major, $DockerImageVersion.Minor,
-#                 $ManifestAppVersion.Build, $ManifestAppVersion.Revision
-#             }
-#             'manual' {
-#               Write-Host -Object "Using custom app version."
-#               $CustomAppVersion
-#             }
-#           }
-#         Write-Host -Object "Selected app version: $SelectedAppVersion."
-#         Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
-        
-#         if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
-#           $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
-#           $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
-#           $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision)
-#         {
-#           if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
-#             Write-Warning -Message "Manifest app version does not match selected app version."
-#           }
-#           if ($ManifestVersionMismatchAction -eq 'error') {
-#             exit(1)
-#           }
-#         }
-        
-#         $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
-#         Write-Host -Object "Custom app release version: $CustomAppReleaseVersion"
-#         $SelectedAppReleaseVersion = `
-#           switch ($env:AppReleaseVersionSelection) {
-#             'manifestMajorMinor' {
-#               Write-Host -Object "Creating app release version using app manifest major-minor version."
-#               '{0}.{1}' -f
-#                 $ManifestAppVersion.Major, $ManifestAppVersion.Minor
-#             }
-#             'manifestBuildRevision' {
-#               Write-Host -Object "Creating app release version using app manifest build-revision version."
-#               '{0}.{1}' -f
-#                 $ManifestAppVersion.Build, $ManifestAppVersion.Revision
-#             }
-#             'manual' {
-#               Write-Host -Object "Using custom app release version."
-#               $CustomAppReleaseVersion
-#             }
-#           }
-#         Write-Host -Object "Selected app release version: $SelectedAppReleaseVersion."
-#         Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-#       env:
-#         AppVersionSelection: ${{ parameters.appVersionSelection }}
-#         CustomAppVersion: ${{ parameters.appVersion }}
-#         manifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
-#         AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
-#         CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
-#         BcApplicationVersion: $(BcApplicationVersion)
-#       displayName: Get App Version
-      
-#     - ${{ if not(eq(parameters.testType, 'none')) }}:
-#       - task: ALOpsAppPublish@1
-#         displayName: 'ALOps Install AL TestTool'
-#         inputs:
-#           usedocker: true
-#           installaltesttool: true
-#           skip_verification: true
-#           install_al_app_names: |
-#            Tests-TestLibraries
-#            System Application Test
-#            System Application Test Library
-#            Any
-#            Library Assert
-#            Test Runner
-    
-#     - task: ALOpsAppCompiler@1
-#       displayName: 'Compile Extension'
-#       inputs:
-#         usedocker: true
-#         targetproject: '$(MainAppFolder)/app.json'
-#         failed_on_warnings: ${{ parameters.failCompilationOnWarnings }}
-#         nav_app_version: $(AppVersion)
-
-#     - task: ALOpsAppSign@1
-#       displayName: 'ALOps App Sign'
-#       env:
-#         pfx_password: $(BCAppSigningCertificatePassword)
-#       inputs:
-#         usedocker: true
-#         nav_artifact_app_filter: '*.app'
-#         pfx_path: $(DownloadBCAppSigningCertificate.SecureFilePath)
-#         timestamp_uri: 'http://timestamp.comodoca.com/authenticode' 
-      
-#     - ${{ if eq(parameters.eInvoice, true) }}:  
-#       - task: ALOpsDockerExec@1
-#         inputs:
-#           inline_script: 'Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll -Destination (Resolve-Path -Path ''C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\'').ProviderPath'
-
-#     - ${{ if eq(parameters.S4LESSEE, true) }}: 
-#       - task: ALOpsDockerExec@1
-#         inputs:
-#           inline_script: |
-#             New-Item -ItemType Directory -Path SofteraFiles
-#             Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
-#             Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
-#             Copy-Item -Path SofteraFiles\ClosedXML\lib\net452\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-
-#             Invoke-WebRequest -Uri  https://www.nuget.org/api/v2/package/DocumentFormat.OpenXml/2.7.2 -OutFile SofteraFiles\DocumentFormat.zip
-#             Expand-Archive -Path SofteraFiles\DocumentFormat.zip -DestinationPath SofteraFiles\DocumentFormat
-#             Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-
-#             #Copy-Item -Path C:\edoc\MainApp\.netpackages\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-    
-#     - task: ALOpsAppPublish@1
-#       displayName: 'Publish AL-App'
-#       inputs:
-#         usedocker: true
-#         nav_artifact_app_filter: '*.app'  
-        
-#     - ${{ if eq(parameters.testType, 'testApp') }}:      
-#       - task: ALOpsAppCompiler@1
-#         displayName: 'Compile Test Extension'
-#         inputs:
-#           usedocker: true
-#           targetproject: '$(TestAppFolder)/app.json'
-#           failed_on_warnings: ${{ parameters.failCompilationOnWarnings }}
-#           nav_app_version: $(AppVersion)
-#       - task: ALOpsAppPublish@1
-#         displayName: 'Publish Test AL-App'
-#         inputs:
-#           usedocker: true
-#           nav_artifact_app_filter: '*.test*.app' 
-#           skip_verification: true
-    
-#     - ${{ if not(eq(parameters.testType, 'none')) }}:
-#       - ${{ if parameters.installALTestTool }}:
-#         - task: ALOpsAppTest@1
-#           displayName: 'ALOps Run TestSuite'
-#           inputs:
-#             usedocker: true
-#             import_action: "Skip"
-#             import_testtoolkit: false
-#             testpage: '130455'
-#             testsuite: 'DEFAULT'
-#             failed_test_action: ${{ parameters.failedTestAction }} 
-#           continueOnError: true
-#       - ${{ if not(parameters.installALTestTool) }}:
-#         - task: ALOpsAppTest@1
-#           displayName: 'ALOps Run TestSuite'
-#           inputs:
-#             usedocker: true
-#             import_action: "Skip"
-#             import_testtoolkit: false
-#             testpage: '130455'
-#             testsuite: 'DEFAULT'
-#             testfilter: ${{ parameters.testFilter }}
-#             failed_test_action: ${{ parameters.failedTestAction }} 
-#           continueOnError: true
-#       - task: PublishTestResults@2
-#         displayName: 'Publish Test Results **/TestResults.xml'
-#         inputs:
-#           testResultsFormat: XUnit
-#           testResultsFiles: '**/TestResults.xml'
-#           testRunTitle: 'BC Test Results: $(Build.BuildId)'
-          
-#     - task: ALOpsDockerRemove@1
-#       displayName: 'Remove Docker Container'
-#       enabled: true
-#       condition: always()
-
-#     - powershell: |
-#         Set-StrictMode -Version Latest
-#         $DockerVersion = $env:BcApplicationVersion      
-#         $BranchName = `
-#             if ($env:IsPullRequest -eq 'false') {
-#                 $env:Build_SourceBranchName
-#             } else {
-#                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
-#             }
-
-#         $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
-#         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-#         if ([System.IO.Directory]::Exists($TempPath)) {
-#             throw "TempPath ($TempPath) already exist"
-#         }
-
-#         New-Item -ItemType Directory -Path $TempPath -Force
-#         Copy-Item -Path * -Destination $TempPath -Recurse
-
-#         $OldPath = "$CommonPath-Old"
-#         if ([System.IO.Directory]::Exists($OldPath)) {
-#             Remove-Item -Path $OldPath -Recurse -Force
-#         }
-
-#         $Path = $CommonPath
-#         if ([System.IO.Directory]::Exists($Path)) {
-#             New-Item -ItemType Directory -Path $OldPath -Force
-#             Copy-Item -Path $Path\* -Destination $OldPath -Recurse
-#             Remove-Item -Path $Path -Recurse -Force
-#         }
-#         if (-not ([System.IO.Directory]::Exists($path))) {
-#             Copy-Item -Path $TempPath -Destination $Path -Recurse
-#             Remove-Item  -Path $TempPath -Recurse -Force
-#         }
-#       condition: variables['IsReleasePRCommit']
-#       env:
-#         AppReleaseVersion: $(AppReleaseVersion)
-#         BcApplicationVersion: $(BcApplicationVersion)
-#       displayName: Copy files to \\filestorage
