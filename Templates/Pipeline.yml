@@ -239,12 +239,6 @@ stages:
     - powershell: |
         [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
 
-        $settings = (Get-Content (Join-Path $PSScriptRoot "settings.json") | ConvertFrom-Json)
-        if ("$version" -eq "")  {
-            $version = $settings.versions[0].version
-            Write-Host "Version not defined, using $version"
-        }
-
         $bcContainerHelperVersion = "latest"
         if ($settings.PSObject.Properties.Name -eq 'bcContainerHelperVersion' -and $settings.bcContainerHelperVersion) {
             $bcContainerHelperVersion = $settings.bcContainerHelperVersion
