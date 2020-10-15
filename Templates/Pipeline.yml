@@ -352,7 +352,7 @@ stages:
         Run-AlPipeline @params `
             -pipelinename 'test' `
             -containerName 'test' `
-            -artifact $artifact.replace('{INSIDERSASTOKEN}',$env:BcArtifactSasToken) `
+            -artifact $artifact `
             -licenseFile $env:LicenseFile `
       env:
         LicenseFile: $(BCLicense.SecureFileName)
