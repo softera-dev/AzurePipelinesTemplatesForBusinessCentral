@@ -283,14 +283,14 @@ stages:
         }
         
         $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
-        $AppsFromDependencies = @(latestIntegrationCoreAppPath,
-          latestSofteraBalticLoggingAppPath,
-          latestCoreAppPath,
-          latestHRAppPath,
-          latestTimeScheduleAppPath,
-          latestTimeEmployeeTimeAppPath,
-          latestSalaryAppPath,
-          latestLBCAlnaCoreAppPath) | Get-ChildItem -Filter '*.app' -Recurse | Select-Object -ExpandProperty FullName
+        $AppsFromDependencies = @($env:LatestIntegrationCoreAppPath,
+          $env:LatestSofteraBalticLoggingAppPath,
+          $env:LatestCoreAppPath,
+          $env:LatestHRAppPath,
+          $env:LatestTimeScheduleAppPath,
+          $env:LatestTimeEmployeeTimeAppPath,
+          $env:LatestSalaryAppPath,
+          $env:LatestLBCAlnaCoreAppPath) | Get-ChildItem -Filter '*.app' -Recurse | Select-Object -ExpandProperty FullName
         
         Run-AlPipeline @params `
             -pipelinename 'test' `
@@ -323,6 +323,14 @@ stages:
         DockerMemory: $(DockerMemory)
         RequiredOmniviaConnectorAddIn: ${{ parameters.eInvoice }}
         RequiredClosedXMLConnectorAddIn: ${{ parameters.S4LESSEE }}
+        LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
+        LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
+        LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
+        LatestHRAppPath: ${{ parameters.latestHRAppPath }}
+        LatestTimeScheduleAppPath: ${{ parameters.latestTimeScheduleAppPath }}
+        LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
+        LatestSalaryAppPath: ${{ parameters.latestSalaryAppPath }}
+        LatestLBCAlnaCoreAppPath: ${{ parameters.latestLBCAlnaCoreAppPath }}
       displayName: Run Pipeline
       
     - powershell: |
