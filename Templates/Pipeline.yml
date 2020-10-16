@@ -346,6 +346,8 @@ stages:
       displayName: Get App Version
         
     - powershell: |
+        Set-StrictMode -Version Latest
+          
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         
         $NewBCContainer = { 
@@ -394,7 +396,7 @@ stages:
           $env:LatestSalaryAppPath,
           $env:LatestLBCAlnaCoreAppPath
         $AppsFromDependencies = @(
-          $InstallAppFolders |
+          $InstallAppsFolders |
           Where-Object -FilterScript { $_ } |
           ForEach-Object -Process {
             $AppFiles = `
