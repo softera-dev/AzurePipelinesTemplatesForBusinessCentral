@@ -398,7 +398,7 @@ stages:
         )
         
         Run-AlPipeline @params `
-            -pipelinename 'test' `
+            -pipelinename 'Build' `
             -containerName $Global:ContainerName `
             -artifact $env:ArtifactUrl `
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
@@ -409,6 +409,7 @@ stages:
             -codeSignCertPfxFile $env:CodeSignCertPfxFile `
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
             -installApps $AppsFromDependencies `
+            -keepContainer $Global:ContainerName `
             -NewBCContainer $NewBCContainer 
             
          
