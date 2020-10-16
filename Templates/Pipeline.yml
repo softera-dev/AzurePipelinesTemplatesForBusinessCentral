@@ -420,11 +420,12 @@ stages:
             -codeSignCertPfxFile $env:CodeSignCertPfxFile `
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
             -installApps $AppsFromDependencies `
-            -keepContainer `
-            -NewBCContainer $NewBCContainer 
+            -azureDevOps `
+            -NewBCContainer $NewBCContainer `
+            -PublishBcContainerApp $PublishBcContainerApp
             
          
-        Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
+        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         ArtifactUrl: $(ArtifactUrl)
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
