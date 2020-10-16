@@ -259,14 +259,14 @@ stages:
         $NewBCContainer = { 
           param([hashtable]$Parameters) 
           
-          if ($env:RequiredOmnivaConnectorAddIn -eq 'true') {
+          if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
             Invoke-ScriptInBCContainer -containerName $Global:ContainerName -scriptblock { 
               Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll `
                 -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
             } 
           }  
           
-          if ($env:RequiredClosedXMLConnectorAddIn -eq 'true') {
+          if ($env:RequireClosedXMLConnectorAddIn -eq 'true') {
             New-Item -ItemType Directory -Path SofteraFiles
             Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
             Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
@@ -321,8 +321,8 @@ stages:
         MainAppFolder: $(MainAppFolder)
         TestAppFolder: $(TestAppFolder)
         DockerMemory: $(DockerMemory)
-        RequiredOmniviaConnectorAddIn: ${{ parameters.eInvoice }}
-        RequiredClosedXMLConnectorAddIn: ${{ parameters.S4LESSEE }}
+        RequireOmniviaConnectorAddIn: ${{ parameters.eInvoice }}
+        RequireClosedXMLConnectorAddIn: ${{ parameters.S4LESSEE }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
         LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
