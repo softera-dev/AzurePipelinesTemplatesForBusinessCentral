@@ -413,7 +413,7 @@ stages:
                
         Write-Host -Object "Installed apps folders: $InstallAppsFolders"
         
-        Run-AlPipeline @params `
+        Run-AlPipeline `
             -pipelinename 'Build' `
             -containerName $Global:ContainerName `
             -artifact $env:ArtifactUrl `
