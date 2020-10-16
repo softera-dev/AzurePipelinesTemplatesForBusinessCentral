@@ -148,7 +148,7 @@ stages:
     - name: MasterBranch
       value: ${{ parameters.masterBranch }}
     - name: IsReleasePRCommit
-      value: $[ startsWith(variables['BUILD_SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-') ]
+      value: $[ startsWith(variables['BUILD.SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-') ]
     - name: BcApplicationVersion
       value: ''
     steps:
@@ -422,8 +422,7 @@ stages:
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
-      #condition: variables['IsReleasePRCommit']
-      condition: startsWith(variables['BUILD.SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-')
+      condition: variables['IsReleasePRCommit']
       env:
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
