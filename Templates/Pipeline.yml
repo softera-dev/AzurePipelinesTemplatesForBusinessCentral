@@ -336,6 +336,8 @@ stages:
           }
         Write-Host -Object "Selected app release version: $SelectedAppReleaseVersion."
         Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
+        
+        Write-Host -Object "##vso[task.setvariable variable=ManifestAppVersion;]$ManifestAppVersion"
       env:
         AppVersionSelection: ${{ parameters.appVersionSelection }}
         CustomAppVersion: ${{ parameters.appVersion }}
@@ -347,7 +349,15 @@ stages:
         
     - powershell: |
         Set-StrictMode -Version Latest
-          
+        
+        [version]$ManifestAppVersion = `
+          Get-Content -Path $env:MAINAPPFOLDER/app.json |
+          ConvertFrom-Json
+        $ManifestAppVersion.Version = $env:AppVersion
+        $ManifestAppVersion |
+          ConvertTo-Json |
+           Set-Content -LiteralPath $env:MAINAPPFOLDER/app.json
+        
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         
         $NewBCContainer = { 
@@ -432,6 +442,7 @@ stages:
          
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
+        AppVersion: $(AppVersion)
         ArtifactUrl: $(ArtifactUrl)
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
