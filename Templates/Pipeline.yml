@@ -423,7 +423,7 @@ stages:
             Remove-Item  -Path $TempPath -Recurse -Force
         }
       #condition: variables['IsReleasePRCommit']
-      condition: startsWith(variables['BUILD_SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-')
+      condition: startsWith(variables['$env:BUILD_SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-')
       env:
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
