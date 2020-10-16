@@ -321,7 +321,7 @@ stages:
         MainAppFolder: $(MainAppFolder)
         TestAppFolder: $(TestAppFolder)
         DockerMemory: $(DockerMemory)
-        RequireOmniviaConnectorAddIn: ${{ parameters.eInvoice }}
+        RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
         RequireClosedXMLConnectorAddIn: ${{ parameters.S4LESSEE }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
