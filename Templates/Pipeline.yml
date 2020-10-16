@@ -148,7 +148,7 @@ stages:
     - name: MasterBranch
       value: ${{ parameters.masterBranch }}
     - name: IsReleasePRCommit
-      value: $[ startsWith(variables['BUILD.SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-') ]
+      value: $[ startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-') ]
     - name: BcApplicationVersion
       value: ''
     steps:
@@ -389,6 +389,8 @@ stages:
       displayName: Get App Version
 
     - powershell: |    
+        Write-Host -Object "IsReleasePRCommit: $env:IsReleasePRCommit"
+        
         Set-StrictMode -Version Latest
         $DockerVersion = $env:BcApplicationVersion      
         $BranchName = `
@@ -422,8 +424,10 @@ stages:
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
-      condition: variables['IsReleasePRCommit']
+      #condition: variables['IsReleasePRCommit']
+      condition: startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')
       env:
+        IsReleasePRCommit: $(IsReleasePRCommit)
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Copy files to \\filestorage
