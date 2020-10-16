@@ -254,49 +254,75 @@ stages:
 #         script: 'Install-Module -Name BcContainerHelper -Force'
         
     - powershell: |
-        $params = @{}
-        $insiderSasToken = "$ENV:BcArtifactSasToken"
-        $codeSigncertPfxFile = "$ENV:CodeSignCertPfxFile"
+        $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         
-        if ("$ENV:CodeSignCertPfxPassword" -ne "") {
-            $codeSignCertPfxPassword = try { "$ENV:CodeSignCertPfxPassword" | ConvertTo-SecureString } catch { ConvertTo-SecureString -String "$ENV:CodeSignCertPfxPassword" -AsPlainText -Force }
-            $params = @{
-                "codeSignCertPfxFile" = $codeSignCertPfxFile
-                "codeSignCertPfxPassword" = $codeSignCertPfxPassword
-            }
-        }
-        else {
-            $codeSignCertPfxPassword = $null
+        $NewBCContainer = { 
+          param([hashtable]$Parameters) 
+          
+          if ($env:RequiredOmnivaConnectorAddIn -eq 'true') {
+            Invoke-ScriptInBCContainer -containerName $Global:ContainerName -scriptblock { 
+              Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll `
+                -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
+            } 
+          }  
+          
+          if ($env:RequiredClosedXMLConnectorAddIn -eq 'true') {
+            New-Item -ItemType Directory -Path SofteraFiles
+            Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
+            Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
+            Copy-Item -Path SofteraFiles\ClosedXML\lib\net452\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+            Invoke-WebRequest -Uri  https://www.nuget.org/api/v2/package/DocumentFormat.OpenXml/2.7.2 -OutFile SofteraFiles\DocumentFormat.zip
+            Expand-Archive -Path SofteraFiles\DocumentFormat.zip -DestinationPath SofteraFiles\DocumentFormat
+            Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+          }
+          
+          New-BcContainer @parameters
+          Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock {
+              $progressPreference = 'SilentlyContinue'
+          }
         }
         
-        $containerName = 'test'
-        $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
-
+        $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
+        $AppsFromDependencies = @(latestIntegrationCoreAppPath,
+          latestSofteraBalticLoggingAppPath,
+          latestCoreAppPath,
+          latestHRAppPath,
+          latestTimeScheduleAppPath,
+          latestTimeEmployeeTimeAppPath,
+          latestSalaryAppPath,
+          latestLBCAlnaCoreAppPath) | Get-ChildItem -Filter '*.app' -Recurse | Select-Object -ExpandProperty FullName
+        
         Run-AlPipeline @params `
             -pipelinename 'test' `
-            -containerName $containerName `
-            -artifact $artifact `
+            -containerName $Global:ContainerName `
+            -artifact $ArtifactUrl `
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
             -licenseFile $env:LicenseFile `
             -appFolders $env:MainAppFolder `
             -testFolders $env:TestAppFolder `
-            -memoryLimit $env:DockerMemory
+            -memoryLimit $env:DockerMemory `
+            -codeSignCertPfxFile $env:CodeSignCertPfxFile `
+            -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
+            -installApps $AppsFromDependencies `
+            -NewBCContainer $NewBCContainer 
             
          
         Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
         Write-Host -Object "##vso[task.setvariable variable=artifact;]$artifact"
       env:
-        LicenseFile: $(DownloadBCLicense.SecureFilePath)
-        CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
-        CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         BcArtifactSasToken: $(BcArtifactSasToken)
         BcArtifactVersion: $(BcArtifactVersion)
         BcArtifactType: $(BcArtifactType)
         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
         BcArtifactCountry: $(BcArtifactCountry)
+        LicenseFile: $(DownloadBCLicense.SecureFilePath)
+        CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
+        CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: $(MainAppFolder)
         TestAppFolder: $(TestAppFolder)
         DockerMemory: $(DockerMemory)
+        RequiredOmniviaConnectorAddIn: ${{ parameters.eInvoice }}
+        RequiredClosedXMLConnectorAddIn: ${{ parameters.S4LESSEE }}
       displayName: Run Pipeline
       
     - powershell: |
@@ -306,7 +332,7 @@ stages:
         Write-Host -Object "BC application version: $BcApplicationVersion"
         Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
       env:
-        ArtifactUrl: $(artifact)
+        ArtifactUrl: $(ArtifactUrl)
       displayName: Get BC application version
       
     - powershell: |
@@ -439,6 +465,6 @@ stages:
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
       env:
-        ContainerName: $(containerName)
+        ContainerName: $(ContainerName)
       displayName: 'Cleanup'
       condition: always()
