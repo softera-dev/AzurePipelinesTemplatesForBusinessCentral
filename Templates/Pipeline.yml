@@ -382,6 +382,14 @@ stages:
           }
         }
         
+        $PublishBcContainerApp = { 
+          param([hashtable]$Parameters)
+                    
+          Write-Host -Object "Publishing app $($Parameters['appFile'])"
+          
+          Publish-BcContainerApp @Parameters
+        }
+        
         $InstallAppsFolders = `
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
@@ -393,8 +401,18 @@ stages:
           $env:LatestLBCAlnaCoreAppPath
         $AppsFromDependencies = @(
           $InstallAppFolders |
-          Get-ChildItem -Filter '*.app' -Recurse |
-          Select-Object -ExpandProperty FullName
+          Where-Object -FilterScript { $_ } |
+          ForEach-Object -Process {
+            $AppFiles = `
+              Get-ChildItem -LiteralPath $_ -Filter '*.app' -Recurse |
+              Select-Object -ExpandProperty FullName
+            if ($AppFiles) {
+              $AppFiles
+            } else {
+              Write-Host -Object "No app files found in folder $_."
+              throw 'No app files found in folder.'
+            }
+          }
         )
         
         Run-AlPipeline @params `
