@@ -270,7 +270,7 @@ stages:
         }
         
         $containerName = 'test'
-        $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry
+        $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
 
         Run-AlPipeline @params `
             -pipelinename 'test' `
@@ -282,6 +282,7 @@ stages:
             -testFolders $(TestAppFolder) 
          
         Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
+        Write-Host -Object "##vso[task.setvariable variable=artifact;]$artifact"
       env:
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
@@ -295,11 +296,12 @@ stages:
       
     - powershell: |
         #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
-        $BcApplicationVersion = $env:BcArtifactVersion
+        $parts = $env:ArtifactUrl.Split('/')
+        $BcApplicationVersion = $parts[4]
         Write-Host -Object "BC application version: $BcApplicationVersion"
         Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
       env:
-        BcArtifactVersion: $(BcArtifactVersion)
+        ArtifactUrl: $(artifact)
       displayName: Get BC application version
       
     - powershell: |
@@ -427,12 +429,10 @@ stages:
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Copy files to \\filestorage
-
-
-    - task: PowerShell@2
+        
+    - powershell: |
+        Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
+      env:
+        ContainerName: $(containerName)
       displayName: 'Cleanup'
       condition: always()
-      inputs:
-        targetType: inline
-        script: 'Remove-BcContainer -containerName $(containerName); Flush-ContainerHelperCache -KeepDays 7'
-        failOnStderr: false
