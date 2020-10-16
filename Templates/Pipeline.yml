@@ -382,6 +382,14 @@ stages:
           
           Publish-BcContainerApp @Parameters
         }
+             
+        $CompileAppInBcContainer = { 
+          param([hashtable]$Parameters)
+                    
+          Write-Host -Object "Publishing app $($Parameters['appFile'])" -Foreground Green
+          
+          Compile-AppInBcContainer @parameters
+        }
         
         $InstallAppsFolders = `
           $env:LatestIntegrationCoreAppPath,
@@ -422,6 +430,7 @@ stages:
             -installApps $AppsFromDependencies `
             -azureDevOps `
             -NewBCContainer $NewBCContainer `
+            -CompileAppInBcContainer $CompileAppInBcContainer `
             -PublishBcContainerApp $PublishBcContainerApp
             
          
