@@ -409,7 +409,7 @@ stages:
             -codeSignCertPfxFile $env:CodeSignCertPfxFile `
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
             -installApps $AppsFromDependencies `
-            -keepContainer $Global:ContainerName `
+            -keepContainer `
             -NewBCContainer $NewBCContainer 
             
          
