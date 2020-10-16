@@ -252,95 +252,21 @@ stages:
 #       inputs:
 #         targetType: inline
 #         script: 'Install-Module -Name BcContainerHelper -Force'
-        
+
     - powershell: |
-        $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
-        
-        $NewBCContainer = { 
-          param([hashtable]$Parameters) 
-          
-          if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
-            Invoke-ScriptInBCContainer -containerName $Global:ContainerName -scriptblock { 
-              Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll `
-                -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
-            } 
-          }  
-          
-          if ($env:RequireClosedXML -eq 'true') {
-            New-Item -ItemType Directory -Path SofteraFiles
-            Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
-            Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
-            Copy-Item -Path SofteraFiles\ClosedXML\lib\net452\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-            Invoke-WebRequest -Uri  https://www.nuget.org/api/v2/package/DocumentFormat.OpenXml/2.7.2 -OutFile SofteraFiles\DocumentFormat.zip
-            Expand-Archive -Path SofteraFiles\DocumentFormat.zip -DestinationPath SofteraFiles\DocumentFormat
-            Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-          }
-          
-          New-BcContainer @parameters
-          Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock {
-              $progressPreference = 'SilentlyContinue'
-          }
-        }
-        
+        #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
         $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
-        $AppsFromDependencies = @($env:LatestIntegrationCoreAppPath,
-          $env:LatestSofteraBalticLoggingAppPath,
-          $env:LatestCoreAppPath,
-          $env:LatestHRAppPath,
-          $env:LatestTimeScheduleAppPath,
-          $env:LatestTimeEmployeeTimeAppPath,
-          $env:LatestSalaryAppPath,
-          $env:LatestLBCAlnaCoreAppPath) | Get-ChildItem -Filter '*.app' -Recurse | Select-Object -ExpandProperty FullName
-        
-        Run-AlPipeline @params `
-            -pipelinename 'test' `
-            -containerName $Global:ContainerName `
-            -artifact $ArtifactUrl `
-            -baseFolder $env:BUILD_SOURCESDIRECTORY `
-            -licenseFile $env:LicenseFile `
-            -appFolders $env:MainAppFolder `
-            -testFolders $env:TestAppFolder `
-            -memoryLimit $env:DockerMemory `
-            -codeSignCertPfxFile $env:CodeSignCertPfxFile `
-            -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
-            -installApps $AppsFromDependencies `
-            -NewBCContainer $NewBCContainer 
-            
-         
-        Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
-        Write-Host -Object "##vso[task.setvariable variable=artifact;]$artifact"
+        Write-Host -Object "##vso[task.setvariable variable=ArtifactUrl;]$ArtifactUrl"
+        $parts = $ArtifactUrl.Split('/')
+        $BcApplicationVersion = $parts[4]
+        Write-Host -Object "BC application version: $BcApplicationVersion"
+        Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
       env:
         BcArtifactSasToken: $(BcArtifactSasToken)
         BcArtifactVersion: $(BcArtifactVersion)
         BcArtifactType: $(BcArtifactType)
         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
         BcArtifactCountry: $(BcArtifactCountry)
-        LicenseFile: $(DownloadBCLicense.SecureFilePath)
-        CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
-        CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
-        MainAppFolder: $(MainAppFolder)
-        TestAppFolder: $(TestAppFolder)
-        DockerMemory: $(DockerMemory)
-        RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
-        RequireClosedXML: ${{ parameters.S4LESSEE }}
-        LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
-        LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
-        LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
-        LatestHRAppPath: ${{ parameters.latestHRAppPath }}
-        LatestTimeScheduleAppPath: ${{ parameters.latestTimeScheduleAppPath }}
-        LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
-        LatestSalaryAppPath: ${{ parameters.latestSalaryAppPath }}
-        LatestLBCAlnaCoreAppPath: ${{ parameters.latestLBCAlnaCoreAppPath }}
-      displayName: Run Pipeline
-      
-    - powershell: |
-        #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
-        $parts = $env:ArtifactUrl.Split('/')
-        $BcApplicationVersion = $parts[4]
-        Write-Host -Object "BC application version: $BcApplicationVersion"
-        Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
-      env:
-        ArtifactUrl: $(ArtifactUrl)
       displayName: Get BC application version
       
     - powershell: |
@@ -426,6 +352,80 @@ stages:
         CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Get App Version
+        
+    - powershell: |
+        $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+        
+        $NewBCContainer = { 
+          param([hashtable]$Parameters) 
+          
+          if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
+            Invoke-ScriptInBCContainer -containerName $Global:ContainerName -scriptblock { 
+              Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll `
+                -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
+            } 
+          }  
+          
+          if ($env:RequireClosedXML -eq 'true') {
+            New-Item -ItemType Directory -Path SofteraFiles
+            Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
+            Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
+            Copy-Item -Path SofteraFiles\ClosedXML\lib\net452\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+            Invoke-WebRequest -Uri  https://www.nuget.org/api/v2/package/DocumentFormat.OpenXml/2.7.2 -OutFile SofteraFiles\DocumentFormat.zip
+            Expand-Archive -Path SofteraFiles\DocumentFormat.zip -DestinationPath SofteraFiles\DocumentFormat
+            Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+          }
+          
+          New-BcContainer @parameters
+          Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock {
+              $progressPreference = 'SilentlyContinue'
+          }
+        }
+        
+        $AppsFromDependencies = @($env:LatestIntegrationCoreAppPath,
+          $env:LatestSofteraBalticLoggingAppPath,
+          $env:LatestCoreAppPath,
+          $env:LatestHRAppPath,
+          $env:LatestTimeScheduleAppPath,
+          $env:LatestTimeEmployeeTimeAppPath,
+          $env:LatestSalaryAppPath,
+          $env:LatestLBCAlnaCoreAppPath) | Get-ChildItem -Filter '*.app' -Recurse | Select-Object -ExpandProperty FullName
+        
+        Run-AlPipeline @params `
+            -pipelinename 'test' `
+            -containerName $Global:ContainerName `
+            -artifact $env:ArtifactUrl `
+            -baseFolder $env:BUILD_SOURCESDIRECTORY `
+            -licenseFile $env:LicenseFile `
+            -appFolders $env:MainAppFolder `
+            -testFolders $env:TestAppFolder `
+            -memoryLimit $env:DockerMemory `
+            -codeSignCertPfxFile $env:CodeSignCertPfxFile `
+            -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
+            -installApps $AppsFromDependencies `
+            -NewBCContainer $NewBCContainer 
+            
+         
+        Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
+      env:
+        ArtifactUrl: $(ArtifactUrl)
+        LicenseFile: $(DownloadBCLicense.SecureFilePath)
+        CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
+        CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
+        MainAppFolder: $(MainAppFolder)
+        TestAppFolder: $(TestAppFolder)
+        DockerMemory: $(DockerMemory)
+        RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
+        RequireClosedXML: ${{ parameters.S4LESSEE }}
+        LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
+        LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
+        LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
+        LatestHRAppPath: ${{ parameters.latestHRAppPath }}
+        LatestTimeScheduleAppPath: ${{ parameters.latestTimeScheduleAppPath }}
+        LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
+        LatestSalaryAppPath: ${{ parameters.latestSalaryAppPath }}
+        LatestLBCAlnaCoreAppPath: ${{ parameters.latestLBCAlnaCoreAppPath }}
+      displayName: Run Pipeline
 
     - powershell: |    
         Write-Host -Object "IsReleasePRCommit: $env:IsReleasePRCommit"
