@@ -148,7 +148,7 @@ stages:
     - name: MasterBranch
       value: ${{ parameters.masterBranch }}
     - name: IsReleasePRCommit
-      value: $[ startsWith(variables['$env:BUILD_SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-') ]
+      value: $[ startsWith(variables['BUILD_SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-') ]
     - name: BcApplicationVersion
       value: ''
     steps:
