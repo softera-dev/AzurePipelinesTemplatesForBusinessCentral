@@ -298,6 +298,7 @@ stages:
               $CustomAppVersion
             }
           }
+              
         Write-Host -Object "Selected app version: $SelectedAppVersion."
         Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
         
@@ -490,9 +491,9 @@ stages:
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Copy files to \\filestorage
         
-    - powershell: |
-        Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
-      env:
-        ContainerName: $(ContainerName)
-      displayName: 'Cleanup'
-      condition: always()
+#     - powershell: |
+#         Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
+#       env:
+#         ContainerName: $(ContainerName)
+#       displayName: 'Cleanup'
+#       condition: always()
