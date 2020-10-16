@@ -359,6 +359,8 @@ stages:
         $NewBCContainer = { 
           param([hashtable]$Parameters) 
           
+          $Parameters['isolation'] = $env:DockerIsolation
+          
           if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
             Invoke-ScriptInBCContainer -containerName $Global:ContainerName -scriptblock { 
               Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll `
@@ -382,14 +384,20 @@ stages:
           }
         }
         
-        $AppsFromDependencies = @($env:LatestIntegrationCoreAppPath,
+        $InstallAppsFolders = `
+          $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
           $env:LatestCoreAppPath,
           $env:LatestHRAppPath,
           $env:LatestTimeScheduleAppPath,
           $env:LatestTimeEmployeeTimeAppPath,
           $env:LatestSalaryAppPath,
-          $env:LatestLBCAlnaCoreAppPath) | Get-ChildItem -Filter '*.app' -Recurse | Select-Object -ExpandProperty FullName
+          $env:LatestLBCAlnaCoreAppPath
+        $AppsFromDependencies = @(
+          $InstallAppFolders |
+          Get-ChildItem -Filter '*.app' -Recurse |
+          Select-Object -ExpandProperty FullName
+        )
         
         Run-AlPipeline @params `
             -pipelinename 'test' `
@@ -415,6 +423,7 @@ stages:
         MainAppFolder: $(MainAppFolder)
         TestAppFolder: $(TestAppFolder)
         DockerMemory: $(DockerMemory)
+        DockerIsolation: ${{ parameters.dockerIsolation }}
         RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
         RequireClosedXML: ${{ parameters.S4LESSEE }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
