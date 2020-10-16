@@ -350,11 +350,11 @@ stages:
     - powershell: |
         Set-StrictMode -Version Latest
         
-        [version]$ManifestAppVersion = `
+        $ManifestApp = `
           Get-Content -Path $env:MAINAPPFOLDER/app.json |
           ConvertFrom-Json
-        $ManifestAppVersion.Version = $env:AppVersion
-        $ManifestAppVersion |
+        $ManifestApp.Version = $env:AppVersion
+        $ManifestApp |
           ConvertTo-Json |
            Set-Content -LiteralPath $env:MAINAPPFOLDER/app.json
         
