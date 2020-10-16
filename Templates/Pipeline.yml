@@ -385,7 +385,7 @@ stages:
         $PublishBcContainerApp = { 
           param([hashtable]$Parameters)
                     
-          Write-Host -Object "Publishing app $($Parameters['appFile'])"
+          Write-Host -Object "Publishing app $($Parameters['appFile'])" -Foreground Green
           
           Publish-BcContainerApp @Parameters
         }
