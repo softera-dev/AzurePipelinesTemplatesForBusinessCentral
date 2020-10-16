@@ -266,7 +266,7 @@ stages:
             } 
           }  
           
-          if ($env:RequireClosedXMLConnectorAddIn -eq 'true') {
+          if ($env:RequireClosedXML -eq 'true') {
             New-Item -ItemType Directory -Path SofteraFiles
             Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
             Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
@@ -322,7 +322,7 @@ stages:
         TestAppFolder: $(TestAppFolder)
         DockerMemory: $(DockerMemory)
         RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
-        RequireClosedXMLConnectorAddIn: ${{ parameters.S4LESSEE }}
+        RequireClosedXML: ${{ parameters.S4LESSEE }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
         LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
