@@ -148,7 +148,7 @@ stages:
     - name: MasterBranch
       value: ${{ parameters.masterBranch }}
     - name: IsReleasePRCommit
-      value: $[ startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-') ]
+      value: $[ startsWith(variables['$env:BUILD_SOURCEVERSIONMESSAGE'], 'Merge WIP to Release-') ]
     - name: BcApplicationVersion
       value: ''
     steps:
@@ -388,9 +388,7 @@ stages:
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Get App Version
 
-    - powershell: |
-        Write-Host -Object "Commit message: $env:BUILD_SOURCEVERSIONMESSAGE"
-    
+    - powershell: |    
         Set-StrictMode -Version Latest
         $DockerVersion = $env:BcApplicationVersion      
         $BranchName = `
