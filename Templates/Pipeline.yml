@@ -266,7 +266,7 @@ stages:
         # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
         [version]$CustomAppVersion = $env:CustomAppVersion
         [version]$ManifestAppVersion = `
-          Get-Content -Path $(MainAppFolder)/app.json |
+          Get-Content -Path $env:MAINAPPFOLDER/app.json |
           ConvertFrom-Json |
           Select-Object -ExpandProperty version
         [version]$DockerImageVersion = $env:BcApplicationVersion
