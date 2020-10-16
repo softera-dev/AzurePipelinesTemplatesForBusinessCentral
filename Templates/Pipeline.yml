@@ -140,8 +140,6 @@ stages:
       
     - name: DockerMemory
       value: ${{ parameters.dockerMemory }}
-    - name: DockerIsolation
-      value: ${{ parameters.dockerIsolation }}
       
     - name: IsPullRequest
       value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
