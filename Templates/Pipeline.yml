@@ -278,8 +278,9 @@ stages:
             -artifact $artifact `
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
             -licenseFile $env:LicenseFile `
-            -appFolders $(MainAppFolder) `
-            -testFolders $(TestAppFolder)
+            -appFolders $env:MainAppFolder `
+            -testFolders $env:TestAppFolder `
+            -memoryLimit $env:DockerMemory
             
          
         Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
@@ -293,6 +294,9 @@ stages:
         BcArtifactType: $(BcArtifactType)
         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
         BcArtifactCountry: $(BcArtifactCountry)
+        MainAppFolder: $(MainAppFolder)
+        TestAppFolder: $(TestAppFolder)
+        DockerMemory: $(DockerMemory)
       displayName: Run Pipeline
       
     - powershell: |
