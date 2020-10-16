@@ -408,6 +408,8 @@ stages:
             }
           }
         )
+               
+        Write-Host -Object "Installed apps folders: $InstallAppsFolders"
         
         Run-AlPipeline @params `
             -pipelinename 'Build' `
