@@ -253,46 +253,46 @@ stages:
 #         targetType: inline
 #         script: 'Install-Module -Name BcContainerHelper -Force'
         
-    - powershell: |
-        $params = @{}
-        $insiderSasToken = "$ENV:BcArtifactSasToken"
-        $codeSigncertPfxFile = "$ENV:CodeSignCertPfxFile"
+#     - powershell: |
+#         $params = @{}
+#         $insiderSasToken = "$ENV:BcArtifactSasToken"
+#         $codeSigncertPfxFile = "$ENV:CodeSignCertPfxFile"
         
-        if ("$ENV:CodeSignCertPfxPassword" -ne "") {
-            $codeSignCertPfxPassword = try { "$ENV:CodeSignCertPfxPassword" | ConvertTo-SecureString } catch { ConvertTo-SecureString -String "$ENV:CodeSignCertPfxPassword" -AsPlainText -Force }
-            $params = @{
-                "codeSignCertPfxFile" = $codeSignCertPfxFile
-                "codeSignCertPfxPassword" = $codeSignCertPfxPassword
-            }
-        }
-        else {
-            $codeSignCertPfxPassword = $null
-        }
+#         if ("$ENV:CodeSignCertPfxPassword" -ne "") {
+#             $codeSignCertPfxPassword = try { "$ENV:CodeSignCertPfxPassword" | ConvertTo-SecureString } catch { ConvertTo-SecureString -String "$ENV:CodeSignCertPfxPassword" -AsPlainText -Force }
+#             $params = @{
+#                 "codeSignCertPfxFile" = $codeSignCertPfxFile
+#                 "codeSignCertPfxPassword" = $codeSignCertPfxPassword
+#             }
+#         }
+#         else {
+#             $codeSignCertPfxPassword = $null
+#         }
         
-        $containerName = 'test'
-        $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
+#         $containerName = 'test'
+#         $artifact = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
 
-        Run-AlPipeline @params `
-            -pipelinename 'test' `
-            -containerName $containerName `
-            -artifact $artifact `
-            -baseFolder $env:BUILD_SOURCESDIRECTORY `
-            -licenseFile $env:LicenseFile `
-            -appFolders $(MainAppFolder) `
-            -testFolders $(TestAppFolder) 
+#         Run-AlPipeline @params `
+#             -pipelinename 'test' `
+#             -containerName $containerName `
+#             -artifact $artifact `
+#             -baseFolder $env:BUILD_SOURCESDIRECTORY `
+#             -licenseFile $env:LicenseFile `
+#             -appFolders $(MainAppFolder) `
+#             -testFolders $(TestAppFolder) 
          
-        Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
-        Write-Host -Object "##vso[task.setvariable variable=artifact;]$artifact"
-      env:
-        LicenseFile: $(DownloadBCLicense.SecureFilePath)
-        CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
-        CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
-        BcArtifactSasToken: $(BcArtifactSasToken)
-        BcArtifactVersion: $(BcArtifactVersion)
-        BcArtifactType: $(BcArtifactType)
-        BcArtifactStorageAccount: $(BcArtifactStorageAccount)
-        BcArtifactCountry: $(BcArtifactCountry)
-      displayName: Run Pipeline
+#         Write-Host -Object "##vso[task.setvariable variable=containerName;]$containerName"
+#         Write-Host -Object "##vso[task.setvariable variable=artifact;]$artifact"
+#       env:
+#         LicenseFile: $(DownloadBCLicense.SecureFilePath)
+#         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
+#         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
+#         BcArtifactSasToken: $(BcArtifactSasToken)
+#         BcArtifactVersion: $(BcArtifactVersion)
+#         BcArtifactType: $(BcArtifactType)
+#         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
+#         BcArtifactCountry: $(BcArtifactCountry)
+#       displayName: Run Pipeline
       
     - powershell: |
         #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
@@ -389,7 +389,7 @@ stages:
       displayName: Get App Version
 
     - powershell: |
-        Write-Host -Object "Commit message: $env:Build.SourceVersionMessage"
+        Write-Host -Object "Commit message: $env:BUILD_SOURCEVERSIONMESSAGE"
     
         Set-StrictMode -Version Latest
         $DockerVersion = $env:BcApplicationVersion      
