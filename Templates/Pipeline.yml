@@ -1,9 +1,24 @@
 parameters:
 - name: bcVersion
   type: string
-- name: alLanguageExtensionSecureFileName
+- name: alLanguageExtensionFileName
   type: string
   default: ''
+- name: rulesetFileName
+  type: string
+  default: al.ruleset.json
+- name: enableCodeCop
+  type: string
+  default: true
+- name: enableAppSourceCop
+  type: string
+  default: true
+- name: enablePerTenantExtensionCop
+  type: string
+  default: true
+- name: enableUICop
+  type: string
+  default: true
 
 - name: organizationName
   type: string
@@ -386,12 +401,26 @@ stages:
           }
           
           New-BcContainer @parameters
-          Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock {
+          Invoke-ScriptInBcContainer $parameters.ContainerName -argumentList $env:ALLanguageExtensionFileName -scriptblock {
+              param($ALLanguageExtensionFileName)
               $progressPreference = 'SilentlyContinue'
-              Remove-Item -Path 'C:\run\*.vsix'
+              if ($ALLanguageExtensionFileName -ne '') {
+                Remove-Item -Path 'C:\run\*.vsix'
+              }
           }
           
-          Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionSecureFileName -containerPath 'C:\run\ALLanguage.vsix'
+          if ($env:ALLanguageExtensionFileName -ne '') {
+            Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
+          }
+          
+        }
+        
+        $CompileBcContainerApp = { 
+          param([hashtable]$Parameters)
+                    
+          $Parameters['rulesetFile'] = $env:RulesetFileName
+          
+          Compile-AppBcContainerApp @Parameters
         }
         
         $PublishBcContainerApp = { 
@@ -442,17 +471,23 @@ stages:
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
             -installApps $AppsFromDependencies `
             -azureDevOps `
-            -enableCodeCop `
-            -enableAppSourceCop `
-            -enablePerTenantExtensionCop `
-            -enableUICop `
+            -enableCodeCop:($env:EnableCodeCop -eq 'true') `
+            -enableAppSourceCop:($env:EnableAppSourceCop -eq 'true') `
+            -enablePerTenantExtensionCop:($env:EnablePerTenantExtensionCop -eq 'true') `
+            -enableUICop:($env:EnableUICop -eq 'true') `
             -NewBCContainer $NewBCContainer `
+            -CompileAppInBcContainer $CompileBcContainerApp
             -PublishBcContainerApp $PublishBcContainerApp
             
          
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
-        ALLanguageExtensionSecureFileName: ${{ parameters.alLanguageExtensionSecureFileName }}
+        ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
+        RulesetFileName: ${{ parameters.rulesetFileName }}
+        EnableCodeCop: ${{ parameters.enableCodeCop }}
+        EnableAppSourceCop: ${{ parameters.enableAppSourceCop }}
+        EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
+        EnableUICop: ${{ parameters.enableUICop }}
         AppVersion: $(AppVersion)
         ArtifactUrl: $(ArtifactUrl)
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
