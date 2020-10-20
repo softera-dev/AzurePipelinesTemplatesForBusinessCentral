@@ -420,7 +420,7 @@ stages:
                     
           $Parameters['rulesetFile'] = $env:RulesetFileName
           
-          Compile-AppBcContainerApp @Parameters
+          Compile-AppInBcContainer @Parameters
         }
         
         $PublishBcContainerApp = { 
