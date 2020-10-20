@@ -523,7 +523,7 @@ stages:
             -enablePerTenantExtensionCop:($env:EnablePerTenantExtensionCop -eq 'true') `
             -enableUICop:($env:EnableUICop -eq 'true') `
             -NewBCContainer $NewBCContainer `
-            -CompileAppInBcContainer $CompileBcContainerApp
+            -CompileAppInBcContainer $CompileBcContainerApp `
             -PublishBcContainerApp $PublishBcContainerApp
             
          
