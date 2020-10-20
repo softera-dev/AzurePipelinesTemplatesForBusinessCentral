@@ -4,18 +4,6 @@ parameters:
 - name: alLanguageExtensionSecureFileName
   type: string
   default: ''
-- name: enableCodeCop
-  type: boolean
-  default: true
-- name: enableAppSourceCop
-  type: boolean
-  default: true
-- name: enablePerTenantExtensionCop
-  type: boolean
-  default: true
-- name: enableUICop
-  type: boolean
-  default: true
 
 - name: organizationName
   type: string
@@ -454,10 +442,10 @@ stages:
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
             -installApps $AppsFromDependencies `
             -azureDevOps `
-            -enableCodeCop $env:EnableCodeCop `
-            -enableAppSourceCop $env:EnableAppSourceCop `
-            -enablePerTenantExtensionCop $env:EnablePerTenantExtensionCop `
-            -enableUICop  $env:EnableUICop `
+            -enableCodeCop `
+            -enableAppSourceCop `
+            -enablePerTenantExtensionCop `
+            -enableUICop `
             -NewBCContainer $NewBCContainer `
             -PublishBcContainerApp $PublishBcContainerApp
             
@@ -465,10 +453,6 @@ stages:
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         ALLanguageExtensionSecureFileName: ${{ parameters.alLanguageExtensionSecureFileName }}
-        EnableCodeCop: ${{ parameters.enableCodeCop }}
-        EnableAppSourceCop: ${{ parameters.enableAppSourceCop }}
-        EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
-        EnableUICop: ${{ parameters.enableUICop }}
         AppVersion: $(AppVersion)
         ArtifactUrl: $(ArtifactUrl)
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
