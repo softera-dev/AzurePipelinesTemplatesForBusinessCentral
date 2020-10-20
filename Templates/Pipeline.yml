@@ -417,8 +417,10 @@ stages:
         
         $CompileBcContainerApp = { 
           param([hashtable]$Parameters)
+          
+          $RulesetFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $env:RulesetFileName
                     
-          $Parameters['rulesetFile'] = $env:MainAppFolder/$env:RulesetFileName
+          $Parameters['rulesetFile'] = $RulesetFilePath
           
           Compile-AppInBcContainer @Parameters
         }
