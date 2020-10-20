@@ -413,6 +413,42 @@ stages:
             Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
           }
           
+          # iš AppSourceCop.json failo prieš Run-AlPipeline kvietimą, jei yra, priešingu atveju @{}
+          if (Test-Path $env:MAINAPPFOLDER/AppSourceCop.json -PathType leaf) {
+            $AppSourceCopSettings = `
+              Get-Content -Path $env:MAINAPPFOLDER/AppSourceCop.json |
+              ConvertFrom-Json
+          } else {
+            $AppSourceCopSettings = @{}   
+          }
+          # iš AppSourceCop.json failo prieš po Run-AlPipeline kvietimo prieš Compile-AppInBcContainer jei yra, priešingu atveju @{}
+          if (Test-Path $env:MAINAPPFOLDER/AppSourceCop.json -PathType leaf) {
+            $AppSourceCopSettingsCreatedByRunAlPipeline = ` 
+              Get-Content -Path $env:MAINAPPFOLDER/AppSourceCop.json |
+              ConvertFrom-Json
+          } else {
+            $AppSourceCopSettings = @{}   
+          }
+          # Nereikalingų properčių pašalinimas:
+          @(
+            $AppSourceCopSettings.Keys
+            if ($AppSourceCopSettings.Keys.Count -gt 0) {
+              'mandatoryAffixes'
+              'mandatoryPrefix'
+              'mandatorySuffix'
+              'supportedCountries'
+            }
+          ) |
+          ForEach-Object -Process {
+              $AppSourceCopSettingsCreatedByRunAlPipeline.Remove($_)
+          }
+          $AppSourceCopSettingsToSave = $AppSourceCopSettingsCreatedByRunAlPipeline + $AppSourceCopSettings
+          # Išsaugom pataisytą AppSourceCop.json
+          $AppSourceCopSettingsToSave |
+          ConvertTo-Json |
+          Set-Content -LiteralPath $env:MainAppFolder
+        
+          
         }
         
         $CompileBcContainerApp = { 
@@ -459,6 +495,15 @@ stages:
         )
                
         Write-Host -Object "Installed apps folders: $InstallAppsFolders"
+        
+        Get-ChildItem `
+          -LiteralPath $env:MainAppFolder `
+          -Filter 'AppSourceCop.json' `
+          -Recurse |
+        ForEach-Object -Process {
+          # AppSourceCop.json kopija vadinsis AppSourceCop.json-original
+          $_ | Copy-Item -Destination ($_.FullName + '-original')
+        }
         
         Run-AlPipeline `
             -pipelinename 'Build' `
