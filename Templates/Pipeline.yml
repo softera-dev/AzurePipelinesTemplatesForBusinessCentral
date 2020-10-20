@@ -1,6 +1,21 @@
 parameters:
 - name: bcVersion
   type: string
+- name: alLanguageExtensionSecureFileName
+  type: string
+  default: ''
+- name: enableCodeCop
+  type: boolean
+  default: true
+- name: enableAppSourceCop
+  type: boolean
+  default: true
+- name: enablePerTenantExtensionCop
+  type: boolean
+  default: true
+- name: enableUICop
+  type: boolean
+  default: true
 
 - name: organizationName
   type: string
@@ -361,7 +376,7 @@ stages:
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         
         $NewBCContainer = { 
-          param([hashtable]$Parameters) 
+          param([hashtable]$Parameters)
           
           $Parameters['isolation'] = $env:DockerIsolation
           
@@ -385,7 +400,10 @@ stages:
           New-BcContainer @parameters
           Invoke-ScriptInBcContainer $parameters.ContainerName -scriptblock {
               $progressPreference = 'SilentlyContinue'
+              Remove-Item -Path 'C:\run\*.vsix'
           }
+          
+          Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionSecureFileName -containerPath 'C:\run\ALLanguage.vsix'
         }
         
         $PublishBcContainerApp = { 
@@ -436,12 +454,21 @@ stages:
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
             -installApps $AppsFromDependencies `
             -azureDevOps `
+            -enableCodeCop $env:EnableCodeCop `
+            -enableAppSourceCop $env:EnableAppSourceCop `
+            -enablePerTenantExtensionCop $env:EnablePerTenantExtensionCop `
+            -enableUICop  $env:EnableUICop `
             -NewBCContainer $NewBCContainer `
             -PublishBcContainerApp $PublishBcContainerApp
             
          
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
+        ALLanguageExtensionSecureFileName: ${{ parameters.alLanguageExtensionSecureFileName }}
+        EnableCodeCop: ${{ parameters.enableCodeCop }}
+        EnableAppSourceCop: ${{ parameters.enableAppSourceCop }}
+        EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
+        EnableUICop: ${{ parameters.enableUICop }}
         AppVersion: $(AppVersion)
         ArtifactUrl: $(ArtifactUrl)
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
