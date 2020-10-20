@@ -413,7 +413,6 @@ stages:
             Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
           }
           
-          # iš AppSourceCop.json failo prieš Run-AlPipeline kvietimą, jei yra, priešingu atveju @{}
           if (Test-Path $env:MAINAPPFOLDER/AppSourceCop.json -PathType leaf) {
             $AppSourceCopSettings = `
               Get-Content -Path $env:MAINAPPFOLDER/AppSourceCop.json |
@@ -421,7 +420,6 @@ stages:
           } else {
             $AppSourceCopSettings = @{}   
           }
-          # iš AppSourceCop.json failo prieš po Run-AlPipeline kvietimo prieš Compile-AppInBcContainer jei yra, priešingu atveju @{}
           if (Test-Path $env:MAINAPPFOLDER/AppSourceCop.json -PathType leaf) {
             $AppSourceCopSettingsCreatedByRunAlPipeline = ` 
               Get-Content -Path $env:MAINAPPFOLDER/AppSourceCop.json |
@@ -429,7 +427,6 @@ stages:
           } else {
             $AppSourceCopSettings = @{}   
           }
-          # Nereikalingų properčių pašalinimas:
           @(
             $AppSourceCopSettings.Keys
             if ($AppSourceCopSettings.Keys.Count -gt 0) {
@@ -443,10 +440,9 @@ stages:
               $AppSourceCopSettingsCreatedByRunAlPipeline.Remove($_)
           }
           $AppSourceCopSettingsToSave = $AppSourceCopSettingsCreatedByRunAlPipeline + $AppSourceCopSettings
-          # Išsaugom pataisytą AppSourceCop.json
           $AppSourceCopSettingsToSave |
           ConvertTo-Json |
-          Set-Content -LiteralPath $env:MainAppFolder
+          Set-Content -LiteralPath $env:MainAppFolder\AppSourceCop.json
         
           
         }
@@ -501,7 +497,6 @@ stages:
           -Filter 'AppSourceCop.json' `
           -Recurse |
         ForEach-Object -Process {
-          # AppSourceCop.json kopija vadinsis AppSourceCop.json-original
           $_ | Copy-Item -Destination ($_.FullName + '-original')
         }
         
