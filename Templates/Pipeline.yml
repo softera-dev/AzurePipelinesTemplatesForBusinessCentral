@@ -6,7 +6,7 @@ parameters:
   default: ''
 - name: rulesetFileName
   type: string
-  default: ''
+  default: al.ruleset.json
 - name: enableCodeCop
   type: string
   default: true
@@ -418,7 +418,7 @@ stages:
         $CompileBcContainerApp = { 
           param([hashtable]$Parameters)
                     
-          $Parameters['rulesetFile'] = $env:RulesetFileName
+          $Parameters['rulesetFile'] = $env:MainAppFolder/$env:RulesetFileName
           
           Compile-AppInBcContainer @Parameters
         }
