@@ -6,7 +6,7 @@ parameters:
   default: ''
 - name: rulesetFileName
   type: string
-  default: al.ruleset.json
+  default: ''
 - name: enableCodeCop
   type: string
   default: true
