@@ -411,18 +411,22 @@ stages:
           
           if ($env:ALLanguageExtensionFileName -ne '') {
             Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
-          }
+          }    
+        }
+        
+        $CompileBcContainerApp = { 
+          param([hashtable]$Parameters)
           
-          if (Test-Path $env:MAINAPPFOLDER/AppSourceCop.json -PathType leaf) {
+          if (Test-Path $Parameters['appProjectFolder']\AppSourceCop.json -PathType leaf) {
             $AppSourceCopSettings = `
-              Get-Content -Path $env:MAINAPPFOLDER/AppSourceCop.json |
+              Get-Content -Path $Parameters['appProjectFolder']\AppSourceCop.json |
               ConvertFrom-Json
           } else {
             $AppSourceCopSettings = @{}   
           }
-          if (Test-Path $env:MAINAPPFOLDER/AppSourceCop.json -PathType leaf) {
+          if (Test-Path $Parameters['appProjectFolder']\AppSourceCop.json -PathType leaf) {
             $AppSourceCopSettingsCreatedByRunAlPipeline = ` 
-              Get-Content -Path $env:MAINAPPFOLDER/AppSourceCop.json |
+              Get-Content -Path $Parameters['appProjectFolder']\AppSourceCop.json |
               ConvertFrom-Json
           } else {
             $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
@@ -442,13 +446,7 @@ stages:
           $AppSourceCopSettingsToSave = $AppSourceCopSettingsCreatedByRunAlPipeline + $AppSourceCopSettings
           $AppSourceCopSettingsToSave |
           ConvertTo-Json |
-          Set-Content -LiteralPath $env:MainAppFolder\AppSourceCop.json
-        
-          
-        }
-        
-        $CompileBcContainerApp = { 
-          param([hashtable]$Parameters)
+          Set-Content -LiteralPath $Parameters['appProjectFolder']\AppSourceCop.json
           
           $RulesetFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $env:RulesetFileName
                     
