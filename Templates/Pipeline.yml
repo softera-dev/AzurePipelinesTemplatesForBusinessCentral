@@ -417,16 +417,19 @@ stages:
         $CompileBcContainerApp = { 
           param([hashtable]$Parameters)
           
-          if (Test-Path $Parameters['appProjectFolder']\AppSourceCop.json -PathType leaf) {
+          $AppSourceCopFileName = 'AppSourceCop.json'
+          $AppSourceCopFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileName
+          
+          if (Test-Path $AppSourceCopFilePath -PathType leaf) {
             $AppSourceCopSettings = `
-              Get-Content -Path $Parameters['appProjectFolder']\AppSourceCop.json |
+              Get-Content -Path $AppSourceCopFilePath |
               ConvertFrom-Json
           } else {
             $AppSourceCopSettings = @{}   
           }
-          if (Test-Path $Parameters['appProjectFolder']\AppSourceCop.json -PathType leaf) {
+          if (Test-Path $AppSourceCopFilePath -PathType leaf) {
             $AppSourceCopSettingsCreatedByRunAlPipeline = ` 
-              Get-Content -Path $Parameters['appProjectFolder']\AppSourceCop.json |
+              Get-Content -Path $AppSourceCopFilePath |
               ConvertFrom-Json
           } else {
             $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
@@ -446,7 +449,7 @@ stages:
           $AppSourceCopSettingsToSave = $AppSourceCopSettingsCreatedByRunAlPipeline + $AppSourceCopSettings
           $AppSourceCopSettingsToSave |
           ConvertTo-Json |
-          Set-Content -LiteralPath $Parameters['appProjectFolder']\AppSourceCop.json
+          Set-Content -LiteralPath $AppSourceCopFilePath
           
           $RulesetFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $env:RulesetFileName
                     
