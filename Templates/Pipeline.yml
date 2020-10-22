@@ -427,9 +427,13 @@ stages:
           } else {
             $AppSourceCopSettings = @{}   
           }
-          if (Test-Path $AppSourceCopFilePath -PathType leaf) {
+          
+          $AppSourceCopFileNameOriginal = 'AppSourceCop.json-original'
+          $AppSourceCopFilePathOriginal = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileNameOriginal
+                    
+          if (Test-Path $AppSourceCopFilePathOriginal -PathType leaf) {
             $AppSourceCopSettingsCreatedByRunAlPipeline = ` 
-              Get-Content -Path $AppSourceCopFilePath |
+              Get-Content -Path $AppSourceCopFilePathOriginal |
               ConvertFrom-Json
           } else {
             $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
