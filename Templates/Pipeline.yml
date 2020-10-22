@@ -425,7 +425,7 @@ stages:
               Get-Content -Path $env:MAINAPPFOLDER/AppSourceCop.json |
               ConvertFrom-Json
           } else {
-            $AppSourceCopSettings = @{}   
+            $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
           }
           @(
             $AppSourceCopSettings.Keys
