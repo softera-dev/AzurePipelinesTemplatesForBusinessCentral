@@ -527,7 +527,7 @@ stages:
                
         Write-Host -Object "Installed apps folders: $InstallAppsFolders"
         
-        Write-Host -Object "Commit messaga: ${{ parameters.IsReleasePRCommit }} "
+        Write-Host -Object "Commit messaga: $env:ISPR "
         
         Get-ChildItem `
           -LiteralPath $env:MainAppFolder `
@@ -560,6 +560,7 @@ stages:
                            
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
+        ISPR: ${{ parameters.IsReleasePRCommit }}
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         RulesetFileName: ${{ parameters.rulesetFileName }}
         EnableCodeCop: ${{ parameters.enableCodeCop }}
