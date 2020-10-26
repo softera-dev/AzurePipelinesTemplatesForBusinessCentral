@@ -527,6 +527,8 @@ stages:
                
         Write-Host -Object "Installed apps folders: $InstallAppsFolders"
         
+        Write-Host -Object "Commit messaga: {{ parameters.IsReleasePRCommit }} "
+        
         Get-ChildItem `
           -LiteralPath $env:MainAppFolder `
           -Filter 'AppSourceCop.json' `
