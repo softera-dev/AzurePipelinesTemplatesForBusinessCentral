@@ -560,7 +560,7 @@ stages:
                            
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
-        ISPR: ${{ parameters.IsReleasePRCommit }}
+        ISPR: $(IsReleasePRCommit)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         RulesetFileName: ${{ parameters.rulesetFileName }}
         EnableCodeCop: ${{ parameters.enableCodeCop }}
