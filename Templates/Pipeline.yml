@@ -527,8 +527,6 @@ stages:
                
         Write-Host -Object "Installed apps folders: $InstallAppsFolders"
         
-        Write-Host -Object "Commit messaga: $env:BUILD_SOURCEVERSIONMESSAGE "
-        
         Get-ChildItem `
           -LiteralPath $env:MainAppFolder `
           -Filter 'AppSourceCop.json' `
