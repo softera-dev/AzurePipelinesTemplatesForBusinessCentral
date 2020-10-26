@@ -366,7 +366,7 @@ stages:
       displayName: Get App Version
         
     - powershell: |
-        Set-StrictMode -Version Latest
+        Set-StrictMode -Version Latest 
         
         $ManifestApp = `
           Get-Content -Path $env:MAINAPPFOLDER/app.json |
@@ -374,8 +374,8 @@ stages:
         $ManifestApp.Version = $env:AppVersion
         $ManifestApp |
           ConvertTo-Json |
-           Set-Content -LiteralPath $env:MAINAPPFOLDER/app.json
-        
+          Set-Content -LiteralPath $env:MAINAPPFOLDER/app.json
+
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         
         $NewBCContainer = { 
@@ -413,30 +413,60 @@ stages:
             Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
           }    
         }
-        
+       
         $CompileBcContainerApp = { 
           param([hashtable]$Parameters)
+          
+          function PSCustomObjectConvertToHashtable() {
+                param(
+                    [Parameter(ValueFromPipeline)]
+                    $object
+                )
+
+                if ( $object -eq $null ) { return $null }
+
+                if ( $object -is [psobject] ) {
+                    $result = @{}
+                    $items = $object | Get-Member -MemberType NoteProperty
+                    foreach( $item in $items ) {
+                        $key = $item.Name
+                        $value = PSCustomObjectConvertToHashtable -object $object.$key
+                        $result.Add($key, $value)
+                    }
+                    return $result
+                } elseif ($object -is [array]) {
+                    $result = [object[]]::new($object.Count)
+                    for ($i = 0; $i -lt $object.Count; $i++) {
+                        $result[$i] = (PSCustomObjectConvertToHashtable -object $object[$i])
+                    }
+                    return ,$result
+                } else {
+                    return $object
+                }
+            }
           
           $AppSourceCopFileName = 'AppSourceCop.json'
           $AppSourceCopFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileName
           
           if (Test-Path $AppSourceCopFilePath -PathType leaf) {
-            $AppSourceCopSettings = `
+            $AppSourceCopSettingsCreatedByRunAlPipeline = `
               Get-Content -Path $AppSourceCopFilePath |
-              ConvertFrom-Json
+              ConvertFrom-Json |
+              PSCustomObjectConvertToHashtable
           } else {
-            $AppSourceCopSettings = @{}   
+            $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
           }
           
           $AppSourceCopFileNameOriginal = 'AppSourceCop.json-original'
           $AppSourceCopFilePathOriginal = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileNameOriginal
                     
           if (Test-Path $AppSourceCopFilePathOriginal -PathType leaf) {
-            $AppSourceCopSettingsCreatedByRunAlPipeline = ` 
+            $AppSourceCopSettings = ` 
               Get-Content -Path $AppSourceCopFilePathOriginal |
-              ConvertFrom-Json
+              ConvertFrom-Json |
+              PSCustomObjectConvertToHashtable
           } else {
-            $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
+            $AppSourceCopSettings = @{}   
           }
           @(
             $AppSourceCopSettings.Keys
@@ -461,7 +491,7 @@ stages:
           
           Compile-AppInBcContainer @Parameters
         }
-        
+
         $PublishBcContainerApp = { 
           param([hashtable]$Parameters)
                     
@@ -469,7 +499,7 @@ stages:
           
           Publish-BcContainerApp @Parameters
         }
-        
+
         $InstallAppsFolders = `
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
@@ -504,7 +534,7 @@ stages:
         ForEach-Object -Process {
           $_ | Copy-Item -Destination ($_.FullName + '-original')
         }
-        
+
         Run-AlPipeline `
             -pipelinename 'Build' `
             -containerName $Global:ContainerName `
@@ -512,7 +542,7 @@ stages:
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
             -licenseFile $env:LicenseFile `
             -appFolders $env:MainAppFolder `
-            -testFolders $env:TestAppFolder `
+            -testFolders @() `
             -memoryLimit $env:DockerMemory `
             -codeSignCertPfxFile $env:CodeSignCertPfxFile `
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
@@ -525,8 +555,7 @@ stages:
             -NewBCContainer $NewBCContainer `
             -CompileAppInBcContainer $CompileBcContainerApp `
             -PublishBcContainerApp $PublishBcContainerApp
-            
-         
+                           
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
@@ -599,9 +628,9 @@ stages:
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Copy files to \\filestorage
         
-#     - powershell: |
-#         Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
-#       env:
-#         ContainerName: $(ContainerName)
-#       displayName: 'Cleanup'
-#       condition: always()
+    - powershell: |
+        Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
+      env:
+        ContainerName: $(ContainerName)
+      displayName: 'Cleanup'
+      condition: always()
