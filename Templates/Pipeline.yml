@@ -192,7 +192,7 @@ stages:
     - powershell: |
         Set-StrictMode -Version Latest
         
-        if ($env:BcVersion -eq '') {
+        if ([string]::IsNullOrEmpty($env:BcVersion)) {
           exit
         }
         
