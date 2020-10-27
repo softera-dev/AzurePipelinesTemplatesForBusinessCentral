@@ -387,10 +387,10 @@ stages:
           New-BcContainer @parameters
                     
           if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
-            Invoke-ScriptInBCContainer -containerName $parameters.containerName -scriptblock { 
+            #Invoke-ScriptInBCContainer -containerName $parameters.containerName -scriptblock { 
               Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll `
                 -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
-            } 
+            #} 
           }  
           
           if ($env:RequireClosedXML -eq 'true') {
