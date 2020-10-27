@@ -278,6 +278,8 @@ stages:
           $ImageNameForSplitting = $env:ImageName
           $parts = $ImageNameForSplitting.Split(':')
           $BcApplicationVersion = $parts[1]
+          Write-Host -Object "BC application version: $BcApplicationVersion"
+          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
         } else {
           #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
           $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
