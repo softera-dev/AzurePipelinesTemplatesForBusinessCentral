@@ -567,7 +567,7 @@ stages:
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
             -licenseFile $env:LicenseFile `
             -appFolders $env:MainAppFolder `
-            -testFolders $env:TestAppFolder `
+            -testFolders @() `
             -memoryLimit $env:DockerMemory `
             -codeSignCertPfxFile $env:CodeSignCertPfxFile `
             -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
