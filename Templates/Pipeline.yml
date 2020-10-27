@@ -382,9 +382,12 @@ stages:
           param([hashtable]$Parameters)
           
           $Parameters['isolation'] = $env:DockerIsolation
+          $Parameters['containerName'] = $Global:ContainerName
+                   
+          New-BcContainer @parameters
           
           if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
-            Invoke-ScriptInBCContainer -containerName $Global:ContainerName -scriptblock { 
+            Invoke-ScriptInBCContainer -containerName $parameters.containerName -scriptblock { 
               Copy-Item -Path C:\Extension\MainApp\.netpackages\OmnivaConnector.dll `
                 -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
             } 
@@ -400,8 +403,7 @@ stages:
             Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
           }
           
-          New-BcContainer @parameters
-          Invoke-ScriptInBcContainer $parameters.ContainerName -argumentList $env:ALLanguageExtensionFileName -scriptblock {
+          Invoke-ScriptInBcContainer $parameters.containerName -argumentList $env:ALLanguageExtensionFileName -scriptblock {
               param($ALLanguageExtensionFileName)
               $progressPreference = 'SilentlyContinue'
               if ($ALLanguageExtensionFileName -ne '') {
@@ -410,7 +412,7 @@ stages:
           }
           
           if ($env:ALLanguageExtensionFileName -ne '') {
-            Copy-FileToBCContainer -containerName $Global:ContainerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
+            Copy-FileToBCContainer -containerName $parameters.containerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
           }    
         }
        
