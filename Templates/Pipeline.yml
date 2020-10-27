@@ -193,6 +193,8 @@ stages:
         Set-StrictMode -Version Latest
         
         if ([string]::IsNullOrEmpty($env:BcVersion)) {
+          $EmptyBCVersion = 'true'
+          Write-Host -Object "##vso[task.setvariable variable=EmptyBCVersion;]$EmptyBCVersion"
           exit
         }
         
@@ -272,7 +274,7 @@ stages:
         script: 'Install-Module -Name BcContainerHelper -Force'
 
     - powershell: |
-        if ([string]::IsNullOrEmpty($env:BcVersion)) {
+        if ($env:EmptyBCVersion -eq 'true') {
           exit
         } 
         
@@ -289,6 +291,7 @@ stages:
         BcArtifactType: $(BcArtifactType)
         BcArtifactStorageAccount: $(BcArtifactStorageAccount)
         BcArtifactCountry: $(BcArtifactCountry)
+        EmptyBCVersion: $(EmptyBCVersion)
       displayName: Get BC application version
       
     - powershell: |
