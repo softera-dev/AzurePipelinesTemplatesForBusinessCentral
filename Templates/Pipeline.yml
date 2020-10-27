@@ -191,8 +191,13 @@ stages:
     
     - powershell: |
         Set-StrictMode -Version Latest
+        
+        if ($env:BcVersion -eq '') {
+          exit
+        }
+        
         Write-Host -Object "BC version given $env:BcVersion"
-
+        
         $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
         if ($env:BcVersion -notmatch $Pattern) {
           Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
