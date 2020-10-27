@@ -272,13 +272,17 @@ stages:
         script: 'Install-Module -Name BcContainerHelper -Force'
 
     - powershell: |
-        #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
-        $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
-        Write-Host -Object "##vso[task.setvariable variable=ArtifactUrl;]$ArtifactUrl"
-        $parts = $ArtifactUrl.Split('/')
-        $BcApplicationVersion = $parts[4]
-        Write-Host -Object "BC application version: $BcApplicationVersion"
-        Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
+        if ([string]::IsNullOrEmpty($env:BcVersion)) {
+          exit
+        } else {
+          #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
+          $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
+          Write-Host -Object "##vso[task.setvariable variable=ArtifactUrl;]$ArtifactUrl"
+          $parts = $ArtifactUrl.Split('/')
+          $BcApplicationVersion = $parts[4]
+          Write-Host -Object "BC application version: $BcApplicationVersion"
+          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
+        }
       env:
         BcArtifactSasToken: $(BcArtifactSasToken)
         BcArtifactVersion: $(BcArtifactVersion)
