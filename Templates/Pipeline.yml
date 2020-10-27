@@ -133,7 +133,7 @@ stages:
   displayName: Main
   jobs:
   - job: Main
-    condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), eq(variables['IsReleasePRCommit'], 'True'))
+    condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
     variables:
     - name: BcArtifactType
       value: ''
@@ -163,8 +163,8 @@ stages:
       value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
     - name: MasterBranch
       value: ${{ parameters.masterBranch }}
-    - name: IsReleasePRCommit
-      value: $[ startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-') ]
+#     - name: IsReleasePRCommit
+#       value: $[ startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-') ]
     - name: BcApplicationVersion
       value: ''
     steps:
@@ -623,8 +623,7 @@ stages:
         if (-not ([System.IO.Directory]::Exists($path))) {
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
-        } 
-      #condition: eq(variables['IsReleasePRCommit'], 'True')
+        }
       condition: startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')
       env:
         IsReleasePRCommit: $(IsReleasePRCommit)
