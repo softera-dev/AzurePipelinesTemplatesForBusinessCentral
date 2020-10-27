@@ -275,17 +275,20 @@ stages:
 
     - powershell: |
         if ($env:EmptyBCVersion -eq 'true') {
-          exit
-        } 
-        
-        #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
-        $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
-        Write-Host -Object "##vso[task.setvariable variable=ArtifactUrl;]$ArtifactUrl"
-        $parts = $ArtifactUrl.Split('/')
-        $BcApplicationVersion = $parts[4]
-        Write-Host -Object "BC application version: $BcApplicationVersion"
-        Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
+          $ImageNameForSplitting = $env:ImageName
+          $parts = $ImageNameForSplitting.Split(':')
+          $BcApplicationVersion = $parts[1]
+        } else {
+          #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
+          $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
+          Write-Host -Object "##vso[task.setvariable variable=ArtifactUrl;]$ArtifactUrl"
+          $parts = $ArtifactUrl.Split('/')
+          $BcApplicationVersion = $parts[4]
+          Write-Host -Object "BC application version: $BcApplicationVersion"
+          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
+        }
       env:
+        ImageName: ${{ parameters.imageName }}
         BcArtifactSasToken: $(BcArtifactSasToken)
         BcArtifactVersion: $(BcArtifactVersion)
         BcArtifactType: $(BcArtifactType)
