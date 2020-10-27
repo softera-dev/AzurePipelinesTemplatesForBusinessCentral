@@ -623,8 +623,9 @@ stages:
         if (-not ([System.IO.Directory]::Exists($path))) {
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
-        }
-      condition: eq(variables['IsReleasePRCommit'], 'True')
+        } 
+      #condition: eq(variables['IsReleasePRCommit'], 'True')
+      condition: startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')
       env:
         IsReleasePRCommit: $(IsReleasePRCommit)
         AppReleaseVersion: $(AppReleaseVersion)
