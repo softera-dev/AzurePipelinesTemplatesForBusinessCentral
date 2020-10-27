@@ -1,6 +1,10 @@
 parameters:
 - name: bcVersion
   type: string
+  default: ''
+- name: imageName 
+  type: string
+  default: ''
 - name: alLanguageExtensionFileName
   type: string
   default: ''
@@ -541,6 +545,7 @@ stages:
         Run-AlPipeline `
             -pipelinename 'Build' `
             -containerName $Global:ContainerName `
+            -imageName $env:ImageName `
             -artifact $env:ArtifactUrl `
             -baseFolder $env:BUILD_SOURCESDIRECTORY `
             -licenseFile $env:LicenseFile `
@@ -568,6 +573,7 @@ stages:
         EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
         EnableUICop: ${{ parameters.enableUICop }}
         AppVersion: $(AppVersion)
+        ImageName: ${{ parameters.imageName }}
         ArtifactUrl: $(ArtifactUrl)
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
