@@ -173,7 +173,7 @@ stages:
               break
             }
             { $_ -in @('NextMinor', 'NextMajor') } {
-              $GetBcArtifactUrlParameters.StorageAccount = 'bcinsider'
+              $GetBcArtifactUrlParameters.StorageAccount = ''
               $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
               $GetBcArtifactUrlParameters.Select = $Matches.Version
               break
