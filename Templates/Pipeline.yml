@@ -36,15 +36,13 @@ parameters:
 - name: masterBranch
   type: string
   default: WIP
-- name: appVersionSelection
+- name: appReleaseVersionFormat
   type: string
-  default: manifest
-  values:
-  - manifest
-  - dockerImageMajorMinorAndManifestMajorMinor
-  - dockerImageMajorMinorAndManifestBuildRevision
-  - manual
-- name: appVersion
+  default: '{Manifest.Build}.{Manifest.Revision}'
+- name: appVersionFormat
+  type: string 
+  default: '{Container.Major}.{Container.Minor}.{Release.Major}.{Release.Minor}'
+- name: customAppVersion
   type: string
   default: '0.0.0.0'
 - name: manifestVersionMismatchAction
@@ -54,17 +52,6 @@ parameters:
   - error
   - warning
   - none
-  
-- name: appReleaseVersionSelection
-  type: string
-  default: manifestBuildRevision
-  values:
-  - manifestMajorMinor
-  - manifestBuildRevision
-  - manual
-- name: appReleaseVersion
-  type: string
-  default: ''
     
 - name: dockerMemory
   type: string
@@ -192,61 +179,55 @@ stages:
     - powershell: |
         Set-StrictMode -Version Latest
         
-        if ([string]::IsNullOrEmpty($env:BcVersion)) {
-          $EmptyBCVersion = 'true'
-          Write-Host -Object "##vso[task.setvariable variable=EmptyBCVersion;]$EmptyBCVersion"
-          exit
-        }
-        
-        Write-Host -Object "BC version given $env:BcVersion"
-        
-        $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
-        if ($env:BcVersion -notmatch $Pattern) {
-          Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
-          throw 'BC version doesn''t match pattern. '
-        }
+        if ($env:BcVersion) {
+          Write-Host -Object "BC version given $env:BcVersion"
 
-        Write-Host
-        Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
-        Write-Host -Object "Parsed artifact version: $($Matches.Version)"
-        Write-Host -Object "Parsed artifact country: $($Matches.Country)"
-
-        $Type = $Matches.Type
-        $Version = $Matches.Version
-        $Country = $Matches.Country
-        $StorageAccount = 'bcartifacts'
-        $SasToken = ''
-        switch ($Version) {
-          'Current' {
-            $Version = ''
-            break
+          $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
+          if ($env:BcVersion -notmatch $Pattern) {
+            Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
+            throw 'BC version doesn''t match pattern. '
           }
-          'NextMinor' {
-            #TODO change version
-            $Version = '17'
-            $StorageAccount = 'bcinsider'
-            $SasToken = $env:BcInsiderSasToken
-            break
+          Write-Host
+          Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
+          Write-Host -Object "Parsed artifact version: $($Matches.Version)"
+          Write-Host -Object "Parsed artifact country: $($Matches.Country)"
+          $GetBcArtifactUrlParameters = @{
+            Type           = $Matches.Type 
+            Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
+            Country        = $Matches.Country
+            Select         = 'Latest'
+            StorageAccount = 'bcartifacts'
+            SasToken       = ''
           }
-          'NextMajor' {
-            $Version = ''
-            $StorageAccount = 'bcinsider'
-            $SasToken = $env:BcInsiderSasToken
-            break
+          switch ($Matches.Version) {
+            'Current' {
+              $GetBcArtifactUrlParameters.Select = 'Current'
+              break
+            }
+            { $_ -in @('NextMinor', 'NextMajor') } {
+              $GetBcArtifactUrlParameters.StorageAccount = 'bcinsider'
+              $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
+              $GetBcArtifactUrlParameters.Select = $Matches.Version
+              break
+            }
+          }
+          Write-Host
+          Write-Host -Object "Artifact type:            $($GetBcArtifactUrlParameters.Type)"
+          Write-Host -Object "Artifact version:         $($GetBcArtifactUrlParameters.Version -creplace '^$', $Matches.Version)"
+          Write-Host -Object "Artifact country:         $($GetBcArtifactUrlParameters.Country)"
+          Write-Host -Object "Artifact storage account: $($GetBcArtifactUrlParameters.StorageAccount)"
+        }
+        if ($GetBcArtifactUrlParameters.Version -notmatch '^(?:11\.\d+|13\.\d+|14\.(?:0|1|2|3|4))\.\d+\.\d+$') {
+          $BcArtifactUrlOrImageName = @{
+            artifact = Get-BCArtifactUrl @GetBcArtifactUrlParameters
+          }
+        } else {
+          $BcArtifactUrlOrImageName = @{
+            artifact  = ''
+            imageName = "mcr.microsoft.com/businesscentral/$($GetBcArtifactUrlParameters.Type.ToLower()):$($GetBcArtifactUrlParameters.Version)-$($GetBcArtifactUrlParameters.Country)"
           }
         }
-
-        Write-Host
-        Write-Host -Object "Artifact type:            $Type"
-        Write-Host -Object "Artifact version:         $($Version -creplace '^$', $Matches.Version)"
-        Write-Host -Object "Artifact country:         $Country"
-        Write-Host -Object "Artifact storage account: $StorageAccount"
-
-        Write-Host -Object "##vso[task.setvariable variable=BcArtifactType;]$Type"
-        Write-Host -Object "##vso[task.setvariable variable=BcArtifactVersion;]$Version"
-        Write-Host -Object "##vso[task.setvariable variable=BcArtifactCountry;]$Country"
-        Write-Host -Object "##vso[task.setvariable variable=BcArtifactStorageAccount;]$StorageAccount"
-        Write-Host -Object "##vso[task.setvariable variable=BcArtifactSasToken;isSecret=true]$SasToken"
+        Write-Host -Object "##vso[task.setvariable variable=BcArtifactUrlOrImageName;]$BcArtifactUrlOrImageName"
       env: 
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
@@ -272,225 +253,134 @@ stages:
       inputs:
         targetType: inline
         script: 'Install-Module -Name BcContainerHelper -Force'
-
-    - powershell: |
-        if ($env:EmptyBCVersion -eq 'true') {
-          $ImageNameForSplitting = $env:ImageName
-          $parts = $ImageNameForSplitting.Split(':')
-          $BcApplicationVersion = $parts[1]
-          Write-Host -Object "BC application version: $BcApplicationVersion"
-          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
-          $ArtifactUrl = '';
-          Write-Host -Object "##vso[task.setvariable variable=ArtifactUrl;]$ArtifactUrl"
-        } else {
-          #$BcApplicationVersion = Get-NAVApplication -ServerInstance bc | Select-Object -ExpandProperty ApplicationVersion
-          $ArtifactUrl = Get-BcArtifactUrl -type $env:BcArtifactType -version $env:BcArtifactVersion -country $env:BcArtifactCountry -sasToken $env:BcArtifactSasToken -storageAccount $env:BcArtifactStorageAccount
-          Write-Host -Object "##vso[task.setvariable variable=ArtifactUrl;]$ArtifactUrl"
-          $parts = $ArtifactUrl.Split('/')
-          $BcApplicationVersion = $parts[4]
-          Write-Host -Object "BC application version: $BcApplicationVersion"
-          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$BcApplicationVersion"
-        }
-      env:
-        ImageName: ${{ parameters.imageName }}
-        BcArtifactSasToken: $(BcArtifactSasToken)
-        BcArtifactVersion: $(BcArtifactVersion)
-        BcArtifactType: $(BcArtifactType)
-        BcArtifactStorageAccount: $(BcArtifactStorageAccount)
-        BcArtifactCountry: $(BcArtifactCountry)
-        EmptyBCVersion: $(EmptyBCVersion)
-      displayName: Get BC application version
-      
-    - powershell: |
-        Set-StrictMode -Version Latest
-        
-        # TODO: pull ManifestAppVersion, DockerImageVersion and maybe platform version outside because it duplicates with app copying to filestorage code
-        [version]$CustomAppVersion = $env:CustomAppVersion
-        [version]$ManifestAppVersion = `
-          Get-Content -Path $env:MAINAPPFOLDER/app.json |
-          ConvertFrom-Json |
-          Select-Object -ExpandProperty version
-        [version]$DockerImageVersion = $env:BcApplicationVersion
-          
-        Write-Host -Object "Custom app version:   $CustomAppVersion"
-        Write-Host -Object "Docker image version: $DockerImageVersion"
-        Write-Host -Object "Manifest app version: $ManifestAppVersion"
-        
-        [version]$SelectedAppVersion = `
-          switch ($env:AppVersionSelection) {
-            'manifest' {
-              Write-Host -Object "Using app version from app manifest."
-              [string]$ManifestAppVersion
-            }
-            'dockerImageMajorMinorAndManifestMajorMinor' {
-              Write-Host -Object "Creating app version using Docker image major-minor version and app manifest major-minor version."
-              '{0}.{1}.{2}.{3}' -f
-                $DockerImageVersion.Major, $DockerImageVersion.Minor,
-                $ManifestAppVersion.Major, $ManifestAppVersion.Minor
-            }
-            'dockerImageMajorMinorAndManifestBuildRevision' {
-              Write-Host -Object "Creating app version using Docker image major-minor version and app manifest build-revision version."
-              '{0}.{1}.{2}.{3}' -f
-                $DockerImageVersion.Major, $DockerImageVersion.Minor,
-                $ManifestAppVersion.Build, $ManifestAppVersion.Revision
-            }
-            'manual' {
-              Write-Host -Object "Using custom app version."
-              $CustomAppVersion
-            }
-          }
-              
-        Write-Host -Object "Selected app version: $SelectedAppVersion."
-        Write-Host -Object "##vso[task.setvariable variable=AppVersion;]$SelectedAppVersion"
-        
-        if ($ManifestAppVersion.Major -ne $SelectedAppVersion.Major -or `
-          $ManifestAppVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
-          $ManifestAppVersion.Build -ne $SelectedAppVersion.Build -and `
-          $ManifestAppVersion.Revision -ne $SelectedAppVersion.Revision)
-        {
-          if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
-            Write-Warning -Message "Manifest app version does not match selected app version."
-          }
-          if ($ManifestVersionMismatchAction -eq 'error') {
-            exit(1)
-          }
-        }
-        
-        $CustomAppReleaseVersion = $env:CustomAppReleaseVersion
-        Write-Host -Object "Custom app release version: $CustomAppReleaseVersion"
-        $SelectedAppReleaseVersion = `
-          switch ($env:AppReleaseVersionSelection) {
-            'manifestMajorMinor' {
-              Write-Host -Object "Creating app release version using app manifest major-minor version."
-              '{0}.{1}' -f
-                $ManifestAppVersion.Major, $ManifestAppVersion.Minor
-            }
-            'manifestBuildRevision' {
-              Write-Host -Object "Creating app release version using app manifest build-revision version."
-              '{0}.{1}' -f
-                $ManifestAppVersion.Build, $ManifestAppVersion.Revision
-            }
-            'manual' {
-              Write-Host -Object "Using custom app release version."
-              $CustomAppReleaseVersion
-            }
-          }
-        Write-Host -Object "Selected app release version: $SelectedAppReleaseVersion."
-        Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-        
-        Write-Host -Object "##vso[task.setvariable variable=ManifestAppVersion;]$ManifestAppVersion"
-      env:
-        AppVersionSelection: ${{ parameters.appVersionSelection }}
-        CustomAppVersion: ${{ parameters.appVersion }}
-        manifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
-        AppReleaseVersionSelection: ${{ parameters.appReleaseVersionSelection }}
-        CustomAppReleaseVersion: ${{ parameters.appReleaseVersion }}
-        BcApplicationVersion: $(BcApplicationVersion)
-      displayName: Get App Version
         
     - powershell: |
         Set-StrictMode -Version Latest 
         
-        $ManifestApp = `
-          Get-Content -Path $env:MAINAPPFOLDER/app.json |
-          ConvertFrom-Json
-        $ManifestApp.Version = $env:AppVersion
-        $ManifestApp |
-          ConvertTo-Json |
-          Set-Content -LiteralPath $env:MAINAPPFOLDER/app.json
-
-        $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
-        
-        $NewBCContainer = { 
+        $NewBCContainer = {
           param([hashtable]$Parameters)
-          
+
           $Parameters['isolation'] = $env:DockerIsolation
-          $Parameters['containerName'] = $Global:ContainerName
-                   
+
           New-BcContainer @parameters
-          
-          $OmnivaConnectorFile = '.netpackages\OmnivaConnector.dll'
-          $OmnivaConnectorPath = Join-Path -Path $env:MainAppFolder -ChildPath $OmnivaConnectorFile
-                    
+
           if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
-            Copy-Item -Path $OmnivaConnectorPath `
-              -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
-          }  
-          
-          if ($env:RequireClosedXML -eq 'true') {
-            New-Item -ItemType Directory -Path SofteraFiles
-            Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
-            Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
-            Copy-Item -Path SofteraFiles\ClosedXML\lib\net452\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-            Invoke-WebRequest -Uri  https://www.nuget.org/api/v2/package/DocumentFormat.OpenXml/2.7.2 -OutFile SofteraFiles\DocumentFormat.zip
-            Expand-Archive -Path SofteraFiles\DocumentFormat.zip -DestinationPath SofteraFiles\DocumentFormat
-            Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-          }
-          
-          Invoke-ScriptInBcContainer $parameters.containerName -argumentList $env:ALLanguageExtensionFileName -scriptblock {
-              param($ALLanguageExtensionFileName)
+            $OmnivaConnectorFile = '.netpackages\OmnivaConnector.dll'
+            $OmnivaConnectorPath = Join-Path -Path $env:MainAppFolder -ChildPath $OmnivaConnectorFile
+            Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
+              Copy-Item -Path $OmnivaConnectorPath `
+                -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
+            }  
+
+            if ($env:RequireClosedXML -eq 'true') {
+              Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
+                New-Item -ItemType Directory -Path SofteraFiles
+                Invoke-WebRequest -Uri https://www.nuget.org/api/v2/package/ClosedXML/0.88.0-beta1 -OutFile SofteraFiles\ClosedXML.zip
+                Expand-Archive -Path SofteraFiles\ClosedXML.zip -DestinationPath SofteraFiles\ClosedXML
+                Copy-Item -Path SofteraFiles\ClosedXML\lib\net452\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+                Invoke-WebRequest -Uri  https://www.nuget.org/api/v2/package/DocumentFormat.OpenXml/2.7.2 -OutFile SofteraFiles\DocumentFormat.zip
+                Expand-Archive -Path SofteraFiles\DocumentFormat.zip -DestinationPath SofteraFiles\DocumentFormat
+                Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+              }
+            }
+
+            Invoke-ScriptInBcContainer $Parameters.containerName -argumentList $env:ALLanguageExtensionFileName -scriptblock {
+              param($env:ALLanguageExtensionFileName)
               $progressPreference = 'SilentlyContinue'
-              if ($ALLanguageExtensionFileName -ne '') {
+              if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
                 Remove-Item -Path 'C:\run\*.vsix'
               }
+            }
+
+            if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
+              Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
+            }
+
+            [version]$CustomAppVersion = $env:CustomAppVersion
+            [version]$ContainerVersion = $(
+              Get-BCContainerDebugInfo -containerName $Parameters.containerName -ExcludeEnvVars -ExcludePing -ExcludeDockerLogs |
+              ConvertFrom-Json
+            ).'container.labels'.version
+            [version]$ManifestVersion = $(
+              Get-Content -Path $env:MainAppFolder/app.json |
+              ConvertFrom-Json |
+              Select-Object -ExpandProperty version
+            )
+            $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
+            [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
+              param(
+                [System.Text.RegularExpressions.Match]$Match
+              )
+              switch -CaseSensitive ($Match.Groups['Identifier'].Value) {
+                'Manifest.Major' { $ManifestVersion.Major }
+                'Manifest.Minor' { $ManifestVersion.Minor }
+                'Manifest.Build' { $ManifestVersion.Build }
+                'Manifest.Revision' { $ManifestVersion.Revision }
+                'Container.Major' { $ContainerVersion.Major }
+                'Container.Minor' { $ContainerVersion.Minor }
+                'Container.Build' { $ContainerVersion.Build }
+                'Container.Revision' { $ContainerVersion.Revision }
+                'Custom.Major' { $CustomAppVersion.Major }
+                'Custom.Minor' { $CustomAppVersion.Minor }
+                'Custom.Build' { $CustomAppVersion.Build }
+                'Custom.Revision' { $CustomAppVersion.Revision }
+                'Release.Major' { $SelectedAppReleaseVersion.Major }
+                'Release.Minor' { $SelectedAppReleaseVersion.Minor }
+                'Release.Build' { $SelectedAppReleaseVersion.Build }
+                'Release.Revision' { $SelectedAppReleaseVersion.Revision }
+              }
+            }
+            [version]$SelectedAppReleaseVersion = [regex]::Replace($env:AppReleaseVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
+            [version]$SelectedAppVersion = [regex]::Replace($env:AppVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
+
+            if ($ManifestVersion.Major -ne $SelectedAppVersion.Major -or `
+                $ManifestVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
+                $ManifestVersion.Build -ne $SelectedAppVersion.Build -and `
+                $ManifestVersion.Revision -ne $SelectedAppVersion.Revision) {
+              if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
+                Write-Warning -Message "Manifest app version does not match selected app version."
+              }
+              if ($ManifestVersionMismatchAction -eq 'error') {
+                exit(1)
+              }
+            }
+            Write-Host
+            Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
+            Write-Host -Object "Selected application version: $SelectedAppVersion"
+
+            $ManifestApp = $(
+              Get-Content -Path $env:MainAppFolder/app.json |
+              ConvertFrom-Json )
+            $ManifestApp.Version = [string]$SelectedAppVersion
+            $ManifestApp |
+            ConvertTo-Json |
+            Set-Content -LiteralPath $env:MainAppFolder/app.json
           }
-          
-          if ($env:ALLanguageExtensionFileName -ne '') {
-            Copy-FileToBCContainer -containerName $parameters.containerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
-          }    
         }
-       
+
         $CompileBcContainerApp = { 
           param([hashtable]$Parameters)
-          
-          function PSCustomObjectConvertToHashtable() {
-                param(
-                    [Parameter(ValueFromPipeline)]
-                    $object
-                )
 
-                if ( $object -eq $null ) { return $null }
-
-                if ( $object -is [psobject] ) {
-                    $result = @{}
-                    $items = $object | Get-Member -MemberType NoteProperty
-                    foreach( $item in $items ) {
-                        $key = $item.Name
-                        $value = PSCustomObjectConvertToHashtable -object $object.$key
-                        $result.Add($key, $value)
-                    }
-                    return $result
-                } elseif ($object -is [array]) {
-                    $result = [object[]]::new($object.Count)
-                    for ($i = 0; $i -lt $object.Count; $i++) {
-                        $result[$i] = (PSCustomObjectConvertToHashtable -object $object[$i])
-                    }
-                    return ,$result
-                } else {
-                    return $object
-                }
-            }
-          
           $AppSourceCopFileName = 'AppSourceCop.json'
-          $AppSourceCopFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileName
-          
+          $AppSourceCopFilePath = Join-Path -Path $Parameters['appProjectFolder']" -ChildPath $AppSourceCopFileName
+
           if (Test-Path $AppSourceCopFilePath -PathType leaf) {
-            $AppSourceCopSettingsCreatedByRunAlPipeline = `
+            $AppSourceCopSettingsCreatedByRunAlPipeline = $(
               Get-Content -Path $AppSourceCopFilePath |
               ConvertFrom-Json |
-              PSCustomObjectConvertToHashtable
+              PSCustomObjectConvertToHashtable )
           } else {
             $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
           }
-          
+
           $AppSourceCopFileNameOriginal = 'AppSourceCop.json-original'
           $AppSourceCopFilePathOriginal = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileNameOriginal
-                    
+
           if (Test-Path $AppSourceCopFilePathOriginal -PathType leaf) {
-            $AppSourceCopSettings = ` 
+            $AppSourceCopSettings = $(
               Get-Content -Path $AppSourceCopFilePathOriginal |
               ConvertFrom-Json |
-              PSCustomObjectConvertToHashtable
+              PSCustomObjectConvertToHashtable )
           } else {
             $AppSourceCopSettings = @{}   
           }
@@ -504,29 +394,21 @@ stages:
             }
           ) |
           ForEach-Object -Process {
-              $AppSourceCopSettingsCreatedByRunAlPipeline.Remove($_)
+            $AppSourceCopSettingsCreatedByRunAlPipeline.Remove($_)
           }
           $AppSourceCopSettingsToSave = $AppSourceCopSettingsCreatedByRunAlPipeline + $AppSourceCopSettings
           $AppSourceCopSettingsToSave |
           ConvertTo-Json |
           Set-Content -LiteralPath $AppSourceCopFilePath
-          
+
           $RulesetFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $env:RulesetFileName
-                    
+
           $Parameters['rulesetFile'] = $RulesetFilePath
-          
+
           Compile-AppInBcContainer @Parameters
         }
 
-        $PublishBcContainerApp = { 
-          param([hashtable]$Parameters)
-                    
-          Write-Host -Object "Publishing app $($Parameters['appFile'])" -Foreground Green
-          
-          Publish-BcContainerApp @Parameters
-        }
-
-        $InstallAppsFolders = `
+        $InstallAppsFolders = @(
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
           $env:LatestCoreAppPath,
@@ -534,14 +416,14 @@ stages:
           $env:LatestTimeScheduleAppPath,
           $env:LatestTimeEmployeeTimeAppPath,
           $env:LatestSalaryAppPath,
-          $env:LatestLBCAlnaCoreAppPath
+          $env:LatestLBCAlnaCoreAppPath)
         $AppsFromDependencies = @(
           $InstallAppsFolders |
           Where-Object -FilterScript { $_ } |
           ForEach-Object -Process {
             $AppFiles = `
               Get-ChildItem -LiteralPath $_ -Filter '*.app' -Recurse |
-              Select-Object -ExpandProperty FullName
+            Select-Object -ExpandProperty FullName
             if ($AppFiles) {
               $AppFiles
             } else {
@@ -550,9 +432,9 @@ stages:
             }
           }
         )
-               
+
         Write-Host -Object "Installed apps folders: $InstallAppsFolders"
-        
+
         Get-ChildItem `
           -LiteralPath $env:MainAppFolder `
           -Filter 'AppSourceCop.json' `
@@ -561,30 +443,67 @@ stages:
           $_ | Copy-Item -Destination ($_.FullName + '-original')
         }
 
+        function PSCustomObjectConvertToHashtable() {
+          param(
+            [Parameter(ValueFromPipeline)]
+            $object
+          )
+          if ( $object -eq $null ) { return $null }
+          if ( $object -is [psobject] ) {
+            $result = @{}
+            $items = $object | Get-Member -MemberType NoteProperty
+            foreach ( $item in $items ) {
+              $key = $item.Name
+              $value = PSCustomObjectConvertToHashtable -object $object.$key
+              $result.Add($key, $value)
+            }
+            return $result
+          } elseif ($object -is [array]) {
+            $result = [object[]]::new($object.Count)
+            for ($i = 0; $i -lt $object.Count; $i++) {
+              $result[$i] = (PSCustomObjectConvertToHashtable -object $object[$i])
+            }
+            return , $result
+          } else {
+            return $object
+          }
+        }
+
+        $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+
+        $GetRunAlPipelineParameters = @{
+          pipelinename                = 'Build'
+          containerName               = $Global:ContainerName
+          baseFolder                  = $env:BUILD_SOURCESDIRECTORY
+          licenseFile                 = $env:LicenseFile
+          appFolders                  = $env:MainAppFolder
+          testFolders                 = @(
+            $env:TestAppFolder |
+            Where-Object -FilterScript {
+              $env:BUILD_SOURCESDIRECTORY | 
+              Join-Path -ChildPath $env:TestAppFolder | 
+              Join-Path -ChildPath 'app.json' | 
+              Test-Path
+            }
+          )
+          memoryLimit                 = $env:DockerMemory
+          codeSignCertPfxFile         = $env:CodeSignCertPfxFile
+          codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
+          installApps                 = $AppsFromDependencies
+          azureDevOps                 = $true
+          enableCodeCop               = ($env:EnableCodeCop -eq 'true')
+          enableAppSourceCop          = ($env:EnableAppSourceCop -eq 'true')
+          enablePerTenantExtensionCop = ($env:EnablePerTenantExtensionCop -eq 'true')
+          enableUICop                 = ($env:EnableUICop -eq 'true') 
+          NewBCContainer              = $NewBCContainer
+          CompileAppInBcContainer     = $CompileBcContainerApp
+        }
+
         Run-AlPipeline `
-            -pipelinename 'Build' `
-            -containerName $Global:ContainerName `
-            -imageName $env:ImageName `
-            -artifact $env:ArtifactUrl `
-            -baseFolder $env:BUILD_SOURCESDIRECTORY `
-            -licenseFile $env:LicenseFile `
-            -appFolders $env:MainAppFolder `
-            -testFolders $env:TestAppFolder `
-            -memoryLimit $env:DockerMemory `
-            -codeSignCertPfxFile $env:CodeSignCertPfxFile `
-            -codeSignCertPfxPassword (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force) `
-            -installApps $AppsFromDependencies `
-            -azureDevOps `
-            -enableCodeCop:($env:EnableCodeCop -eq 'true') `
-            -enableAppSourceCop:($env:EnableAppSourceCop -eq 'true') `
-            -enablePerTenantExtensionCop:($env:EnablePerTenantExtensionCop -eq 'true') `
-            -enableUICop:($env:EnableUICop -eq 'true') `
-            -NewBCContainer $NewBCContainer `
-            -CompileAppInBcContainer $CompileBcContainerApp `
-            -PublishBcContainerApp $PublishBcContainerApp
-                           
-        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
+          @GetRunAlPipelineParameters `
+          @BcArtifactUrlOrImageName
       env:
+        #BcArtifactUrlOrImageName: $(BcArtifactUrlOrImageName)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         RulesetFileName: ${{ parameters.rulesetFileName }}
         EnableCodeCop: ${{ parameters.enableCodeCop }}
@@ -599,6 +518,9 @@ stages:
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: $(MainAppFolder)
         TestAppFolder: $(TestAppFolder)
+        AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
+        AppVersionFormat: ${{ parameters.appVersionFormat }}
+        CustomAppVersion: ${{ parameters.customAppVersion }}
         DockerMemory: $(DockerMemory)
         DockerIsolation: ${{ parameters.dockerIsolation }}
         RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
