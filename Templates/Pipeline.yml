@@ -320,7 +320,7 @@ stages:
           param([hashtable]$Parameters)
 
           $AppSourceCopFileName = 'AppSourceCop.json'
-          $AppSourceCopFilePath = Join-Path -Path $Parameters['appProjectFolder']" -ChildPath $AppSourceCopFileName
+          $AppSourceCopFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileName
 
           if (Test-Path $AppSourceCopFilePath -PathType leaf) {
             $AppSourceCopSettingsCreatedByRunAlPipeline = $(
@@ -460,6 +460,8 @@ stages:
         Run-AlPipeline `
           @GetRunAlPipelineParameters `
           @BcArtifactUrlOrImageName
+          
+        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         #BcArtifactUrlOrImageName: $(BcArtifactUrlOrImageName)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
