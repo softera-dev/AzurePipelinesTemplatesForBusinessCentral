@@ -143,8 +143,29 @@ stages:
       condition: always()
       displayName: Checking free disk and ram space
     
+    - checkout: self
+      clean: true
+        
+    - task: DownloadSecureFile@1
+      name: DownloadBCLicense
+      inputs:
+        secureFile: $(BCLicense.SecureFileName)
+      displayName: Download BC license
+
+    - task: DownloadSecureFile@1
+      name: DownloadBCAppSigningCertificate
+      inputs:
+        secureFile: $(BCAppSigningCertificateSecureFileName)
+      displayName: Download certificate for BC app signing
+
+    - task: PowerShell@2
+      displayName: 'Install BcContainerHelper'
+      inputs:
+        targetType: inline
+        script: 'Install-Module -Name BcContainerHelper -Force'
+        
     - powershell: |
-        Set-StrictMode -Version Latest
+        Set-StrictMode -Version Latest 
         
         if ($env:BcVersion) {
           Write-Host -Object "BC version given $env:BcVersion"
@@ -195,35 +216,6 @@ stages:
             imageName = "mcr.microsoft.com/businesscentral/$($GetBcArtifactUrlParameters.Type.ToLower()):$($GetBcArtifactUrlParameters.Version)-$($GetBcArtifactUrlParameters.Country)"
           }
         }
-        Write-Host -Object "##vso[task.setvariable variable=BcArtifactUrlOrImageName;]$BcArtifactUrlOrImageName"
-      env: 
-        BcVersion: ${{ parameters.bcVersion }}
-        BcInsiderSasToken: $(BCSasToken)
-      displayName: Select BC artifact version
-
-    - checkout: self
-      clean: true
-        
-    - task: DownloadSecureFile@1
-      name: DownloadBCLicense
-      inputs:
-        secureFile: $(BCLicense.SecureFileName)
-      displayName: Download BC license
-
-    - task: DownloadSecureFile@1
-      name: DownloadBCAppSigningCertificate
-      inputs:
-        secureFile: $(BCAppSigningCertificateSecureFileName)
-      displayName: Download certificate for BC app signing
-
-    - task: PowerShell@2
-      displayName: 'Install BcContainerHelper'
-      inputs:
-        targetType: inline
-        script: 'Install-Module -Name BcContainerHelper -Force'
-        
-    - powershell: |
-        Set-StrictMode -Version Latest 
         
         $NewBCContainer = {
           param([hashtable]$Parameters)
@@ -472,11 +464,12 @@ stages:
 
         Run-AlPipeline `
           @GetRunAlPipelineParameters `
-          $env:BcArtifactUrlOrImageName
+          @BcArtifactUrlOrImageName
           
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
-        BcArtifactUrlOrImageName: $(BcArtifactUrlOrImageName)
+        BcVersion: ${{ parameters.bcVersion }}
+        BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         RulesetFileName: ${{ parameters.rulesetFileName }}
         EnableCodeCop: ${{ parameters.enableCodeCop }}
