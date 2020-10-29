@@ -2,9 +2,6 @@ parameters:
 - name: bcVersion
   type: string
   default: ''
-- name: imageName 
-  type: string
-  default: ''
 - name: alLanguageExtensionFileName
   type: string
   default: ''
@@ -62,31 +59,6 @@ parameters:
   values: 
   - hyperv
   - process
-
-- name: failCompilationOnWarnings
-  type: boolean
-  default: true
- 
-- name: testType
-  type: string
-  default: none
-  values:
-  - none
-  - sameApp
-  - testApp
-- name: testFilter
-  type: string
-  default: ''
-- name: installALTestTool   #bc14 ir žemesnėm nurodom false
-  type: boolean
-  default: true
-- name: failedTestAction
-  type: string
-  default: Warning
-  values:
-  - Warning
-  - Error
-  - Ignore
   
 - name: eInvoice
   type: boolean
@@ -126,20 +98,6 @@ stages:
   - job: Main
     condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
     variables:
-    - name: BcArtifactType
-      value: ''
-    - name: BcArtifactVersion
-      value: ''
-    - name: BcArtifactCountry
-      value: ''
-    - name: BcArtifactStorageAccount
-      value: ''
-    - name: BcArtifactSasToken
-      value: ''
-    - name: AppVersion
-      value: ''
-    - name: AppReleaseVersion
-      value: ''
     - name: MainAppFolder
       value: ${{ parameters.mainAppFolder }}
     - name: TestAppFolder
@@ -510,9 +468,6 @@ stages:
         EnableAppSourceCop: ${{ parameters.enableAppSourceCop }}
         EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
         EnableUICop: ${{ parameters.enableUICop }}
-        AppVersion: $(AppVersion)
-        ImageName: ${{ parameters.imageName }}
-        ArtifactUrl: $(ArtifactUrl)
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
