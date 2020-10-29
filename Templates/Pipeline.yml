@@ -459,7 +459,7 @@ stages:
 
         Run-AlPipeline `
           @GetRunAlPipelineParameters `
-          @env:BcArtifactUrlOrImageName
+          $env:BcArtifactUrlOrImageName
           
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
