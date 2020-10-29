@@ -169,6 +169,7 @@ stages:
           switch ($Matches.Version) {
             'Current' {
               $GetBcArtifactUrlParameters.Select = 'Current'
+              $GetBcArtifactUrlParameters.StorageAccount = ''
               break
             }
             { $_ -in @('NextMinor', 'NextMajor') } {
