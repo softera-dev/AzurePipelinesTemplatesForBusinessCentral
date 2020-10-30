@@ -23,15 +23,6 @@ parameters:
 - name: doNotRunTests
   type: string
   default: true
-- name: installTestFramework
-  type: string
-  default: false
-- name: installTestLibraries
-  type: string
-  default: false
-- name: installPerformanceToolkit
-  type: string
-  default: false
 
 - name: organizationName
   type: string
@@ -437,9 +428,6 @@ stages:
           enablePerTenantExtensionCop = ($env:EnablePerTenantExtensionCop -eq 'true')
           enableUICop                 = ($env:EnableUICop -eq 'true')
           doNotRunTests               = ($env:DoNotRunTests -eq 'true')
-          installTestFramework        = ($env:InstallTestFramework -eq 'true')
-          installTestLibraries        = ($env:InstallTestLibraries -eq 'true')
-          installPerformanceToolkit   = ($env:InstallPerformanceToolkit -eq 'true')
           NewBCContainer              = $NewBCContainer
           CompileAppInBcContainer     = $CompileBcContainerApp
         }
@@ -458,9 +446,6 @@ stages:
         EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
         EnableUICop: ${{ parameters.enableUICop }}
         DoNotRunTests: ${{ parameters.doNotRunTests }}
-        InstallTestFramework: ${{ parameters.installTestFramework }}
-        InstallTestLibraries: ${{ parameters.installTestLibraries }}
-        InstallPerformanceToolkit: ${{ parameters.installPerformanceToolkit }}
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
