@@ -20,9 +20,6 @@ parameters:
 - name: enableUICop
   type: string
   default: true
-- name: doNotRunTests
-  type: string
-  default: true
 
 - name: organizationName
   type: string
@@ -427,7 +424,7 @@ stages:
           enableAppSourceCop          = ($env:EnableAppSourceCop -eq 'true')
           enablePerTenantExtensionCop = ($env:EnablePerTenantExtensionCop -eq 'true')
           enableUICop                 = ($env:EnableUICop -eq 'true')
-          doNotRunTests               = ($env:DoNotRunTests -eq 'true')
+          doNotRunTests               = $true
           NewBCContainer              = $NewBCContainer
           CompileAppInBcContainer     = $CompileBcContainerApp
         }
@@ -445,7 +442,6 @@ stages:
         EnableAppSourceCop: ${{ parameters.enableAppSourceCop }}
         EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
         EnableUICop: ${{ parameters.enableUICop }}
-        DoNotRunTests: ${{ parameters.doNotRunTests }}
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
