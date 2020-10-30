@@ -5,30 +5,6 @@ parameters:
 - name: alLanguageExtensionFileName
   type: string
   default: ''
-- name: rulesetFileName
-  type: string
-  default: al.ruleset.json
-- name: enableCodeCop
-  type: string
-  default: true
-- name: enableAppSourceCop
-  type: string
-  default: true
-- name: enablePerTenantExtensionCop
-  type: string
-  default: true
-- name: enableUICop
-  type: string
-  default: true
-- name: installTestFramework
-  type: string
-  default: false
-- name: installTestLibraries
-  type: string
-  default: false
-- name: installPerformanceToolkit
-  type: string
-  default: false
 
 - name: organizationName
   type: string
@@ -36,9 +12,6 @@ parameters:
 - name: mainAppFolder
   type: string
   default: MainApp
-- name: testAppFolder
-  type: string
-  default: TestApp
 - name: masterBranch
   type: string
   default: WIP
@@ -109,8 +82,6 @@ stages:
     variables:
     - name: MainAppFolder
       value: ${{ parameters.mainAppFolder }}
-    - name: TestAppFolder
-      value: ${{ parameters.testAppFolder }}
     - name: OrganizationName
       value: ${{ parameters.organizationName }}
       
@@ -309,48 +280,6 @@ stages:
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
         }
-        $CompileBcContainerApp = { 
-          param([hashtable]$Parameters)
-          $AppSourceCopFileName = 'AppSourceCop.json'
-          $AppSourceCopFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileName
-          if (Test-Path $AppSourceCopFilePath -PathType leaf) {
-            $AppSourceCopSettingsCreatedByRunAlPipeline = $(
-              Get-Content -Path $AppSourceCopFilePath |
-              ConvertFrom-Json |
-              PSCustomObjectConvertToHashtable )
-          } else {
-            $AppSourceCopSettingsCreatedByRunAlPipeline = @{}   
-          }
-          $AppSourceCopFileNameOriginal = 'AppSourceCop.json-original'
-          $AppSourceCopFilePathOriginal = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $AppSourceCopFileNameOriginal
-          if (Test-Path $AppSourceCopFilePathOriginal -PathType leaf) {
-            $AppSourceCopSettings = $(
-              Get-Content -Path $AppSourceCopFilePathOriginal |
-              ConvertFrom-Json |
-              PSCustomObjectConvertToHashtable )
-          } else {
-            $AppSourceCopSettings = @{}   
-          }
-          @(
-            $AppSourceCopSettings.Keys
-            if ($AppSourceCopSettings.Keys.Count -gt 0) {
-              'mandatoryAffixes'
-              'mandatoryPrefix'
-              'mandatorySuffix'
-              'supportedCountries'
-            }
-          ) |
-          ForEach-Object -Process {
-            $AppSourceCopSettingsCreatedByRunAlPipeline.Remove($_)
-          }
-          $AppSourceCopSettingsToSave = $AppSourceCopSettingsCreatedByRunAlPipeline + $AppSourceCopSettings
-          $AppSourceCopSettingsToSave |
-          ConvertTo-Json |
-          Set-Content -LiteralPath $AppSourceCopFilePath
-          $RulesetFilePath = Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $env:RulesetFileName
-          $Parameters['rulesetFile'] = $RulesetFilePath
-          Compile-AppInBcContainer @Parameters
-        }
         $InstallAppsFolders = @(
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
@@ -383,31 +312,6 @@ stages:
         ForEach-Object -Process {
           $_ | Copy-Item -Destination ($_.FullName + '-original')
         }
-        function PSCustomObjectConvertToHashtable() {
-          param(
-            [Parameter(ValueFromPipeline)]
-            $object
-          )
-          if ( $object -eq $null ) { return $null }
-          if ( $object -is [psobject] ) {
-            $result = @{}
-            $items = $object | Get-Member -MemberType NoteProperty
-            foreach ( $item in $items ) {
-              $key = $item.Name
-              $value = PSCustomObjectConvertToHashtable -object $object.$key
-              $result.Add($key, $value)
-            }
-            return $result
-          } elseif ($object -is [array]) {
-            $result = [object[]]::new($object.Count)
-            for ($i = 0; $i -lt $object.Count; $i++) {
-              $result[$i] = (PSCustomObjectConvertToHashtable -object $object[$i])
-            }
-            return , $result
-          } else {
-            return $object
-          }
-        }
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
@@ -415,29 +319,13 @@ stages:
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $env:LicenseFile
           appFolders                  = $env:MainAppFolder
-          testFolders                 = @(
-            $env:TestAppFolder |
-            Where-Object -FilterScript {
-              $env:BUILD_SOURCESDIRECTORY | 
-              Join-Path -ChildPath $env:TestAppFolder | 
-              Join-Path -ChildPath 'app.json' | 
-              Test-Path
-            }
-          )
+          testFolders                 = @()
           memoryLimit                 = $env:DockerMemory
           codeSignCertPfxFile         = $env:CodeSignCertPfxFile
           codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
           installApps                 = $AppsFromDependencies
           azureDevOps                 = $true
-          enableCodeCop               = ($env:EnableCodeCop -eq 'true')
-          enableAppSourceCop          = ($env:EnableAppSourceCop -eq 'true')
-          enablePerTenantExtensionCop = ($env:EnablePerTenantExtensionCop -eq 'true')
-          enableUICop                 = ($env:EnableUICop -eq 'true')
-          installTestFramework        = ($env:InstallTestFramework -eq 'true')
-          installTestLibraries        = ($env:InstallTestLibraries -eq 'true')
-          installPerformanceToolkit   = ($env:InstallPerformanceToolkit -eq 'true')
           NewBCContainer              = $NewBCContainer
-          CompileAppInBcContainer     = $CompileBcContainerApp
         }
         Run-AlPipeline `
           @GetRunAlPipelineParameters `
@@ -448,19 +336,10 @@ stages:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
-        RulesetFileName: ${{ parameters.rulesetFileName }}
-        EnableCodeCop: ${{ parameters.enableCodeCop }}
-        EnableAppSourceCop: ${{ parameters.enableAppSourceCop }}
-        EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
-        EnableUICop: ${{ parameters.enableUICop }}
-        InstallTestFramework: ${{ parameters.installTestFramework }}
-        InstallTestLibraries: ${{ parameters.installTestLibraries }}
-        InstallPerformanceToolkit: ${{ parameters.installPerformanceToolkit }}
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: $(MainAppFolder)
-        TestAppFolder: $(TestAppFolder)
         AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
         AppVersionFormat: ${{ parameters.appVersionFormat }}
         CustomAppVersion: ${{ parameters.customAppVersion }}
