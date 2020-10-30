@@ -20,6 +20,9 @@ parameters:
 - name: enableUICop
   type: string
   default: true
+- name: doNotRunTests
+  type: string
+  default: true
 - name: installTestFramework
   type: string
   default: false
@@ -433,6 +436,7 @@ stages:
           enableAppSourceCop          = ($env:EnableAppSourceCop -eq 'true')
           enablePerTenantExtensionCop = ($env:EnablePerTenantExtensionCop -eq 'true')
           enableUICop                 = ($env:EnableUICop -eq 'true')
+          doNotRunTests               = ($env:DoNotRunTests -eq 'true')
           installTestFramework        = ($env:InstallTestFramework -eq 'true')
           installTestLibraries        = ($env:InstallTestLibraries -eq 'true')
           installPerformanceToolkit   = ($env:InstallPerformanceToolkit -eq 'true')
@@ -453,6 +457,7 @@ stages:
         EnableAppSourceCop: ${{ parameters.enableAppSourceCop }}
         EnablePerTenantExtensionCop: ${{ parameters.enablePerTenantExtensionCop }}
         EnableUICop: ${{ parameters.enableUICop }}
+        DoNotRunTests: ${{ parameters.doNotRunTests }}
         InstallTestFramework: ${{ parameters.installTestFramework }}
         InstallTestLibraries: ${{ parameters.installTestLibraries }}
         InstallPerformanceToolkit: ${{ parameters.installPerformanceToolkit }}
