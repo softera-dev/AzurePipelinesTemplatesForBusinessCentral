@@ -72,6 +72,9 @@ parameters:
 - name: latestLBCAlnaCoreAppPath
   type: string
   default: ''
+- name: latestSOFT4LESSEEforIVER
+  type: string
+  default: ''
 
 stages:
 - stage: Main
@@ -288,7 +291,8 @@ stages:
           $env:LatestTimeScheduleAppPath,
           $env:LatestTimeEmployeeTimeAppPath,
           $env:LatestSalaryAppPath,
-          $env:LatestLBCAlnaCoreAppPath)
+          $env:LatestLBCAlnaCoreAppPath,
+          $env:LatestSOFT4LESSEEforIVER)
         $AppsFromDependencies = @(
           $InstallAppsFolders |
           Where-Object -FilterScript { $_ } |
@@ -355,6 +359,7 @@ stages:
         LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
         LatestSalaryAppPath: ${{ parameters.latestSalaryAppPath }}
         LatestLBCAlnaCoreAppPath: ${{ parameters.latestLBCAlnaCoreAppPath }}
+        LatestSOFT4LESSEEforIVER: ${{ parameters.latestSOFT4LESSEEforIVER }}
       displayName: Run Pipeline
 
     - powershell: |    
