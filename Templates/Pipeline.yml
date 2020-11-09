@@ -276,6 +276,7 @@ stages:
           Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
           Write-Host -Object "Selected application version: $SelectedAppVersion"
           Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
+          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
           $ManifestApp = $(
             Get-Content -Path $env:MainAppFolder/app.json |
             ConvertFrom-Json )
@@ -366,7 +367,8 @@ stages:
     - powershell: |    
         Write-Host -Object "IsReleasePRCommit: $env:IsReleasePRCommit"
         
-        Set-StrictMode -Version Latest     
+        Set-StrictMode -Version Latest 
+        $DockerVersion = $env:BcApplicationVersion
         $BranchName = `
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
@@ -374,7 +376,7 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
 
-        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName"
+        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
         if ([System.IO.Directory]::Exists($TempPath)) {
             throw "TempPath ($TempPath) already exist"
@@ -402,6 +404,7 @@ stages:
       env:
         IsReleasePRCommit: $(IsReleasePRCommit)
         AppReleaseVersion: $(AppReleaseVersion)
+        BcApplicationVersion: $(BcApplicationVersion)
       displayName: Copy files to \\filestorage
         
     - powershell: |
