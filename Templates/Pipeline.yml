@@ -300,7 +300,7 @@ stages:
           $Parameters['assemblyProbingPaths'] = $(
             $env:AlDotNetAssemblyProbingPaths -split ',' |
             ForEach-Object -Process {
-              if ([System.IO.Path]::IsPathRooted($_)) {
+              if (-not [System.IO.Path]::IsPathRooted($_)) {
                 Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $_
               } else {
                 $_
