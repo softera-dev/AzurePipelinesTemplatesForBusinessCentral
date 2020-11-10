@@ -6,10 +6,8 @@ parameters:
   type: string
   default: ''
 - name: alDotNetAssemblyProbingPaths
-  type: array
-  default:
-  - C:/Windows/Assembly
-  - ./.netPackages
+  type: string
+  default: C:/Windows/Assembly,./.netPackages
 
 - name: organizationName
   type: string
@@ -375,7 +373,7 @@ stages:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
-        AlDotNetAssemblyProbingPaths: ${{ join(',', parameters.alDotNetAssemblyProbingPaths) }}
+        AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
