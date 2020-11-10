@@ -297,7 +297,7 @@ stages:
             [hashtable]$Parameters
           )
 
-          $Parameters['assemblyProbingPaths'] = $(
+          $Parameters['assemblyProbingPaths'] = '"' + ($(
             $env:AlDotNetAssemblyProbingPaths -split ',' |
             ForEach-Object -Process {
               if (-not [System.IO.Path]::IsPathRooted($_)) {
@@ -309,7 +309,7 @@ stages:
             Where-Object -FilterScript {
               Test-Path -LiteralPath $_
             }
-          ) -join ','
+          ) -join ',') + '"'
 
           Compile-AppInBcContainer @Parameters
         }
