@@ -6,8 +6,10 @@ parameters:
   type: string
   default: ''
 - name: alDotNetAssemblyProbingPaths
-  type: string
-  default: C:/Windows/Assembly,./.netPackages
+  type: array
+  default:
+  - C:/Windows/Assembly
+  - ./.netPackages
 
 - name: organizationName
   type: string
@@ -297,7 +299,19 @@ stages:
             [hashtable]$Parameters
           )
 
-          $Parameters['assemblyProbingPaths'] = $env:AlDotNetAssemblyProbingPaths
+          $Parameters['assemblyProbingPaths'] = $(
+            $env:AlDotNetAssemblyProbingPaths -split ',' |
+            ForEach-Object -Process {
+              if ([System.IO.Path]::IsPathRooted($_)) {
+                Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $_
+              } else {
+                $_
+              }
+            } |
+            Where-Object -FilterScript {
+              Test-Path -LiteralPath $_
+            }
+          ) -join ','
 
           Compile-AppInBcContainer @Parameters
         }
@@ -361,7 +375,7 @@ stages:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
-        AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
+        AlDotNetAssemblyProbingPaths: ${{ join(',', parameters.alDotNetAssemblyProbingPaths) }}
         LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
