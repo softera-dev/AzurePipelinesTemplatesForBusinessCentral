@@ -216,7 +216,7 @@ stages:
             Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $ZXingFilePath `
               -containerPath $Path/zxing.dll
             Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $ZXingPresentationFilePath `
-              -containerPath $Path/zxing.dll
+              -containerPath $Path/zxing.presentation.dll
           }
           
           if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
