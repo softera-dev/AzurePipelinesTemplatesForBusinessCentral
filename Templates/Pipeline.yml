@@ -54,6 +54,15 @@ parameters:
 - name: ZXing
   type: boolean
   default: false
+- name: ZXingFromFileStorage
+  type: boolean
+  default: false
+- name: latestZXingPath
+  type: string
+  default: ''
+- name: latestZXingPresentationPath
+  type: string
+  default: ''
 - name: latestIntegrationCoreAppPath
   type: string
   default: ''
@@ -203,6 +212,19 @@ stages:
           param([hashtable]$Parameters)
           $Parameters['isolation'] = $env:DockerIsolation
           New-BcContainer @parameters
+          
+          if ($env:RequireZXingFromFileStorage -eq 'true') {
+            $ZXingFilePath = $env:LatestZXingPath
+            $ZXingPresentationFilePath = $env:LatestZXingPresentationPath
+
+            $Path = Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
+              (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
+            }
+            Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $ZXingFilePath `
+              -containerPath $Path/zxing.dll
+            Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $ZXingPresentationFilePath `
+              -containerPath $Path/zxing.presentation.dll
+          }
           
           if ($env:RequireZXing -eq 'true') {
             $ZXingFile = '.netpackages\ZXing.Net\zxing.dll'
@@ -409,6 +431,9 @@ stages:
         RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
         RequireClosedXML: ${{ parameters.S4LESSEE }}
         RequireZXing: ${{ parameters.ZXing }}
+        RequireZXingFromFileStorage: ${{ parameters.ZXingFromFileStorage }}
+        LatestZXingPresentationPath: ${{ parameters.latestZXingPresentationPath }}
+        LatestZXingPath: ${{ parameters.latestZXingPath }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
         LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
