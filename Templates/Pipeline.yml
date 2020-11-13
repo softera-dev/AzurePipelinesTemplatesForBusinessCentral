@@ -316,6 +316,7 @@ stages:
             [hashtable]$Parameters
           )
 
+          <#
           $Parameters['assemblyProbingPaths'] = '"' + ($(
             $env:AlDotNetAssemblyProbingPaths -split ',' |
             ForEach-Object -Process {
@@ -331,6 +332,7 @@ stages:
               }
             }
           ) -join ',') + '"'
+          #>
 
           Compile-AppInBcContainer @Parameters
         }
