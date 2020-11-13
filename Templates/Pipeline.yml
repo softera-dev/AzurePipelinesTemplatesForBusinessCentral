@@ -51,6 +51,9 @@ parameters:
 - name: S4LESSEE
   type: boolean
   default: false
+- name: ZXing
+  type: boolean
+  default: false
 - name: latestIntegrationCoreAppPath
   type: string
   default: ''
@@ -200,6 +203,22 @@ stages:
           param([hashtable]$Parameters)
           $Parameters['isolation'] = $env:DockerIsolation
           New-BcContainer @parameters
+          
+          if ($env:RequireZXing -eq 'true') {
+            $ZXingFile = '.netpackages\ZXing.Net\zxing.dll'
+            $ZXingFilePath = Join-Path -Path $env:MainAppFolder -ChildPath $ZXingFile
+            $ZXingPresentationFile = '.netpackages\ZXing.Net\zxing.presentation.dll'
+            $ZXingPresentationFilePath = Join-Path -Path $env:MainAppFolder -ChildPath $ZXingPresentationFile
+
+            $Path = Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
+              (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
+            }
+            Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $ZXingFilePath `
+              -containerPath $Path/zxing.dll
+            Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $ZXingPresentationFilePath `
+              -containerPath $Path/zxing.dll
+          }
+          
           if ($env:RequireOmnivaConnectorAddIn -eq 'true') {
             $OmnivaConnectorFile = '.netpackages\OmnivaConnector.dll'
             $OmnivaConnectorPath = Join-Path -Path $env:MainAppFolder -ChildPath $OmnivaConnectorFile
@@ -387,6 +406,7 @@ stages:
         DockerIsolation: ${{ parameters.dockerIsolation }}
         RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
         RequireClosedXML: ${{ parameters.S4LESSEE }}
+        RequireZXing: ${{ parameters.ZXing }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
         LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
