@@ -72,6 +72,9 @@ parameters:
 - name: latestCoreAppPath 
   type: string
   default: ''
+- name: latestISAFAppPath 
+  type: string
+  default: ''
 - name: latestHRAppPath 
   type: string
   default: ''
@@ -363,6 +366,7 @@ stages:
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
           $env:LatestCoreAppPath,
+          $env:LatestISAFAppPath,
           $env:LatestHRAppPath,
           $env:LatestTimeScheduleAppPath,
           $env:LatestTimeEmployeeTimeAppPath,
@@ -437,6 +441,7 @@ stages:
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
         LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
+        LatestISAFAppPath: ${{ parameters.latestISAFAppPath }}
         LatestHRAppPath: ${{ parameters.latestHRAppPath }}
         LatestTimeScheduleAppPath: ${{ parameters.latestTimeScheduleAppPath }}
         LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
