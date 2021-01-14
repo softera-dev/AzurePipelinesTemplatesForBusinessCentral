@@ -69,6 +69,9 @@ parameters:
 - name: latestSofteraBalticLoggingAppPath
   type: string
   default: ''
+- name: latestVATAppPath 
+  type: string
+  default: ''
 - name: latestCoreAppPath 
   type: string
   default: ''
@@ -365,6 +368,7 @@ stages:
         $InstallAppsFolders = @(
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
+          $env:LatestVATAppPath,
           $env:LatestCoreAppPath,
           $env:LatestISAFAppPath,
           $env:LatestHRAppPath,
@@ -440,6 +444,7 @@ stages:
         LatestZXingPath: ${{ parameters.latestZXingPath }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
+        LatestVATAppPath: ${{ parameters.latestVATAppPath }}
         LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
         LatestISAFAppPath: ${{ parameters.latestISAFAppPath }}
         LatestHRAppPath: ${{ parameters.latestHRAppPath }}
