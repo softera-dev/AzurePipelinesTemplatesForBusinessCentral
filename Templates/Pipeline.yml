@@ -378,7 +378,7 @@ stages:
           $env:LatestLBCAlnaCoreAppPath,
           $env:LatestSOFT4LESSEEforIVER,
           $env:LatestWMSBarAppPath)
-        echo $InstallAppsFolders
+        #echo $InstallAppsFolders
         $AppsFromDependencies = @(
           $InstallAppsFolders |
           Where-Object -FilterScript { $_ } |
