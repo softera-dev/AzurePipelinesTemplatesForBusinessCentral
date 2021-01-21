@@ -512,7 +512,7 @@ stages:
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
             New-Item -ItemType Directory -Path $Path -Force
-            Copy-Item -Path * -Destination $Path -Recurse
+            Copy-Item -Path * -Destination $Path -Recurse -Force
         }
       condition: always()
       env:
