@@ -506,31 +506,13 @@ stages:
     - powershell: |            
         Set-StrictMode -Version Latest 
 
-        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-        $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-        if ([System.IO.Directory]::Exists($TempPath)) {
-            throw "TempPath ($TempPath) already exist"
-        }
-
-        New-Item -ItemType Directory -Path $TempPath -Force
-        Copy-Item -Path * -Destination $TempPath -Recurse
-
-        $OldPath = "$CommonPath-Old"
-        if ([System.IO.Directory]::Exists($OldPath)) {
-            Remove-Item -Path $OldPath -Recurse -Force
-        }
-
-        $Path = $CommonPath
+        $Path = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
         if ([System.IO.Directory]::Exists($Path)) {
-            New-Item -ItemType Directory -Path $OldPath -Force
-            Copy-Item -Path $Path\* -Destination $OldPath -Recurse
             Remove-Item -Path $Path -Recurse -Force
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
-            Write-Host -Object "nera"
-            Write-Host -Object "$Path"
-            Copy-Item -Path $TempPath -Destination $Path -Recurse
-            Remove-Item  -Path $TempPath -Recurse -Force
+            New-Item -ItemType Directory -Path $Path -Force
+            Copy-Item -Path * -Destination $Path -Recurse
         }
       condition: always()
       env:
