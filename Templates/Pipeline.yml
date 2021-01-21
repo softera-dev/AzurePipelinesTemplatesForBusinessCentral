@@ -44,7 +44,10 @@ parameters:
   values: 
   - hyperv
   - process
-  
+
+- name: latestFolder
+  type: string
+  default: Latest
 - name: eInvoice
   type: boolean
   default: false
@@ -499,7 +502,39 @@ stages:
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
       displayName: Copy files to \\filestorage
-        
+      
+    - powershell: |            
+        Set-StrictMode -Version Latest 
+
+        $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+        $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+        if ([System.IO.Directory]::Exists($TempPath)) {
+            throw "TempPath ($TempPath) already exist"
+        }
+
+        New-Item -ItemType Directory -Path $TempPath -Force
+        Copy-Item -Path * -Destination $TempPath -Recurse
+
+        $OldPath = "$CommonPath-Old"
+        if ([System.IO.Directory]::Exists($OldPath)) {
+            Remove-Item -Path $OldPath -Recurse -Force
+        }
+
+        $Path = $CommonPath
+        if ([System.IO.Directory]::Exists($Path)) {
+            New-Item -ItemType Directory -Path $OldPath -Force
+            Copy-Item -Path $Path\* -Destination $OldPath -Recurse
+            Remove-Item -Path $Path -Recurse -Force
+        }
+        if (-not ([System.IO.Directory]::Exists($path))) {
+            Copy-Item -Path $TempPath -Destination $Path -Recurse
+            Remove-Item  -Path $TempPath -Recurse -Force
+        }
+      condition: always()
+      env:
+        LatestFolder: ${{ parameters.latestFolder }}
+      displayName: Copy files to Latest-BC* folder
+    
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
       env:
