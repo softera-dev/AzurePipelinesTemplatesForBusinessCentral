@@ -527,6 +527,7 @@ stages:
             Remove-Item -Path $Path -Recurse -Force
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
+            Write-Host -Object "nera"
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
