@@ -517,7 +517,7 @@ stages:
       condition: always()
       env:
         LatestFolder: ${{ parameters.latestFolder }}
-      displayName: Copy files to Latest-BC* folder
+      displayName: Copy files to Latest folder
     
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName; Flush-ContainerHelperCache -KeepDays 7
