@@ -492,7 +492,7 @@ stages:
             Copy-Item -Path $Path\* -Destination $OldPath -Recurse
             Remove-Item -Path $Path -Recurse -Force
         }
-        if (-not ([System.IO.Directory]::Exists($path))) {
+        if (-not ([System.IO.Directory]::Exists($Path))) {
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
@@ -526,7 +526,7 @@ stages:
             Copy-Item -Path $Path\* -Destination $OldPath -Recurse
             Remove-Item -Path $Path -Recurse -Force
         }
-        if (-not ([System.IO.Directory]::Exists($path))) {
+        if (-not ([System.IO.Directory]::Exists($Path))) {
             Copy-Item -Path $TempPath -Destination $Path -Recurse
             Remove-Item  -Path $TempPath -Recurse -Force
         }
