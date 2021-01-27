@@ -233,8 +233,8 @@ stages:
               $Path = Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
                     (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
                   }
-              docker cp $PayslipPasswordDllPath $Path
-              #Copy-Item -Path $PayslipPasswordDllPath -Destination $Path
+              Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $PayslipPasswordDllPath `
+                  -containerPath $Path/Ionic.Zip.dll
           }
           
           if ($env:RequireZXingFromFileStorage -eq 'true') {
