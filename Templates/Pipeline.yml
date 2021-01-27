@@ -60,6 +60,12 @@ parameters:
 - name: ZXingFromFileStorage
   type: boolean
   default: false
+- name: PayslipPassword
+  type: boolen
+  default: false
+- name: latestPayslipPasswordDllPath
+  type: string
+  default: ''
 - name: latestZXingPath
   type: string
   default: ''
@@ -221,6 +227,13 @@ stages:
           param([hashtable]$Parameters)
           $Parameters['isolation'] = $env:DockerIsolation
           New-BcContainer @parameters
+          
+          if ($env:RequireDllForPayslipPassword -eq 'true') {    
+            Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
+              $PayslipPasswordDllPath = $env:LatestPayslipPasswordDllPath
+              Copy-Item -Path $PayslipPasswordDllPath -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+              }
+          }
           
           if ($env:RequireZXingFromFileStorage -eq 'true') {
             $ZXingFilePath = $env:LatestZXingPath
@@ -444,6 +457,8 @@ stages:
         RequireClosedXML: ${{ parameters.S4LESSEE }}
         RequireZXing: ${{ parameters.ZXing }}
         RequireZXingFromFileStorage: ${{ parameters.ZXingFromFileStorage }}
+        RequireDllForPayslipPassword: ${{ parameters.PayslipPassword }}
+        LatestPayslipPasswordDllPath: ${{ parameters.latestPayslipPasswordDllPath }}
         LatestZXingPresentationPath: ${{ parameters.latestZXingPresentationPath }}
         LatestZXingPath: ${{ parameters.latestZXingPath }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
