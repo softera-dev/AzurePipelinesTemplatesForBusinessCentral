@@ -229,10 +229,11 @@ stages:
           New-BcContainer @parameters
           
           if ($env:RequireDllForPayslipPassword -eq 'true') {    
-            Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
               $PayslipPasswordDllPath = $env:LatestPayslipPasswordDllPath
-              Copy-Item -Path $PayslipPasswordDllPath -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
-              }
+              $Path = Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
+                    (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath 
+                  }
+              Copy-Item -Path $PayslipPasswordDllPath -Destination $Path
           }
           
           if ($env:RequireZXingFromFileStorage -eq 'true') {
