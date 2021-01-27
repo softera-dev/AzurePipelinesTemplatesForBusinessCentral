@@ -61,7 +61,7 @@ parameters:
   type: boolean
   default: false
 - name: PayslipPassword
-  type: boolen
+  type: boolean
   default: false
 - name: latestPayslipPasswordDllPath
   type: string
