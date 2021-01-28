@@ -496,7 +496,7 @@ stages:
         }
 
         New-Item -ItemType Directory -Path $TempPath -Force
-        Copy-Item -Path * -Destination $TempPath -Recurse
+        Copy-Item -Path * -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
 
         $OldPath = "$CommonPath-Old"
         if ([System.IO.Directory]::Exists($OldPath)) {
@@ -506,11 +506,11 @@ stages:
         $Path = $CommonPath
         if ([System.IO.Directory]::Exists($Path)) {
             New-Item -ItemType Directory -Path $OldPath -Force
-            Copy-Item -Path $Path\* -Destination $OldPath -Recurse
+            Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item -Path $Path -Recurse -Force
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
-            Copy-Item -Path $TempPath -Destination $Path -Recurse
+            Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
             Remove-Item  -Path $TempPath -Recurse -Force
         }
       condition: startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')
