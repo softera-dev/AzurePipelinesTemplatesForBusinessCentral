@@ -81,6 +81,9 @@ parameters:
 - name: latestVATAppPath 
   type: string
   default: ''
+- name: latestFixedAssetAppPath 
+  type: string
+  default: ''
 - name: latestCoreAppPath 
   type: string
   default: ''
@@ -390,6 +393,7 @@ stages:
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
           $env:LatestVATAppPath,
+          $env:LatestFixedAssetAppPath,
           $env:LatestCoreAppPath,
           $env:LatestISAFAppPath,
           $env:LatestSEPAAppPath,
@@ -470,6 +474,7 @@ stages:
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
         LatestVATAppPath: ${{ parameters.latestVATAppPath }}
+        LatestFixedAssetAppPath: ${{ parameters.latestFixedAssetAppPath }}
         LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
         LatestISAFAppPath: ${{ parameters.latestISAFAppPath }}
         LatestSEPAAppPath: ${{ parameters.latestSEPAAppPath }}
