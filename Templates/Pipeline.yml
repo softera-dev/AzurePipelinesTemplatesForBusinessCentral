@@ -510,18 +510,18 @@ stages:
 
         $OldPath = "$CommonPath-Old"
         if ([System.IO.Directory]::Exists($OldPath)) {
-            Remove-Item -Path $OldPath -Recurse -Force
+            do { Remove-Item -LiteralPath $OldPath -Recurse -Force; Start-Sleep -Milliseconds 100 } while ( Test-Path -LiteralPath $OldPath )
         }
 
         $Path = $CommonPath
         if ([System.IO.Directory]::Exists($Path)) {
             New-Item -ItemType Directory -Path $OldPath -Force
             Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-Item -Path $Path -Recurse -Force
+            do { Remove-Item -LiteralPath $Path -Recurse -Force; Start-Sleep -Milliseconds 100 } while ( Test-Path -LiteralPath $Path )
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
             Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-            Remove-Item  -Path $TempPath -Recurse -Force
+            do { Remove-Item -LiteralPath $TempPath -Recurse -Force; Start-Sleep -Milliseconds 100 } while ( Test-Path -LiteralPath $TempPath )
         }
       condition: startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')
       env:
@@ -535,7 +535,7 @@ stages:
 
         $Path = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
         if ([System.IO.Directory]::Exists($Path)) {
-            Remove-Item -Path $Path -Recurse -Force
+            do { Remove-Item -LiteralPath $Path -Recurse -Force; Start-Sleep -Milliseconds 100 } while ( Test-Path -LiteralPath $Path )
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
             New-Item -ItemType Directory -Path $Path -Force
