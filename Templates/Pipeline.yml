@@ -529,7 +529,7 @@ stages:
         IsReleasePRCommit: $(IsReleasePRCommit)
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
-      displayName: Copy files to \\filestorage
+      displayName: Copy files to BCApps
       
     - powershell: |            
         Set-StrictMode -Version Latest 
