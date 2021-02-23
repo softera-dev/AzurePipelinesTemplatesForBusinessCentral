@@ -534,7 +534,7 @@ stages:
     - powershell: |            
         Set-StrictMode -Version Latest 
 
-        $Path = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+        $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
         if ([System.IO.Directory]::Exists($Path)) {
             [System.IO.Directory]::Delete($Path, $true)
         }
