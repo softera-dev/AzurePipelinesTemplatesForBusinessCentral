@@ -540,7 +540,7 @@ stages:
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
             [System.IO.Directory]::CreateDirectory($Path)
-            Copy-Item -Path * -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
+            Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
         }
       condition: not(startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
       env:
