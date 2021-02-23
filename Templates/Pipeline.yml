@@ -541,7 +541,7 @@ stages:
             New-Item -ItemType Directory -Path $Path -Force
             Copy-Item -Path * -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
         }
-      condition: always()
+      condition: not(startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
       env:
         LatestFolder: ${{ parameters.latestFolder }}
       displayName: Copy files to Latest folder
