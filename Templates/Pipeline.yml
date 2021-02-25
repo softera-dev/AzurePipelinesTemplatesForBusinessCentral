@@ -171,7 +171,7 @@ stages:
           $header = @{ Authorization = "Bearer $env:ACCESSTOKEN" }
           $infile = "$secureFileFolder/$secureFileName"
           $organization = (Split-Path $(System.CollectionUri) -leaf)
-          $uri = "https://dev.azure.com/$organization/$(System.TeamProject)/_apis/distributedtask/securefiles?api-version=5.0-preview.1&name=$(secureFileName)"
+          $uri = "https://dev.azure.com/$organization/$(System.TeamProject)/_apis/distributedtask/securefiles?api-version=5.0-preview.1&name=$secureFileName"
 
           Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/octet-stream" -Headers $header -InFile "$infile"
       env:
