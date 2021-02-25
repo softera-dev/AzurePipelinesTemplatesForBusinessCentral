@@ -35,8 +35,8 @@ parameters:
   - warning
   - none
 - name: SelectedAppVersion
-  type: version
-  default: ''
+  type: string
+  default: '0.0.0.0'
     
 - name: dockerMemory
   type: string
