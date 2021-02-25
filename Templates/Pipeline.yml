@@ -355,6 +355,12 @@ stages:
           $ManifestApp |
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
+
+          $selectedAppVersionstring = $SelectedAppVersion
+          $selectedAppVersionstring.Split('.')
+          $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
+          $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
+          $Parameters.licenceFile = $licenceFile
         }
 
         $CompileAppInBcContainer = {
@@ -382,12 +388,6 @@ stages:
 
           Compile-AppInBcContainer @Parameters
         }
-        
-        $selectedAppVersionstring = $SelectedAppVersion
-        Write-Host -Object "app version 2: $selectedAppVersionstring"
-        $selectedAppVersionstring.Split('.')
-        $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
-        $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
         
         $InstallAppsFolders = @(
           $env:LatestIntegrationCoreAppPath,
@@ -433,7 +433,6 @@ stages:
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $licenceFile
           appFolders                  = $env:MainAppFolder
           testFolders                 = @()
           memoryLimit                 = $env:DockerMemory
