@@ -223,10 +223,6 @@ stages:
           }
         }
         
-        $secureFileFolder = '\\filestorage\Files\! SB licencijos\! Naujausios'
-        $secureFileName = '2021-01-05-SB-BC17-DEV90d-licencija-5344129.flf'
-        $licenceFile = "$secureFileFolder/$secureFileName"
-        
         $NewBCContainer = {
           param([hashtable]$Parameters)
           $Parameters['isolation'] = $env:DockerIsolation
@@ -386,6 +382,13 @@ stages:
 
           Compile-AppInBcContainer @Parameters
         }
+        
+        
+        $secureFileFolder = '\\filestorage\Files\! SB licencijos\! Naujausios'
+        $selectedAppVersionstring = $SelectedAppVersion.ToString()
+        $selectedAppVersionstring.Split('{.}')
+        $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
+        $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
 
         $InstallAppsFolders = @(
           $env:LatestIntegrationCoreAppPath,
@@ -497,7 +500,7 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
 
-        $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
+        $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$DockerVersion"
         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
         if ([System.IO.Directory]::Exists($TempPath)) {
             throw "TempPath ($TempPath) already exist"
