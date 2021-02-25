@@ -355,6 +355,12 @@ stages:
           $ManifestApp |
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
+          
+          $selectedAppVersionstring = $ManifestApp.Version
+          $selectedAppVersionstring.Split('{.}')
+          $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
+          $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
+
         }
 
         $CompileAppInBcContainer = {
@@ -383,13 +389,6 @@ stages:
           Compile-AppInBcContainer @Parameters
         }
         
-        
-        $secureFileFolder = '\\filestorage\Files\! SB licencijos\! Naujausios'
-        $selectedAppVersionstring = $SelectedAppVersion.ToString()
-        $selectedAppVersionstring.Split('{.}')
-        $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
-        $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
-
         $InstallAppsFolders = @(
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
