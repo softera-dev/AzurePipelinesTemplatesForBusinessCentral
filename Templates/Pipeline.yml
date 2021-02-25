@@ -34,9 +34,6 @@ parameters:
   - error
   - warning
   - none
-- name: appVersionString
-  type: string
-  default: ''
     
 - name: dockerMemory
   type: string
@@ -351,7 +348,6 @@ stages:
           Write-Host -Object "Selected application version: $SelectedAppVersion"
           Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
           Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
-          $Global:appVersionString = [string]$SelectedAppVersion
           $ManifestApp = $(
             Get-Content -Path $env:MainAppFolder/app.json |
             ConvertFrom-Json )
@@ -387,7 +383,7 @@ stages:
           Compile-AppInBcContainer @Parameters
         }
         
-        $selectedAppVersionstring = $Global:appVersionString
+        $selectedAppVersionstring = $SelectedAppVersion
         Write-Host -Object "app version 2: $selectedAppVersionstring"
         $selectedAppVersionstring.Split('.')
         $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
@@ -455,7 +451,6 @@ stages:
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         BcVersion: ${{ parameters.bcVersion }}
-        AppVersionString: ${{ parameters.appVersionString }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
