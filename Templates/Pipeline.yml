@@ -34,9 +34,9 @@ parameters:
   - error
   - warning
   - none
-- name: SelectedAppVersion
+- name: appVersionString
   type: string
-  default: '0.0.0.0'
+  default: ''
     
 - name: dockerMemory
   type: string
@@ -334,11 +334,11 @@ stages:
             }
           }
           [version]$SelectedAppReleaseVersion = [regex]::Replace($env:AppReleaseVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
-          [version]$env:SelectedAppVersion = [regex]::Replace($env:AppVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
-          if ($ManifestVersion.Major -ne $env:SelectedAppVersion.Major -or `
-              $ManifestVersion.Minor -notin @(0, $env:SelectedAppVersion.Minor) -or `
-              $ManifestVersion.Build -ne $env:SelectedAppVersion.Build -and `
-              $ManifestVersion.Revision -ne $env:SelectedAppVersion.Revision) {
+          [version]$SelectedAppVersion = [regex]::Replace($env:AppVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
+          if ($ManifestVersion.Major -ne $SelectedAppVersion.Major -or `
+              $ManifestVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
+              $ManifestVersion.Build -ne $SelectedAppVersion.Build -and `
+              $ManifestVersion.Revision -ne $SelectedAppVersion.Revision) {
             if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
               Write-Warning -Message "Manifest app version does not match selected app version."
             }
@@ -348,13 +348,15 @@ stages:
           }
           Write-Host
           Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
-          Write-Host -Object "Selected application version: $env:SelectedAppVersion"
+          Write-Host -Object "Selected application version: $SelectedAppVersion"
           Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$env:SelectedAppVersion"
+          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
+          $env:AppVersionString = [string]$SelectedAppVersion
+          Write-Host -Object "app version 1: $env:AppVersionString"
           $ManifestApp = $(
             Get-Content -Path $env:MainAppFolder/app.json |
             ConvertFrom-Json )
-          $ManifestApp.Version = [string]$env:SelectedAppVersion
+          $ManifestApp.Version = [string]$SelectedAppVersion
           $ManifestApp |
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
@@ -386,7 +388,8 @@ stages:
           Compile-AppInBcContainer @Parameters
         }
         
-        $selectedAppVersionstring = [string]$env:SelectedAppVersion
+        $selectedAppVersionstring = $env:AppVersionString
+        Write-Host -Object "app version 2: $selectedAppVersionstring"
         $selectedAppVersionstring.Split('.')
         $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
         $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
@@ -453,7 +456,7 @@ stages:
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         BcVersion: ${{ parameters.bcVersion }}
-        SelectedAppVersion: ${{ parameters.SelectedAppVersion }}
+        AppVersionString: ${{ parameters.appVersionString }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
