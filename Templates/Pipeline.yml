@@ -383,7 +383,7 @@ stages:
           Compile-AppInBcContainer @Parameters
         }
         
-        $selectedAppVersionstring = [string]$BcApplicationVersion
+        $selectedAppVersionstring = [string]$SelectedAppVersion
         $selectedAppVersionstring.Split('{.}')
         $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
         $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
