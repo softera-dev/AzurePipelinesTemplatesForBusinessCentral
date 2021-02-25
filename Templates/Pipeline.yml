@@ -384,7 +384,7 @@ stages:
         }
         
         $selectedAppVersionstring = [string]$env:BcApplicationVersion
-        Write-Host -Object "Selected application version string: $selectedAppVersionstring"
+        Write-Host -Object "Selected application version string: $env:BcApplicationVersion"
         $selectedAppVersionstring.Split('.')
         $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
         $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
