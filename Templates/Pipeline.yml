@@ -383,7 +383,7 @@ stages:
           Compile-AppInBcContainer @Parameters
         }
         
-        $selectedAppVersionstring = [string]$SelectedAppVersion
+        $selectedAppVersionstring = [string]$env:BcApplicationVersion
         $selectedAppVersionstring.Split('{.}')
         $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
         $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
@@ -450,6 +450,7 @@ stages:
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         BcVersion: ${{ parameters.bcVersion }}
+        BcApplicationVersion: $(BcApplicationVersion)
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
