@@ -158,12 +158,30 @@ stages:
     
     - checkout: self
       clean: true
-        
-    - task: DownloadSecureFile@1
-      name: DownloadBCLicense
+    
+    ### The variables secureFileFolder & secureFileName references variables I have defined higher up in the pipeline.
+    - task: PowerShell@2
+      enabled: true
+      displayName: 'Upload Secure File'
       inputs:
-        secureFile: $(BCLicense.SecureFileName)
-      displayName: Download BC license
+        targetType: 'inline'
+        script: |
+          $secureFileFolder = '\\filestorage\Files\! SB licencijos\! Naujausios'
+          $secureFileName = '2021-01-05-SB-BC17-DEV90d-licencija-5344129.flf'
+          $header = @{ Authorization = "Bearer $env:ACCESSTOKEN" }
+          $infile = "$(secureFileFolder)/$(secureFileName)"
+          $organization = (Split-Path $(System.CollectionUri) -leaf)
+          $uri = "https://dev.azure.com/$organization/$(System.TeamProject)/_apis/distributedtask/securefiles?api-version=5.0-preview.1&name=$(secureFileName)"
+
+          Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/octet-stream" -Headers $header -InFile "$infile"
+      env:
+        ACCESSTOKEN: $(System.AccessToken)
+        
+#     - task: DownloadSecureFile@1
+#       name: DownloadBCLicense
+#       inputs:
+#         secureFile: $(BCLicense.SecureFileName)
+#       displayName: Download BC license
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
