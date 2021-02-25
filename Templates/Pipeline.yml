@@ -351,8 +351,7 @@ stages:
           Write-Host -Object "Selected application version: $SelectedAppVersion"
           Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
           Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
-          $env:AppVersionString = [string]$SelectedAppVersion
-          Write-Host -Object "app version 1: $env:AppVersionString"
+          $Global:appVersionString = [string]$SelectedAppVersion
           $ManifestApp = $(
             Get-Content -Path $env:MainAppFolder/app.json |
             ConvertFrom-Json )
@@ -388,7 +387,7 @@ stages:
           Compile-AppInBcContainer @Parameters
         }
         
-        $selectedAppVersionstring = $env:AppVersionString
+        $selectedAppVersionstring = $Global:appVersionString
         Write-Host -Object "app version 2: $selectedAppVersionstring"
         $selectedAppVersionstring.Split('.')
         $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
