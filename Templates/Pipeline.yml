@@ -355,12 +355,18 @@ stages:
           $ManifestApp |
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
-
-          $selectedAppVersionstring = [string]$SelectedAppVersion
-          $selectedAppVersionstring.Split('.')
-          $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
-          $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
-          $Parameters.licenceFile = $licenceFile
+          
+          $DockerVersion = [version]$ContainerVersion
+          $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
+          $LicensePath = $(
+              $DockerVersion.Major..11 |
+              ForEach-Object -Process {
+                  Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
+              } |
+              Select-Object -First 1 -ExpandProperty FullName
+          )
+          Import-BcContainerLicense -containerName $Parameters.containerName -licenseFile $LicensePath
+          Restart-BcContainer -containerName $Parameters.containerName
         }
 
         $CompileAppInBcContainer = {
