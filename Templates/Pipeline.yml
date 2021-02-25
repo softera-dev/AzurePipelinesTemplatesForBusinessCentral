@@ -359,7 +359,7 @@ stages:
           $selectedAppVersionstring = $ManifestApp.Version
           $selectedAppVersionstring.Split('{.}')
           $BCVersion = 'BC' + $selectedAppVersionstring[0] + $selectedAppVersionstring[1]
-          $licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
+          $global:licenceFile = (Resolve-Path -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*$($BCVersion)*").ProviderPath
 
         }
 
@@ -433,7 +433,7 @@ stages:
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $licenceFile
+          licenseFile                 = $global:licenceFile
           appFolders                  = $env:MainAppFolder
           testFolders                 = @()
           memoryLimit                 = $env:DockerMemory
