@@ -162,6 +162,7 @@ stages:
     ### The variables secureFileFolder & secureFileName references variables I have defined higher up in the pipeline.
     - task: PowerShell@2
       enabled: true
+      name: UploadBCLicense
       displayName: 'Upload Secure File'
       inputs:
         targetType: 'inline'
@@ -174,6 +175,8 @@ stages:
           $uri = "https://dev.azure.com/$organization/$(System.TeamProject)/_apis/distributedtask/securefiles?api-version=5.0-preview.1&name=$secureFileName"
 
           Invoke-RestMethod -Uri $uri -Method Post -ContentType "application/octet-stream" -Headers $header -InFile "$infile"
+          
+          Write-Host -Object "##vso[task.setvariable variable=secureFile;]$uri"
       env:
         ACCESSTOKEN: $(System.AccessToken)
         
@@ -472,7 +475,7 @@ stages:
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
-        LicenseFile: $(DownloadBCLicense.SecureFilePath)
+        LicenseFile: $(secureFile)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: $(MainAppFolder)
