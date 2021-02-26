@@ -365,8 +365,13 @@ stages:
               } |
               Select-Object -First 1 -ExpandProperty FullName
           )
-          Import-BcContainerLicense -containerName $Parameters.containerName -licenseFile $LicensePath
-          Restart-BcContainer -containerName $Parameters.containerName
+          Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $LicensePath `
+              -containerPath 'C:\Licence.flf'  
+          if ($DockerVersion.Major -eq '14') { $serverInstance = 'NAV'  } else { $serverInstance = 'BC' }
+          Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock {
+              Import-NAVServerLicense -LicenseFile 'C:\\Licence.flf' -ServerInstance $serverInstance
+              Restart-NAVServerInstance -ServerInstance $serverInstance
+          }
         }
 
         $CompileAppInBcContainer = {
