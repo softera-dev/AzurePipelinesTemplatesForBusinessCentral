@@ -374,7 +374,6 @@ stages:
           Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock {
               Import-NAVServerLicense -LicenseFile 'C:\\Licence.flf' -ServerInstance $serverInstance
               Restart-NAVServerInstance -ServerInstance $serverInstance
-              Sync-NAVTenant -Tenant Default -ServerInstance $serverInstance
           }
         }
 
