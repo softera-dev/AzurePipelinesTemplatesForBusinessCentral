@@ -105,6 +105,9 @@ parameters:
 - name: latestSalaryAppPath 
   type: string
   default: ''
+- name: latestPayslippPasswordAppPath 
+  type: string
+  default: ''
 - name: latestLBCAlnaCoreAppPath
   type: string
   default: ''
@@ -413,6 +416,7 @@ stages:
           $env:LatestTimeScheduleAppPath,
           $env:LatestTimeEmployeeTimeAppPath,
           $env:LatestSalaryAppPath,
+          $env:LatestPayslippPasswordAppPath,
           $env:LatestLBCAlnaCoreAppPath,
           $env:LatestSOFT4LESSEEforIVER,
           $env:LatestWMSBarAppPath)
@@ -492,6 +496,7 @@ stages:
         LatestTimeScheduleAppPath: ${{ parameters.latestTimeScheduleAppPath }}
         LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
         LatestSalaryAppPath: ${{ parameters.latestSalaryAppPath }}
+        LatestPayslippPasswordAppPath: ${{ parameters.latestPayslippPasswordAppPath }}
         LatestLBCAlnaCoreAppPath: ${{ parameters.latestLBCAlnaCoreAppPath }}
         LatestSOFT4LESSEEforIVER: ${{ parameters.latestSOFT4LESSEEforIVER }}
         LatestWMSBarAppPath: ${{ parameters.latestWMSBarAppPath }}
