@@ -105,9 +105,6 @@ parameters:
 - name: latestSalaryAppPath 
   type: string
   default: ''
-- name: latestPayslippPasswordAppPath 
-  type: string
-  default: ''
 - name: latestLBCAlnaCoreAppPath
   type: string
   default: ''
@@ -161,6 +158,12 @@ stages:
     
     - checkout: self
       clean: true
+        
+    - task: DownloadSecureFile@1
+      name: DownloadBCLicense
+      inputs:
+        secureFile: $(BCLicense.SecureFileName)
+      displayName: Download BC license
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
@@ -225,7 +228,7 @@ stages:
             imageName = "mcr.microsoft.com/businesscentral/$($GetBcArtifactUrlParameters.Type.ToLower()):$($GetBcArtifactUrlParameters.Version)-$($GetBcArtifactUrlParameters.Country)"
           }
         }
-        
+
         $NewBCContainer = {
           param([hashtable]$Parameters)
           $Parameters['isolation'] = $env:DockerIsolation
@@ -358,23 +361,6 @@ stages:
           $ManifestApp |
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
-          
-          $DockerVersion = [version]$ContainerVersion
-          $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
-          $LicensePath = $(
-              $DockerVersion.Major..11 |
-              ForEach-Object -Process {
-                  Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
-              } |
-              Select-Object -First 1 -ExpandProperty FullName
-          )
-          Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $LicensePath `
-              -containerPath 'C:\Licence.flf'  
-          if ($DockerVersion.Major -eq '14') { $serverInstance = 'NAV'  } else { $serverInstance = 'BC' }
-          Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock {
-              Import-NAVServerLicense -LicenseFile 'C:\\Licence.flf' -ServerInstance $serverInstance
-              Restart-NAVServerInstance -ServerInstance $serverInstance
-          }
         }
 
         $CompileAppInBcContainer = {
@@ -402,7 +388,7 @@ stages:
 
           Compile-AppInBcContainer @Parameters
         }
-        
+
         $InstallAppsFolders = @(
           $env:LatestIntegrationCoreAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
@@ -415,7 +401,6 @@ stages:
           $env:LatestTimeScheduleAppPath,
           $env:LatestTimeEmployeeTimeAppPath,
           $env:LatestSalaryAppPath,
-          $env:LatestPayslippPasswordAppPath,
           $env:LatestLBCAlnaCoreAppPath,
           $env:LatestSOFT4LESSEEforIVER,
           $env:LatestWMSBarAppPath)
@@ -448,6 +433,7 @@ stages:
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
+          licenseFile                 = $env:LicenseFile
           appFolders                  = $env:MainAppFolder
           testFolders                 = @()
           memoryLimit                 = $env:DockerMemory
@@ -468,6 +454,7 @@ stages:
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
+        LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: $(MainAppFolder)
@@ -495,7 +482,6 @@ stages:
         LatestTimeScheduleAppPath: ${{ parameters.latestTimeScheduleAppPath }}
         LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
         LatestSalaryAppPath: ${{ parameters.latestSalaryAppPath }}
-        LatestPayslippPasswordAppPath: ${{ parameters.latestPayslippPasswordAppPath }}
         LatestLBCAlnaCoreAppPath: ${{ parameters.latestLBCAlnaCoreAppPath }}
         LatestSOFT4LESSEEforIVER: ${{ parameters.latestSOFT4LESSEEforIVER }}
         LatestWMSBarAppPath: ${{ parameters.latestWMSBarAppPath }}
@@ -514,7 +500,7 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
 
-        $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$DockerVersion"
+        $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
         if ([System.IO.Directory]::Exists($TempPath)) {
             throw "TempPath ($TempPath) already exist"
