@@ -222,9 +222,9 @@ stages:
           $BcArtifactUrlOrImageName = @{
             artifact = Get-BCArtifactUrl @GetBcArtifactUrlParameters
           }
-          if ($GetBcArtifactUrlParameters.SasToken) {
-            $BcArtifactUrlOrImageName.imageName = ''
-          }
+          #if ($GetBcArtifactUrlParameters.SasToken) {
+          #  $BcArtifactUrlOrImageName.imageName = ''
+          #}
         } else {
           $BcArtifactUrlOrImageName = @{
             artifact  = ''
