@@ -383,8 +383,8 @@ stages:
             [hashtable]$Parameters
           )
           Invoke-ScriptInBcContainer -containerName $Parameters.containerName -scriptblock {
-              Sync-NAVTenant -ServerInstance $ServerInstance -Tenant default -Force
               Get-NAVTenant -ServerInstance $ServerInstance -Tenant default -ForceRefresh
+              Sync-NAVTenant -ServerInstance $ServerInstance -Tenant default -Force
           }
           Compile-AppInBcContainer @Parameters
         }
