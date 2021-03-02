@@ -219,6 +219,9 @@ stages:
           $BcArtifactUrlOrImageName = @{
             artifact = Get-BCArtifactUrl @GetBcArtifactUrlParameters
           }
+          if ($GetBcArtifactUrlParameters.SasToken) {
+            $BcArtifactUrlOrImageName.imageName = ''
+          }
         } else {
           $BcArtifactUrlOrImageName = @{
             artifact  = ''
@@ -441,7 +444,7 @@ stages:
           $_ | Copy-Item -Destination ($_.FullName + '-original')
         }
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
-        $GetRunAlPipelineParameters = @{
+        $RunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
@@ -456,7 +459,7 @@ stages:
           CompileAppInBcContainer     = $CompileAppInBcContainer
         }
         Run-AlPipeline `
-          @GetRunAlPipelineParameters `
+          @RunAlPipelineParameters `
           @BcArtifactUrlOrImageName
           
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
