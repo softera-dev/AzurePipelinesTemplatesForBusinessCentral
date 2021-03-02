@@ -1,4 +1,7 @@
 parameters:
+- name: removeBcContainer
+  type: boolean
+  default: true
 - name: bcVersion
   type: string
   default: ''
@@ -566,4 +569,4 @@ stages:
       env:
         ContainerName: $(ContainerName)
       displayName: 'Cleanup'
-      condition: always()
+      condition: and(always(), parameters.removeBcContainer)
