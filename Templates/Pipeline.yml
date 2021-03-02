@@ -377,6 +377,7 @@ stages:
           Import-BcContainerLicense -containerName $Parameters.containerName -licenseFile $LicensePath -restart
           Restart-BcContainer -containerName $Parameters.containerName
           Invoke-ScriptInBcContainer -containerName $Parameters.containerName -scriptblock {
+              Get-NAVTenant -ServerInstance $ServerInstance -Tenant default -ForceRefresh
               Sync-NAVTenant -ServerInstance $ServerInstance -Tenant default -Force
           }
         }
