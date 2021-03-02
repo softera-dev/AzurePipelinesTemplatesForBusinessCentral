@@ -441,7 +441,7 @@ stages:
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
           CompileAppInBcContainer     = $CompileAppInBcContainer
-          RemoveBcContainer           = $env:RemoveBcContainer
+          RemoveBcContainer           = $env:RemoveBcContainer -eq 'true'
         }
         Run-AlPipeline `
           @RunAlPipelineParameters `
