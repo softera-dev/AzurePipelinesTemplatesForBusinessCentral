@@ -376,16 +376,16 @@ stages:
           Write-Host -Object "Licence: $LicensePath"
           Import-BcContainerLicense -containerName $Parameters.containerName -licenseFile $LicensePath -restart
           Restart-BcContainer -containerName $Parameters.containerName
-          Invoke-ScriptInBcContainer -containerName $Parameters.containerName -scriptblock {
-              Sync-NAVTenant -ServerInstance $ServerInstance -Tenant default -Force
-              Get-NAVTenant -ServerInstance $ServerInstance -Tenant default -ForceRefresh
-          }
         }
 
         $CompileAppInBcContainer = {
           param(
             [hashtable]$Parameters
           )
+          Invoke-ScriptInBcContainer -containerName $Parameters.containerName -scriptblock {
+              Sync-NAVTenant -ServerInstance $ServerInstance -Tenant default -Force
+              Get-NAVTenant -ServerInstance $ServerInstance -Tenant default -ForceRefresh
+          }
           Compile-AppInBcContainer @Parameters
         }
         
