@@ -353,7 +353,7 @@ stages:
           Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
           Write-Host -Object "Selected application version: $SelectedAppVersion"
           Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
+          Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$ContainerVersion"
           $ManifestApp = $(
             Get-Content -Path $env:MainAppFolder/app.json |
             ConvertFrom-Json )
