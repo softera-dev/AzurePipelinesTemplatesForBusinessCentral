@@ -384,25 +384,6 @@ stages:
           param(
             [hashtable]$Parameters
           )
-
-          <#
-          $Parameters['assemblyProbingPaths'] = '"' + ($(
-            $env:AlDotNetAssemblyProbingPaths -split ',' |
-            ForEach-Object -Process {
-              $AlDotNetAssemblyProbingPath = $(
-                if (-not [System.IO.Path]::IsPathRooted($_)) {
-                  Join-Path -Path $Parameters['appProjectFolder'] -ChildPath $_
-                } else {
-                  $_
-                }
-              )
-              if (Test-Path -LiteralPath $AlDotNetAssemblyProbingPath) {
-                (Resolve-Path -LiteralPath $AlDotNetAssemblyProbingPath).ProviderPath
-              }
-            }
-          ) -join ',') + '"'
-          #>
-
           Compile-AppInBcContainer @Parameters
         }
         
@@ -460,6 +441,7 @@ stages:
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
           CompileAppInBcContainer     = $CompileAppInBcContainer
+          RemoveBcContainer           = $env:RemoveBcContainer
         }
         Run-AlPipeline `
           @RunAlPipelineParameters `
@@ -467,6 +449,7 @@ stages:
           
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
+        RemoveBcContainer: ${{ parameters.removeBcContainer }}
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
