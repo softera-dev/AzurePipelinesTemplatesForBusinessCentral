@@ -375,10 +375,10 @@ stages:
           )
           Write-Host -Object "Licence: $LicensePath"
           Import-BcContainerLicense -containerName $Parameters.containerName -licenseFile $LicensePath -restart
-#          Invoke-ScriptInBcContainer -containerName $Parameters.containerName -scriptblock {
-#              Sync-NAVTenant -ServerInstance $ServerInstance -Tenant default -Force
-#          }
           Restart-BcContainer -containerName $Parameters.containerName
+          Invoke-ScriptInBcContainer -containerName $Parameters.containerName -scriptblock {
+              Sync-NAVTenant -ServerInstance $ServerInstance -Tenant default -Force
+          }
         }
 
         $CompileAppInBcContainer = {
