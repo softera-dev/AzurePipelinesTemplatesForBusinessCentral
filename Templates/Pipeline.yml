@@ -569,4 +569,4 @@ stages:
       env:
         ContainerName: $(ContainerName)
       displayName: 'Cleanup'
-      condition: and(always(), parameters.removeBcContainer)
+      condition: and(always(), eq('${{ parameters.removeBcContainer }}', true))
