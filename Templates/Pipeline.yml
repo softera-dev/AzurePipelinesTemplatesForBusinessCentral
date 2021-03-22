@@ -252,7 +252,7 @@ stages:
           if (-not (Test-Path -LiteralPath $MainAppNetPackagesFolder)) {
             $MainAppNetPackagesFolder = ''
           }
-          Write-Host -Object "Main app .netpackages folder: $ContainerBcAddInsFolder"
+          Write-Host -Object "Main app .netpackages folder: $MainAppNetPackagesFolder"
           
           
           if ($env:RequireDllForPayslipPassword -eq 'true') {    
