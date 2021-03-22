@@ -241,7 +241,7 @@ stages:
           New-BcContainer @parameters
           
           $ContainerBcAddInsFolder = $(
-            Invoke-ScriptInBcContainer -containerName bc -scriptblock {
+            Invoke-ScriptInBcContainer -containerName $Parameters.containerName -scriptblock {
               Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins' |
               Select-Object -ExpandProperty ProviderPath
             }
