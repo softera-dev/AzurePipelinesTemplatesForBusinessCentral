@@ -246,10 +246,13 @@ stages:
               Select-Object -ExpandProperty ProviderPath
             }
           )
+          Write-Host -Object "Container BC Add-ins folder: $ContainerBcAddInsFolder"
+          
           $MainAppNetPackagesFolder = (Join-Path -Path $env:MainAppFolder -ChildPath '.netpackages')
           if (-not (Test-Path -LiteralPath $MainAppNetPackagesFolder)) {
             $MainAppNetPackagesFolder = ''
           }
+          Write-Host -Object "Main app .netpackages folder: $ContainerBcAddInsFolder"
           
           
           if ($env:RequireDllForPayslipPassword -eq 'true') {    
