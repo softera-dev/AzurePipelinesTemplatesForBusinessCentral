@@ -314,11 +314,11 @@ stages:
             }
           }
           if ($env:RequireGpaisEncryption -eq 'true') {
-            if ($env:MainAppNetPackagesFolder) {
+            if ($MainAppNetPackagesFolder) {
               Write-Host -Object 'Installing GPAISEncryption add-in...'
-              Get-ChildItem -LiteralPath $env:MainAppNetPackagesFolder -Recurse -Force |
+              Get-ChildItem -LiteralPath $MainAppNetPackagesFolder -Recurse -Force |
               ForEach-Object -Process {
-                $AddInRelativePath = $_.FullName.Substring($env:MainAppNetPackagesFolder.Length + 1)
+                $AddInRelativePath = $_.FullName.Substring($MainAppNetPackagesFolder.Length + 1)
                 $AddInPath = $ContainerBcAddInsFolder | Join-Path -ChildPath 'GPAISEncryption' | Join-Path -ChildPath $AddInRelativePath
                 Write-Host -Object "Copying $($_.FullName) to $AddInPath in container $($Parameters.containerName)..."
                 Copy-FileToBcContainer -containerName $Parameters.containerName -localPath $_.FullName -containerPath $AddInPath
