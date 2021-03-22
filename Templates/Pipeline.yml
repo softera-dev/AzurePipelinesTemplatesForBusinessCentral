@@ -72,6 +72,9 @@ parameters:
 - name: latestZXingPresentationPath
   type: string
   default: ''
+- name: requireGpaisEncryption
+  type: boolean
+  default: false
 - name: latestIntegrationCoreAppPath
   type: string
   default: ''
@@ -237,6 +240,18 @@ stages:
           $Parameters['isolation'] = $env:DockerIsolation
           New-BcContainer @parameters
           
+          $ContainerBcAddInsFolder = $(
+            Invoke-ScriptInBcContainer -containerName bc -scriptblock {
+              Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins' |
+              Select-Object -ExpandProperty ProviderPath
+            }
+          )
+          $MainAppNetPackagesFolder = (Join-Path -Path $env:MainAppFolder -ChildPath '.netpackages')
+          if (-not (Test-Path -LiteralPath $MainAppNetPackagesFolder)) {
+            $MainAppNetPackagesFolder = ''
+          }
+          
+          
           if ($env:RequireDllForPayslipPassword -eq 'true') {    
               $PayslipPasswordDllPath = $env:LatestPayslipPasswordDllPath
               $Path = Invoke-ScriptInBCContainer -containerName $Parameters.containerName -scriptblock { 
@@ -293,6 +308,18 @@ stages:
               Invoke-WebRequest -Uri  https://www.nuget.org/api/v2/package/DocumentFormat.OpenXml/2.7.2 -OutFile SofteraFiles\DocumentFormat.zip
               Expand-Archive -Path SofteraFiles\DocumentFormat.zip -DestinationPath SofteraFiles\DocumentFormat
               Copy-Item -Path SofteraFiles\DocumentFormat\lib\net46\*.dll -Destination (Resolve-Path -Path 'C:\Program Files\Microsoft Dynamics NAV\*\Service\Add-ins\').ProviderPath
+            }
+          }
+          if ($env:RequireGpaisEncryption -eq 'true') {
+            if ($env:MainAppNetPackagesFolder) {
+              Write-Host -Object 'Installing GPAISEncryption add-in...'
+              Get-ChildItem -LiteralPath $env:MainAppNetPackagesFolder -Recurse -Force |
+              ForEach-Object -Process {
+                $AddInRelativePath = $_.FullName.Substring($env:MainAppNetPackagesFolder.Length + 1)
+                $AddInPath = $ContainerBcAddInsFolder | Join-Path -ChildPath 'GPAISEncryption' | Join-Path -ChildPath $AddInRelativePath
+                Write-Host -Object "Copying $($_.FullName) to $AddInPath in container $($Parameters.containerName)..."
+                Copy-FileToBcContainer -containerName $Parameters.containerName -localPath $_.FullName -containerPath $AddInPath
+              }
             }
           }
           Invoke-ScriptInBcContainer $Parameters.containerName -argumentList $env:ALLanguageExtensionFileName -scriptblock {
@@ -475,6 +502,7 @@ stages:
         LatestPayslipPasswordDllPath: ${{ parameters.latestPayslipPasswordDllPath }}
         LatestZXingPresentationPath: ${{ parameters.latestZXingPresentationPath }}
         LatestZXingPath: ${{ parameters.latestZXingPath }}
+        RequireGpaisEncryption: ${{ parameters.requireGpaisEncryption }}
         LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
         LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
         LatestVATAppPath: ${{ parameters.latestVATAppPath }}
