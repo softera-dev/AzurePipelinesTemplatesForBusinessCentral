@@ -473,7 +473,7 @@ stages:
         if ($env:TestAppFolder -eq 'false') {
           $TestApp = @()
         } else {
-          $TestApp = $env:TestAppFolder
+          $TestApp = 'TestApp'
         }
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
