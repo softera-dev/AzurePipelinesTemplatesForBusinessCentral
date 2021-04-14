@@ -16,8 +16,8 @@ parameters:
   type: string
   default: MainApp
 - name: testAppFolder
-  type: string
-  default: ''
+  type: boolean
+  default: false
 - name: masterBranch
   type: string
   default: WIP
@@ -136,8 +136,6 @@ stages:
     variables:
     - name: MainAppFolder
       value: ${{ parameters.mainAppFolder }}
-    - name: TestAppFolder
-      value: ${{ parameters.testAppFolder }}
     - name: OrganizationName
       value: ${{ parameters.organizationName }}
       
@@ -472,7 +470,11 @@ stages:
           $_ | Copy-Item -Destination ($_.FullName + '-original')
         }
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
-        $TestApp = @($env:TestAppFolder)
+        if ($env:TestAppFolder -eq 'false') {
+          $TestApp = @()
+        } else {
+          $TestApp = $env:TestAppFolder
+        }
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
@@ -502,7 +504,7 @@ stages:
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: $(MainAppFolder)
-        TestAppFolder: $(TestAppFolder)
+        TestAppFolder: ${{ parameters.testAppFolder }}
         AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
         AppVersionFormat: ${{ parameters.appVersionFormat }}
         CustomAppVersion: ${{ parameters.customAppVersion }}
