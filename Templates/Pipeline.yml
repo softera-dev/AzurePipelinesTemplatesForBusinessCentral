@@ -472,8 +472,10 @@ stages:
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         if ($env:TestAppFolder -eq 'false') {
           $TestApp = @()
+          [boolean]$InstallTestApp = $false
         } else {
           $TestApp = 'TestApp'
+          [boolean]$InstallTestApp = $true
         }
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
@@ -487,6 +489,9 @@ stages:
           codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
           installApps                 = $AppsFromDependencies
           azureDevOps                 = $true
+          installTestFramework        = $InstallTestApp
+          installTestLibraries        = $InstallTestApp
+          installPerformanceToolkit   = $InstallTestApp
           NewBCContainer              = $NewBCContainer
           CompileAppInBcContainer     = $CompileAppInBcContainer
         }
