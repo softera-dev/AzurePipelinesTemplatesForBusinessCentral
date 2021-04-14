@@ -491,7 +491,6 @@ stages:
           azureDevOps                 = $true
           installTestFramework        = $InstallTestApp
           installTestLibraries        = $InstallTestApp
-          installPerformanceToolkit   = $InstallTestApp
           NewBCContainer              = $NewBCContainer
           CompileAppInBcContainer     = $CompileAppInBcContainer
         }
