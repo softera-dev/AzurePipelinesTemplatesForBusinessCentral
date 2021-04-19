@@ -126,6 +126,9 @@ parameters:
 - name: latestSLEAppPath
   type: string
   default: ''
+- name: latestAppLicensingAppPath
+  type: string
+  default: ''
 
 stages:
 - stage: Main
@@ -444,7 +447,8 @@ stages:
           $env:LatestLBCAlnaCoreAppPath,
           $env:LatestSOFT4LESSEEforIVER,
           $env:LatestWMSBarAppPath,
-          $env:LatestSLEAppPath)
+          $env:LatestSLEAppPath,
+          $env:LatestAppLicensingAppPath)
         #echo $InstallAppsFolders
         $AppsFromDependencies = @(
           $InstallAppsFolders |
@@ -539,6 +543,7 @@ stages:
         LatestSOFT4LESSEEforIVER: ${{ parameters.latestSOFT4LESSEEforIVER }}
         LatestWMSBarAppPath: ${{ parameters.latestWMSBarAppPath }}
         LatestSLEAppPath: ${{ parameters.latestSLEAppPath }}
+        LatestAppLicensingAppPath: ${{ parameters.latestAppLicensingAppPath }}
       displayName: Run Pipeline
 
     - powershell: |    
