@@ -432,6 +432,7 @@ stages:
         }
 
         $InstallAppsFolders = @(
+          $env:LatestAppLicensingAppPath,
           $env:LatestSofteraBalticLoggingAppPath,
           $env:LatestIntegrationCoreAppPath,
           $env:LatestVATAppPath,
@@ -447,8 +448,7 @@ stages:
           $env:LatestLBCAlnaCoreAppPath,
           $env:LatestSOFT4LESSEEforIVER,
           $env:LatestWMSBarAppPath,
-          $env:LatestSLEAppPath,
-          $env:LatestAppLicensingAppPath)
+          $env:LatestSLEAppPath)
         #echo $InstallAppsFolders
         $AppsFromDependencies = @(
           $InstallAppsFolders |
