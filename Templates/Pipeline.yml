@@ -51,7 +51,7 @@ parameters:
 - name: latestFolder
   type: string
   default: Latest
-- name: beforeAppsInstallScript:
+- name: beforeAppsInstallScript
   type: string
   default: ''
 - name: eInvoice
