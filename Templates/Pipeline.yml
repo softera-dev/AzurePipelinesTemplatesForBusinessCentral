@@ -51,6 +51,9 @@ parameters:
 - name: latestFolder
   type: string
   default: Latest
+- name: beforeAppsInstallScript:
+  type: string
+  default: ''
 - name: eInvoice
   type: boolean
   default: false
@@ -263,6 +266,13 @@ stages:
           }
           Write-Host -Object "Main app .netpackages folder: $MainAppNetPackagesFolder"
           
+          Write-Host -Object "Running script inside container: " + $env:BeforeAppsInstallScript
+          Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $env:BeforeAppsInstallScript -scriptBlock {
+            param(
+              $BeforeAppsInstallScript
+            )
+            Invoke-Expression -Command $BeforeAppsInstallScript
+          }
           
           if ($env:RequireDllForPayslipPassword -eq 'true') {    
               $PayslipPasswordDllPath = $env:LatestPayslipPasswordDllPath
@@ -518,6 +528,7 @@ stages:
         CustomAppVersion: ${{ parameters.customAppVersion }}
         DockerMemory: $(DockerMemory)
         DockerIsolation: ${{ parameters.dockerIsolation }}
+        BeforeAppsInstallScript: ${{ parameters.beforeAppsInstallScript }}
         RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
         RequireClosedXML: ${{ parameters.S4LESSEE }}
         RequireZXing: ${{ parameters.ZXing }}
