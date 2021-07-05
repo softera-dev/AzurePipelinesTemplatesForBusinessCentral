@@ -266,7 +266,7 @@ stages:
           }
           Write-Host -Object "Main app .netpackages folder: $MainAppNetPackagesFolder"
           
-          Write-Host -Object "Running script inside container: " + $env:BeforeAppsInstallScript
+          Write-Host -Object "Running script inside container: $env:BeforeAppsInstallScript"
           Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $env:BeforeAppsInstallScript -scriptBlock {
             param(
               $BeforeAppsInstallScript
