@@ -271,7 +271,7 @@ stages:
             Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $env:BeforeAppsInstallScript -scriptBlock {
               param(
                 $BeforeAppsInstallScript
-              }
+              )
               Invoke-Expression -Command $BeforeAppsInstallScript
             }
           }
