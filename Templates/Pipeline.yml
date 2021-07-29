@@ -134,7 +134,7 @@ parameters:
   default: ''
 - name: latestDependencyAppPaths
   type: object
-  default: ''
+  default: {}
   
 stages:
 - stage: Main
