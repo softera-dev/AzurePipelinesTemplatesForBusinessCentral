@@ -134,7 +134,7 @@ parameters:
   default: ''
 - name: latestDependencyAppPaths
   type: object
-  default: {}
+  default: []
   
 stages:
 - stage: Main
@@ -445,8 +445,6 @@ stages:
 
           Compile-AppInBcContainer @Parameters
         }
-        
-        echo $env:LatestDependencyAppPaths
 
         $InstallAppsFolders = @(
           $env:LatestAppLicensingAppPath,
@@ -465,7 +463,10 @@ stages:
           $env:LatestLBCAlnaCoreAppPath,
           $env:LatestSOFT4LESSEEforIVER,
           $env:LatestWMSBarAppPath,
-          $env:LatestSLEAppPath)
+          $env:LatestSLEAppPath
+          
+          $env:LatestDependencyAppPaths | ConvertFrom-Json
+        )
         #echo $InstallAppsFolders
         $AppsFromDependencies = @(
           $InstallAppsFolders |
@@ -562,7 +563,7 @@ stages:
         LatestWMSBarAppPath: ${{ parameters.latestWMSBarAppPath }}
         LatestSLEAppPath: ${{ parameters.latestSLEAppPath }}
         LatestAppLicensingAppPath: ${{ parameters.latestAppLicensingAppPath }}
-        LatestDependencyAppPaths: ${{ parameters.latestDependencyAppPaths }}
+        LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
       displayName: Run Pipeline
 
     - powershell: |    
