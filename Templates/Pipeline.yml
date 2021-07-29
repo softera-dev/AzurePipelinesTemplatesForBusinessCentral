@@ -132,7 +132,10 @@ parameters:
 - name: latestAppLicensingAppPath
   type: string
   default: ''
-
+- name: latestDependencyAppPaths
+  type: array
+  default: []
+  
 stages:
 - stage: Main
   displayName: Main
@@ -442,6 +445,8 @@ stages:
 
           Compile-AppInBcContainer @Parameters
         }
+        
+        echo $env:LatestDependencyAppPaths
 
         $InstallAppsFolders = @(
           $env:LatestAppLicensingAppPath,
@@ -557,6 +562,7 @@ stages:
         LatestWMSBarAppPath: ${{ parameters.latestWMSBarAppPath }}
         LatestSLEAppPath: ${{ parameters.latestSLEAppPath }}
         LatestAppLicensingAppPath: ${{ parameters.latestAppLicensingAppPath }}
+        LatestDependencyAppPaths: ${{ parameters.latestDependencyAppPaths }}
       displayName: Run Pipeline
 
     - powershell: |    
