@@ -133,7 +133,7 @@ parameters:
   type: string
   default: ''
 - name: latestDependencyAppPaths
-  type: array
+  type: object
   default: []
   
 stages:
