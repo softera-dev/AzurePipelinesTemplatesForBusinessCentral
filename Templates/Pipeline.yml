@@ -16,6 +16,9 @@ parameters:
   type: object
   default:
   - MainApp
+- name: testFolders
+  type: object
+  default: []
 - name: masterBranch
   type: string
   default: WIP
@@ -117,6 +120,12 @@ stages:
         )
         Write-Host -Object 'App folders:'
         $AppFolders | Out-Host
+        
+        $TestFolders = $(
+          $env:TestFolders | ConvertFrom-Json
+        )
+        Write-Host -Object 'Test app folders:'
+        $TestFolders | Out-Host
 
         if ($env:BcVersion) {
           Write-Host -Object "BC version given $env:BcVersion"
@@ -286,11 +295,14 @@ stages:
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $env:LicenseFile
           appFolders                  = $AppFolders
-          testFolders                 = @()
+          testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
           codeSignCertPfxFile         = $env:CodeSignCertPfxFile
           codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
           installApps                 = $AppsFromDependencies
+          installTestRunner           = $true
+          installTestFramework        = $true
+          installTestLibraries        = $true
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
         }
@@ -308,6 +320,7 @@ stages:
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
+        TestFolders: ${{ convertToJson(parameters.testFolders) }}
         AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
         AppVersionFormat: ${{ parameters.appVersionFormat }}
         CustomAppVersion: ${{ parameters.customAppVersion }}
