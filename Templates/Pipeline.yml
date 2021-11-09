@@ -112,14 +112,11 @@ stages:
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
 
-        $AppFolders = @(
+        $AppFolders = $(
           $env:AppFolders | ConvertFrom-Json
         )
         Write-Host -Object 'App folders:'
-        $AppFolders | ConvertTo-Json | Out-Host
-        $AppFolders.GetType()
-        
-        throw "err"
+        $AppFolders | Out-Host
 
         if ($env:BcVersion) {
           Write-Host -Object "BC version given $env:BcVersion"
@@ -262,7 +259,7 @@ stages:
           }
         }
 
-        $InstallAppsFolders = @(
+        $InstallAppsFolders = $(
           $env:LatestDependencyAppPaths | ConvertFrom-Json
         )
         $AppsFromDependencies = @(
