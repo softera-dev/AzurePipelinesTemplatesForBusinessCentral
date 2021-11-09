@@ -112,6 +112,7 @@ stages:
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
 
+        Write-Host -Object $env:AppFolders
         $AppFolders = @(
           $env:AppFolders | ConvertFrom-Json
         )
