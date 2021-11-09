@@ -112,12 +112,12 @@ stages:
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
 
-        Write-Host -Object "App folders: $env:AppFolders"
         $AppFolders = @(
           $env:AppFolders | ConvertFrom-Json
         )
         Write-Host -Object 'App folders:'
-        $AppFolders
+        $AppFolders | ConvertTo-Json | Out-Host
+        $AppFolders.GetType()
         
         throw "err"
 
