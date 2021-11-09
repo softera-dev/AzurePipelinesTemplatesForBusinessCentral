@@ -195,6 +195,7 @@ stages:
 
 
           foreach ($AppFolder in $AppFolders) {
+            Write-Host
             Write-Host -Object "Updating app version in '$AppFolder'..."
 
             [version]$CustomAppVersion = $env:CustomAppVersion
@@ -244,7 +245,6 @@ stages:
                 exit(1)
               }
             }
-            Write-Host
             Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
             Write-Host -Object "Selected application version: $SelectedAppVersion"
             Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
