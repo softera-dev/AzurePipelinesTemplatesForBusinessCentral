@@ -621,7 +621,7 @@ stages:
             [System.IO.Directory]::CreateDirectory($Path)
             Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
         }
-      condition: not(startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
+      #condition: not(startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
       env:
         LatestFolder: ${{ parameters.latestFolder }}
       displayName: Copy files to Latest folder
