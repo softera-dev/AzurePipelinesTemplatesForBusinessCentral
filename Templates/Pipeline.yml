@@ -312,32 +312,6 @@ stages:
         DockerMemory: $(DockerMemory)
         DockerIsolation: ${{ parameters.dockerIsolation }}
         BeforeAppsInstallScript: ${{ parameters.beforeAppsInstallScript }}
-        RequireOmnivaConnectorAddIn: ${{ parameters.eInvoice }}
-        RequireClosedXML: ${{ parameters.S4LESSEE }}
-        RequireZXing: ${{ parameters.ZXing }}
-        RequireZXingFromFileStorage: ${{ parameters.ZXingFromFileStorage }}
-        RequireDllForPayslipPassword: ${{ parameters.PayslipPassword }}
-        LatestPayslipPasswordDllPath: ${{ parameters.latestPayslipPasswordDllPath }}
-        LatestZXingPresentationPath: ${{ parameters.latestZXingPresentationPath }}
-        LatestZXingPath: ${{ parameters.latestZXingPath }}
-        RequireGpaisEncryption: ${{ parameters.requireGpaisEncryption }}
-        LatestIntegrationCoreAppPath: ${{ parameters.latestIntegrationCoreAppPath }}
-        LatestSofteraBalticLoggingAppPath: ${{ parameters.latestSofteraBalticLoggingAppPath }}
-        LatestVATAppPath: ${{ parameters.latestVATAppPath }}
-        LatestFixedAssetAppPath: ${{ parameters.latestFixedAssetAppPath }}
-        LatestCoreAppPath: ${{ parameters.latestCoreAppPath }}
-        LatestISAFAppPath: ${{ parameters.latestISAFAppPath }}
-        LatestSEPAAppPath: ${{ parameters.latestSEPAAppPath }}
-        LatestHRAppPath: ${{ parameters.latestHRAppPath }}
-        LatestTimeScheduleAppPath: ${{ parameters.latestTimeScheduleAppPath }}
-        LatestTimeEmployeeTimeAppPath: ${{ parameters.latestTimeEmployeeTimeAppPath }}
-        LatestSalaryAppPath: ${{ parameters.latestSalaryAppPath }}
-        LatestPayslippPasswordAppPath: ${{ parameters.latestPayslippPasswordAppPath }}
-        LatestLBCAlnaCoreAppPath: ${{ parameters.latestLBCAlnaCoreAppPath }}
-        LatestSOFT4LESSEEforIVER: ${{ parameters.latestSOFT4LESSEEforIVER }}
-        LatestWMSBarAppPath: ${{ parameters.latestWMSBarAppPath }}
-        LatestSLEAppPath: ${{ parameters.latestSLEAppPath }}
-        LatestAppLicensingAppPath: ${{ parameters.latestAppLicensingAppPath }}
         LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
       displayName: Run Pipeline
 
