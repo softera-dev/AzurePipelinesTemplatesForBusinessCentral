@@ -250,12 +250,12 @@ stages:
             Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
             Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
             $ManifestApp = $(
-              Get-Content -Path $env:AppFolder/app.json |
+              Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json )
             $ManifestApp.Version = [string]$SelectedAppVersion
             $ManifestApp |
             ConvertTo-Json |
-            Set-Content -LiteralPath $env:AppFolder/app.json
+            Set-Content -LiteralPath $AppFolder/app.json
           }
         }
 
