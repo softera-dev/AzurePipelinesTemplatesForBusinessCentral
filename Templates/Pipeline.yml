@@ -126,6 +126,7 @@ stages:
         )
         Write-Host -Object 'Test app folders:'
         $TestFolders | Out-Host
+        Write-Host
 
         if ($env:BcVersion) {
           Write-Host -Object "BC version given $env:BcVersion"
