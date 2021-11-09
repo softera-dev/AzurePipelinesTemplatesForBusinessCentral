@@ -115,6 +115,7 @@ stages:
         $AppFolders = @(
           $env:AppFolders | ConvertFrom-Json
         )
+        Write-Host -Object "App folders: $($AppFolders -join ',')"
 
         if ($env:BcVersion) {
           Write-Host -Object "BC version given $env:BcVersion"
