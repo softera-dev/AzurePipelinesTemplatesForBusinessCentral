@@ -437,6 +437,17 @@ stages:
           $_ | Copy-Item -Destination ($_.FullName + '-original')
         }
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+        
+                  $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
+          $LicensePath = $(
+            $AppVersion.Major|
+            ForEach-Object -Process {
+            Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
+           } |
+          Select-Object -First 1 -ExpandProperty FullName
+          )
+         Write-Host -Object "Licence: $LicensePath"
+        
         $RunAlPipelineParameters = @{
           pipelinename                = 'Build'
           licenseFile                 = $env:LicensePath
