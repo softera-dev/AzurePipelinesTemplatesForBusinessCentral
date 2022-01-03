@@ -209,7 +209,7 @@ stages:
             Write-Host -Object "Updating app version in '$AppFolder'..."
 
             [version]$AppVersion = $(
-         Get-Content -Path MainAppFolder/app.json |
+         Get-Content -Path $env:MainAppFolder/app.json |
          ConvertFrom-Json |
          Select-Object -ExpandProperty application
          )
