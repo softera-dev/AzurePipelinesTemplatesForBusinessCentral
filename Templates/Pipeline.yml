@@ -69,7 +69,7 @@ stages:
   - job: Main
     condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
     variables:
-     - name: MainAppFolder
+    - name: MainAppFolder
       value: ${{ parameters.mainAppFolder }}
     
     - name: OrganizationName
