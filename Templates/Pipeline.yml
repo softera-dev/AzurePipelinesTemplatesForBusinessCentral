@@ -361,7 +361,7 @@ stages:
           $ManifestApp |
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
-         
+         }
          
 
         $CompileAppInBcContainer = {
