@@ -68,7 +68,10 @@ stages:
     variables:
     - name: OrganizationName
       value: ${{ parameters.organizationName }}
-
+      
+    - name: MainAppFolder
+      value: ${{ parameters.mainAppFolder }}
+      
     - name: DockerMemory
       value: ${{ parameters.dockerMemory }}
 
@@ -203,7 +206,7 @@ stages:
             Write-Host -Object "Updating app version in '$AppFolder'..."
 
             [version]$AppVersion = $(
-         Get-Content -Path AppFolder/app.json |
+         Get-Content -Path MainAppFolder/app.json |
          ConvertFrom-Json |
          Select-Object -ExpandProperty application
          )
@@ -306,7 +309,7 @@ stages:
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $LicensePath
-          appFolders                  = $AppFolders
+          appFolders                  = $env:AppFolders
           testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
           codeSignCertPfxFile         = $env:CodeSignCertPfxFile
@@ -330,6 +333,7 @@ stages:
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
+        MainAppFolder: $(MainAppFolder)
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
         TestFolders: ${{ convertToJson(parameters.testFolders) }}
         AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
