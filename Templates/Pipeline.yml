@@ -438,6 +438,12 @@ stages:
         }
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         
+        
+        [version]$AppVersion = $(
+         Get-Content -Path $env:MainAppFolder/app.json |
+         ConvertFrom-Json |
+         Select-Object -ExpandProperty application
+         )
                   $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
           $LicensePath = $(
             $AppVersion.Major|
