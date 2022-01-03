@@ -105,11 +105,6 @@ stages:
     - checkout: self
       clean: true
 
-    - task: DownloadSecureFile@1
-      name: DownloadBCLicense
-      inputs:
-        secureFile: $(BCLicense.SecureFileName)
-      displayName: Download BC license
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
