@@ -12,6 +12,9 @@ parameters:
 - name: organizationName
   type: string
   default: ''
+- name: mainAppFolder
+  type: string
+  default: MainApp  
 - name: appFolders
   type: object
   default:
