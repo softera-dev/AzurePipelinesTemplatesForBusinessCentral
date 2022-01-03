@@ -100,12 +100,6 @@ stages:
       clean: true
 
     - task: DownloadSecureFile@1
-      name: DownloadBCLicense
-      inputs:
-        secureFile: $(BCLicense.SecureFileName)
-      displayName: Download BC license
-
-    - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
       inputs:
         secureFile: $(BCAppSigningCertificateSecureFileName)
@@ -208,6 +202,23 @@ stages:
             Write-Host
             Write-Host -Object "Updating app version in '$AppFolder'..."
 
+            [version]$AppVersion = $(
+         Get-Content -Path AppFolder/app.json |
+         ConvertFrom-Json |
+         Select-Object -ExpandProperty application
+         )
+                  $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
+          $LicensePath = $(
+            $AppVersion.Major|
+            ForEach-Object -Process {
+            Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
+           } |
+          Select-Object -First 1 -ExpandProperty FullName
+          )
+         Write-Host -Object "Licence: $LicensePath"
+        
+
+
             [version]$CustomAppVersion = $env:CustomAppVersion
             [version]$ContainerVersion = $(
               Get-BCContainerDebugInfo -containerName $Parameters.containerName -ExcludeEnvVars -ExcludePing -ExcludeDockerLogs |
@@ -294,7 +305,7 @@ stages:
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $env:LicenseFile
+          licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
@@ -317,7 +328,6 @@ stages:
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
-        LicenseFile: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
