@@ -329,7 +329,7 @@ stages:
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
-        LicenseFile: $(LicensePath)
+        LicenseFile: $LicensePath
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
