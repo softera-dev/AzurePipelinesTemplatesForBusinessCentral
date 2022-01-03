@@ -362,28 +362,7 @@ stages:
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
          
-         [version]$AppVersion = $(
-         Get-Content -Path $env:MainAppFolder/app.json |
-         ConvertFrom-Json |
-         Select-Object -ExpandProperty application
-         )
-
-
-          Write-Host  "DAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA: $AppVersion.Major"    
-          $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
-          $LicensePath = $(
-            $AppVersion.Major|
-            ForEach-Object -Process {
-            Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
-           } |
-          Select-Object -First 1 -ExpandProperty FullName
-          )
-         Write-Host -Object "Licence: $LicensePath"
-         Import-BcContainerLicense -containerName $Parameters.containerName -licenseFile $LicensePath
-         Restart-BcContainer -containerName $Parameters.containerName
-         Write-Host "Licence BLALDALDLSADLASDLSADLASDLASLDASLDASLDSALDLASDLSADLSLD: $LicensePath"
-        }
-        
+         
 
         $CompileAppInBcContainer = {
           param(
