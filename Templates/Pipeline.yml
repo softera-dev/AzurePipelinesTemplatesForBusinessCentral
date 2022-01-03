@@ -456,7 +456,7 @@ stages:
         
         $RunAlPipelineParameters = @{
           pipelinename                = 'Build'
-          licenseFile                 = $env:LicensePath
+          licenseFile                 = $LicensePath
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           appFolders                  = $env:MainAppFolder
