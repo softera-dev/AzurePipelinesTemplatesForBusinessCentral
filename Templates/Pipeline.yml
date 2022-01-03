@@ -284,7 +284,7 @@ stages:
         Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
         
         [version]$AppVersion = $(
-         Get-Content -Path $env:AppFolder/app.json |
+         Get-Content -Path $AppFolder/app.json |
          ConvertFrom-Json |
          Select-Object -ExpandProperty application
          )
