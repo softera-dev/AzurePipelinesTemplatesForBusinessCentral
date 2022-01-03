@@ -282,13 +282,28 @@ stages:
           }
         )
         Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
+        
+        [version]$AppVersion = $(
+         Get-Content -Path $env:MainAppFolder/app.json |
+         ConvertFrom-Json |
+         Select-Object -ExpandProperty application
+         )
+                  $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
+          $LicensePath = $(
+            $AppVersion.Major|
+            ForEach-Object -Process {
+            Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
+           } |
+          Select-Object -First 1 -ExpandProperty FullName
+          )
+         Write-Host -Object "Licence: $LicensePath"
 
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $env:LicenseFile
+          licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
@@ -306,30 +321,12 @@ stages:
           @BcArtifactUrlOrImageName
 
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
-        
-        [version]$AppVersion = $(
-         Get-Content -Path $env:MainAppFolder/app.json |
-         ConvertFrom-Json |
-         Select-Object -ExpandProperty application
-         )
-                  $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
-          $LicensePath = $(
-            $AppVersion.Major|
-            ForEach-Object -Process {
-            Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
-           } |
-          Select-Object -First 1 -ExpandProperty FullName
-          )
-         Write-Host -Object "Licence: $LicensePath"
-        
-          
           
       env:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
-        LicenseFile: $LicensePath
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
