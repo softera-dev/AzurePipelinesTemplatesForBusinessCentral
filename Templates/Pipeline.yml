@@ -439,6 +439,7 @@ stages:
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         $RunAlPipelineParameters = @{
           pipelinename                = 'Build'
+          licenseFile                 = '$LicensePath'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           appFolders                  = $env:MainAppFolder
