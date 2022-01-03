@@ -361,7 +361,7 @@ stages:
           $ManifestApp |
           ConvertTo-Json |
           Set-Content -LiteralPath $env:MainAppFolder/app.json
-#NEW ADDED          
+         
          [version]$AppVersion = $(
          Get-Content -Path $env:MainAppFolder/app.json |
          ConvertFrom-Json |
@@ -384,7 +384,7 @@ stages:
          Write-Host "Licence BLALDALDLSADLASDLSADLASDLASLDASLDASLDSALDLASDLSADLSLD: $LicensePath"
         }
         
-#END
+
         $CompileAppInBcContainer = {
           param(
             [hashtable]$Parameters
