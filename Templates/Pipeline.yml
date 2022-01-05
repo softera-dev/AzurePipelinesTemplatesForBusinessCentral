@@ -298,6 +298,13 @@ stages:
          ConvertFrom-Json |
          Select-Object -ExpandProperty application
          )
+         if($AppVersion.Major -lt 14){
+           [version]$AppVersion = $(
+           Get-Content -Path $env:MainAppFolder/app.json |
+           ConvertFrom-Json |
+          Select-Object -ExpandProperty platform
+          )
+         }
           $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
           $LicensePath = $(
             $AppVersion.Major|
