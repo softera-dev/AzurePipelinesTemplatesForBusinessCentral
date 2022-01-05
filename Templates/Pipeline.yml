@@ -346,6 +346,8 @@ stages:
 
         $CommonPath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+        Warning($TempPath)
+        Warning($env:BuildBuildID)
         if ([System.IO.Directory]::Exists($TempPath)) {
             throw "TempPath ($TempPath) already exist"
         }
@@ -384,7 +386,7 @@ stages:
         }
         if (-not ([System.IO.Directory]::Exists($Path))) {
             [System.IO.Directory]::CreateDirectory($Path)
-            Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
+            Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force 
         }
       #condition: not(startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
       env:
