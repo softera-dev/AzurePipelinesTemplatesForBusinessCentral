@@ -388,14 +388,14 @@ stages:
             [System.IO.Directory]::Delete($Path, $true)
             [System.IO.Directory]::CreateDirectory($Path)
             
-            Copy-Item -Path $TempPath -Destination $Path -Recurse -Force
+            Copy-Item -Path $TempPath\* -Destination $Path -Recurse -Force
             
             [System.IO.Directory]::Delete($TempPath, $true)
         }
         else {
             [System.IO.Directory]::CreateDirectory($Path)
-            Copy-Item -Path $TempPath -Destination $Path -Recurse -Force  
-            [System.IO.Directory]::Delete($TempPath, $true)
+            Copy-Item -Path $TempPath\* -Destination $Path -Recurse -Force  
+            [System.IO.Directory]::Delete($TempPath, $true) 
         }
       condition: startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')
       env:
