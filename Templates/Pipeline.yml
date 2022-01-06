@@ -58,6 +58,10 @@ parameters:
 - name: latestDependencyAppPaths
   type: object
   default: []
+  
+- name: releasesFolder
+  type: string
+  default: Releases
 
 stages:
 - stage: Main
@@ -348,9 +352,22 @@ stages:
         $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
         
         
+        #Add apps to top of project for convenience
+        #------
+        $ReleasesPath="\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:ReleasesFolder\$BranchName-$env:Build_Repository_Name"
+        
+        if ([System.IO.Directory]::Exists($ReleasesPath)) {
+            [System.IO.Directory]::Delete($ReleasesPath, $true)
+            [System.IO.Directory]::CreateDirectory($ReleasesPath)
+            Copy-Item -Path ".output\*" -Destination $ReleasesPath -Force
+        }
+        
+        
+        #------
+        
         if ([System.IO.Directory]::Exists($TempPath)) {
-            [System.IO.Directory]::Delete($TempPath, $true)
-            #throw "TempPath ($TempPath) already exist"
+            #[System.IO.Directory]::Delete($TempPath, $true)
+            throw "TempPath ($TempPath) already exist"
         }
 
         [System.IO.Directory]::CreateDirectory($TempPath)
@@ -378,6 +395,7 @@ stages:
         IsReleasePRCommit: $(IsReleasePRCommit)
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
+        ReleasesFolder: $(releasesFolder)
       displayName: Copy files to BCApps
 
     - powershell: |
