@@ -382,7 +382,7 @@ stages:
 
         $Path = $CommonPath
         if ([System.IO.Directory]::Exists($Path)) {
-            #[System.IO.Directory]::CreateDirectory($OldPath)
+            [System.IO.Directory]::CreateDirectory($OldPath)
             Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force  
             
             [System.IO.Directory]::Delete($Path, $true)
