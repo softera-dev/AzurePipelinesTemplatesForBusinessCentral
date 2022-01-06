@@ -386,9 +386,14 @@ stages:
             Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force  
             
             [System.IO.Directory]::Delete($Path, $true)
+            [System.IO.Directory]::CreateDirectory($Path)
+            
+            Copy-Item -Path $TempPath -Destination $Path -Recurse -Force
+            
             [System.IO.Directory]::Delete($TempPath, $true)
         }
-        if (-not ([System.IO.Directory]::Exists($Path))) {
+        else {
+            [System.IO.Directory]::CreateDirectory($Path)
             Copy-Item -Path $TempPath -Destination $Path -Recurse -Force  
             [System.IO.Directory]::Delete($TempPath, $true)
         }
