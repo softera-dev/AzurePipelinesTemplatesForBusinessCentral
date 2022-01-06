@@ -58,10 +58,6 @@ parameters:
 - name: latestDependencyAppPaths
   type: object
   default: []
-  
-- name: releasesFolder
-  type: string
-  default: Releases
 
 stages:
 - stage: Main
@@ -354,7 +350,7 @@ stages:
         
         #Add apps to top of project for convenience
         #------
-        $ReleasesPath="\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:ReleasesFolder\$BranchName-$env:Build_Repository_Name"
+        $ReleasesPath="\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\Releases\$BranchName-$env:Build_Repository_Name"
         
         if ([System.IO.Directory]::Exists($ReleasesPath)) {
             [System.IO.Directory]::Delete($ReleasesPath, $true)
@@ -399,7 +395,6 @@ stages:
         IsReleasePRCommit: $(IsReleasePRCommit)
         AppReleaseVersion: $(AppReleaseVersion)
         BcApplicationVersion: $(BcApplicationVersion)
-        ReleasesFolder: $(releasesFolder)
       displayName: Copy files to BCApps
 
     - powershell: |
