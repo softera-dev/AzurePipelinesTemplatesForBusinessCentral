@@ -361,6 +361,10 @@ stages:
             [System.IO.Directory]::CreateDirectory($ReleasesPath)
             Copy-Item -Path ".output\*" -Destination $ReleasesPath -Force
         }
+        else {
+            [System.IO.Directory]::CreateDirectory($ReleasesPath)
+            Copy-Item -Path ".output\*" -Destination $ReleasesPath -Force
+        }
         
         
         #------
