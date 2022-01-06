@@ -356,7 +356,7 @@ stages:
         [System.IO.Directory]::CreateDirectory($TempPath)
         Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force  
         
-        Copy-Item -Path '.\.output\*' -Destination '\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject' -Force
+        Copy-Item -Path ".output" -Destination "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject" -Force
 
         $OldPath = "$CommonPath-Old"
         if ([System.IO.Directory]::Exists($OldPath)) {
