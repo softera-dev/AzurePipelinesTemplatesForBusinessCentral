@@ -16,6 +16,9 @@ parameters:
   type: object
   default:
   - MainApp
+- name: mainAppFolder
+  type: string
+  default: MainApp
 - name: testFolders
   type: object
   default: []
@@ -66,6 +69,9 @@ stages:
   - job: Main
     condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
     variables:
+    - name: MainAppFolder
+      value: ${{ parameters.mainAppFolder }}
+    
     - name: OrganizationName
       value: ${{ parameters.organizationName }}
 
@@ -99,11 +105,6 @@ stages:
     - checkout: self
       clean: true
 
-    - task: DownloadSecureFile@1
-      name: DownloadBCLicense
-      inputs:
-        secureFile: $(BCLicense.SecureFileName)
-      displayName: Download BC license
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
@@ -288,13 +289,38 @@ stages:
           }
         )
         Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
-
+        
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+        
+        
+        [version]$AppVersion = $(
+         Get-Content -Path $env:MainAppFolder/app.json |
+         ConvertFrom-Json |
+         Select-Object -ExpandProperty application
+         )
+         if($AppVersion.Major -lt 14){
+           [version]$AppVersion = $(
+           Get-Content -Path $env:MainAppFolder/app.json |
+           ConvertFrom-Json |
+          Select-Object -ExpandProperty platform
+          )
+         }
+          $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
+          $LicensePath = $(
+            $AppVersion.Major|
+            ForEach-Object -Process {
+            Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
+           } |
+          Select-Object -First 1 -ExpandProperty FullName
+          )
+         Write-Host -Object "Licence: $LicensePath"
+        
+        
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $env:LicenseFile
+          licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
