@@ -52,6 +52,9 @@ parameters:
   - hyperv
   - process
 
+- name: publishOutput
+  type: boolean
+  default: true
 - name: latestFolder
   type: string
   default: Latest
@@ -357,65 +360,65 @@ stages:
         LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
       displayName: Run Pipeline
 
-    - powershell: |
-        Set-StrictMode -Version Latest
-        $ErrorActionPreference = 'Stop'
+    - ${{ if and(parameters.publishOutput, startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')) }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
 
-        $DockerVersion = $env:BcApplicationVersion
-        $BranchName = $(
-          if ($env:IsPullRequest -eq 'false') {
-              $env:Build_SourceBranchName
-          } else {
-              $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+          $DockerVersion = $env:BcApplicationVersion
+          $BranchName = $(
+            if ($env:IsPullRequest -eq 'false') {
+                $env:Build_SourceBranchName
+            } else {
+                $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+            }
+          )
+
+          $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
+          $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+          if ([System.IO.Directory]::Exists($TempPath)) {
+              throw "TempPath ($TempPath) already exist"
           }
-        )
 
-        $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
-        $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-        if ([System.IO.Directory]::Exists($TempPath)) {
-            throw "TempPath ($TempPath) already exist"
-        }
+          [System.IO.Directory]::CreateDirectory($TempPath)
+          Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
 
-        [System.IO.Directory]::CreateDirectory($TempPath)
-        Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
+          $OldPath = "$CommonPath-Old"
+          if ([System.IO.Directory]::Exists($OldPath)) {
+              [System.IO.Directory]::Delete($OldPath, $true)
+          }
 
-        $OldPath = "$CommonPath-Old"
-        if ([System.IO.Directory]::Exists($OldPath)) {
-            [System.IO.Directory]::Delete($OldPath, $true)
-        }
+          $Path = $CommonPath
+          if ([System.IO.Directory]::Exists($Path)) {
+              [System.IO.Directory]::CreateDirectory($Path)
+              Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
+              [System.IO.Directory]::Delete($Path, $true)
+          }
+          if (-not ([System.IO.Directory]::Exists($Path))) {
+              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
+              [System.IO.Directory]::Delete($TempPath, $true)
+          }
+        env:
+          IsReleasePRCommit: $(IsReleasePRCommit)
+          AppReleaseVersion: $(AppReleaseVersion)
+          BcApplicationVersion: $(BcApplicationVersion)
+        displayName: Copy files to BCApps
 
-        $Path = $CommonPath
-        if ([System.IO.Directory]::Exists($Path)) {
-            [System.IO.Directory]::CreateDirectory($Path)
-            Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-            [System.IO.Directory]::Delete($Path, $true)
-        }
-        if (-not ([System.IO.Directory]::Exists($Path))) {
-            Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-            [System.IO.Directory]::Delete($TempPath, $true)
-        }
-      condition: startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')
-      env:
-        IsReleasePRCommit: $(IsReleasePRCommit)
-        AppReleaseVersion: $(AppReleaseVersion)
-        BcApplicationVersion: $(BcApplicationVersion)
-      displayName: Copy files to BCApps
+    - ${{ if ne(parameters.latestFolder, '') }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
 
-    - powershell: |
-        Set-StrictMode -Version Latest
-
-        $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-        if ([System.IO.Directory]::Exists($Path)) {
-            [System.IO.Directory]::Delete($Path, $true)
-        }
-        if (-not ([System.IO.Directory]::Exists($Path))) {
-            [System.IO.Directory]::CreateDirectory($Path)
-            Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-        }
-      #condition: not(startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
-      env:
-        LatestFolder: ${{ parameters.latestFolder }}
-      displayName: Copy files to Latest folder
+          $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+          if ([System.IO.Directory]::Exists($Path)) {
+              [System.IO.Directory]::Delete($Path, $true)
+          }
+          if (-not ([System.IO.Directory]::Exists($Path))) {
+              [System.IO.Directory]::CreateDirectory($Path)
+              Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
+          }
+        env:
+          LatestFolder: ${{ parameters.latestFolder }}
+        displayName: Copy files to Latest folder
 
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName
