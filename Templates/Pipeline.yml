@@ -286,7 +286,8 @@ stages:
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
 
         $LicensePath = $(
-          "\\filestorage\Files\! SB licencijos\! Naujausios\*BC$($PlatformVersion.Major)*.flf" |
+          ($PlatformVersion.Major)..12 |
+          ForEach-Object -Process { "\\filestorage\Files\! SB licencijos\! Naujausios\*BC$_*.flf" } |
           Resolve-Path |
           Select-Object -First 1 -ExpandProperty ProviderPath
         )
