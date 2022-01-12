@@ -283,8 +283,13 @@ stages:
         Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
 
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
 
-        $LicensePath = (Resolve-Item -Path "\\filestorage\Files\! SB licencijos\! Naujausios\*BC$($PlatformVersion.Major)*.flf").Path
+        $LicensePath = $(
+          "\\filestorage\Files\! SB licencijos\! Naujausios\*BC$($PlatformVersion.Major)*.flf" |
+          Resolve-Path |
+          Select-Object -First 1 -ExpandProperty ProviderPath
+        )
 
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
@@ -305,8 +310,6 @@ stages:
           NewBCContainer              = $NewBCContainer
         }
         Run-AlPipeline @GetRunAlPipelineParameters
-
-        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
