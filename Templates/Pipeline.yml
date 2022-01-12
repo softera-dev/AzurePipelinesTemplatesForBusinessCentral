@@ -1,7 +1,6 @@
 parameters:
 - name: bcVersion
   type: string
-  default: ''
 - name: alLanguageExtensionFileName
   type: string
   default: ''
@@ -134,7 +133,6 @@ stages:
         $TestFolders | Out-Host
         Write-Host
 
-        if ($env:BcVersion) {
           Write-Host -Object "BC version given $env:BcVersion"
           $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
           if ($env:BcVersion -notmatch $Pattern) {
@@ -171,18 +169,9 @@ stages:
           Write-Host -Object "Artifact version:         $($GetBcArtifactUrlParameters.Version -creplace '^$', $Matches.Version)"
           Write-Host -Object "Artifact country:         $($GetBcArtifactUrlParameters.Country)"
           Write-Host -Object "Artifact storage account: $($GetBcArtifactUrlParameters.StorageAccount)"
-        }
-        if ($GetBcArtifactUrlParameters.Version -notmatch '^(?:11\.\d+|13\.\d+|14\.(?:0|1|2|3|4))\.\d+\.\d+$') {
-          $BcArtifactUrlOrImageName = @{
-            artifact = Get-BCArtifactUrl @GetBcArtifactUrlParameters
-          }
-        } else {
-          $BcArtifactUrlOrImageName = @{
-            artifact  = ''
-            imageName = "mcr.microsoft.com/businesscentral/$($GetBcArtifactUrlParameters.Type.ToLower()):$($GetBcArtifactUrlParameters.Version)-$($GetBcArtifactUrlParameters.Country)"
-          }
-        }
 
+        $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
+        
 
         $NewBCContainer = {
           param([hashtable]$Parameters)
@@ -305,6 +294,7 @@ stages:
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
+          artifact                    = $BcArtifactUrl
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $env:LicensePath
           appFolders                  = $AppFolders
@@ -319,9 +309,7 @@ stages:
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
         }
-        Run-AlPipeline `
-          @GetRunAlPipelineParameters `
-          @BcArtifactUrlOrImageName
+        Run-AlPipeline @GetRunAlPipelineParameters
 
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
