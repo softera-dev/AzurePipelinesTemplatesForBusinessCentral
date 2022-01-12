@@ -16,15 +16,15 @@ parameters:
   type: object
   default:
   - MainApp
-- name: mainAppFolder
-  type: string
-  default: MainApp
 - name: testFolders
   type: object
   default: []
 - name: masterBranch
   type: string
   default: WIP
+- name: mainAppFolder
+  type: string
+  default: MainApp
 - name: appReleaseVersionFormat
   type: string
   default: '{Manifest.Build}.{Manifest.Revision}'
@@ -72,9 +72,6 @@ stages:
   - job: Main
     condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
     variables:
-    - name: MainAppFolder
-      value: ${{ parameters.mainAppFolder }}
-    
     - name: OrganizationName
       value: ${{ parameters.organizationName }}
 
@@ -108,6 +105,11 @@ stages:
     - checkout: self
       clean: true
 
+    - task: DownloadSecureFile@1
+      name: DownloadBCLicense
+      inputs:
+        secureFile: $(BCLicense.SecureFileName)
+      displayName: Download BC license
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
@@ -124,7 +126,7 @@ stages:
         )
         Write-Host -Object 'App folders:'
         $AppFolders | Out-Host
-        
+
         $TestFolders = $(
           $env:TestFolders | ConvertFrom-Json
         )
@@ -207,6 +209,11 @@ stages:
             Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
           }
 
+          [version]$AppVersion = $(
+            Get-Content -Path $env:MainAppFolder/app.json |
+            ConvertFrom-Json |
+            Select-Object -ExpandProperty application
+          )
 
           foreach ($AppFolder in $AppFolders) {
             Write-Host
@@ -292,38 +299,14 @@ stages:
           }
         )
         Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
-        
+
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
-        
-        
-        [version]$AppVersion = $(
-         Get-Content -Path $env:MainAppFolder/app.json |
-         ConvertFrom-Json |
-         Select-Object -ExpandProperty application
-         )
-         if($AppVersion.Major -lt 14){
-           [version]$AppVersion = $(
-           Get-Content -Path $env:MainAppFolder/app.json |
-           ConvertFrom-Json |
-          Select-Object -ExpandProperty platform
-          )
-         }
-          $LicensesFolderPath = '\\filestorage\Files\! SB licencijos\! Naujausios'
-          $LicensePath = $(
-            $AppVersion.Major|
-            ForEach-Object -Process {
-            Get-ChildItem -Path "$LicensesFolderPath\*BC$_*.flf"
-           } |
-          Select-Object -First 1 -ExpandProperty FullName
-          )
-         Write-Host -Object "Licence: $LicensePath"
-        
-        
+
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $LicensePath
+          licenseFile                 = $env:LicensePath
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
@@ -346,9 +329,10 @@ stages:
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
-        LicenseFile: $(DownloadBCLicense.SecureFilePath)
+        LicensePath: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
+        MainAppFolder: ${{ parameters.mainAppFolder }}
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
         TestFolders: ${{ convertToJson(parameters.testFolders) }}
         AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
@@ -365,7 +349,6 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
-          $DockerVersion = $env:BcApplicationVersion
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
@@ -374,7 +357,7 @@ stages:
             }
           )
 
-          $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$env:AppVersion\$BranchName-$DockerVersion"
+          $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
           if ([System.IO.Directory]::Exists($TempPath)) {
               throw "TempPath ($TempPath) already exist"
@@ -398,10 +381,6 @@ stages:
               Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
               [System.IO.Directory]::Delete($TempPath, $true)
           }
-        env:
-          IsReleasePRCommit: $(IsReleasePRCommit)
-          AppReleaseVersion: $(AppReleaseVersion)
-          BcApplicationVersion: $(BcApplicationVersion)
         displayName: Copy files to BCApps
 
     - ${{ if ne(parameters.latestFolder, '') }}:
