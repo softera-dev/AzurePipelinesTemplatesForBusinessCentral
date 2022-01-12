@@ -105,12 +105,6 @@ stages:
       clean: true
 
     - task: DownloadSecureFile@1
-      name: DownloadBCLicense
-      inputs:
-        secureFile: $(BCLicense.SecureFileName)
-      displayName: Download BC license
-
-    - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
       inputs:
         secureFile: $(BCAppSigningCertificateSecureFileName)
@@ -133,45 +127,48 @@ stages:
         $TestFolders | Out-Host
         Write-Host
 
-          Write-Host -Object "BC version given $env:BcVersion"
-          $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
-          if ($env:BcVersion -notmatch $Pattern) {
-            Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
-            throw 'BC version doesn''t match pattern. '
+        Write-Host -Object "BC version given $env:BcVersion"
+        $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
+        if ($env:BcVersion -notmatch $Pattern) {
+          Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
+          throw 'BC version doesn''t match pattern. '
+        }
+        Write-Host
+        Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
+        Write-Host -Object "Parsed artifact version: $($Matches.Version)"
+        Write-Host -Object "Parsed artifact country: $($Matches.Country)"
+        $GetBcArtifactUrlParameters = @{
+          Type           = $Matches.Type
+          Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
+          Country        = $Matches.Country
+          Select         = 'Latest'
+          StorageAccount = 'bcartifacts'
+          SasToken       = ''
+        }
+        switch ($Matches.Version) {
+          'Current' {
+            $GetBcArtifactUrlParameters.Select = 'Current'
+            $GetBcArtifactUrlParameters.StorageAccount = ''
+            break
           }
-          Write-Host
-          Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
-          Write-Host -Object "Parsed artifact version: $($Matches.Version)"
-          Write-Host -Object "Parsed artifact country: $($Matches.Country)"
-          $GetBcArtifactUrlParameters = @{
-            Type           = $Matches.Type
-            Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
-            Country        = $Matches.Country
-            Select         = 'Latest'
-            StorageAccount = 'bcartifacts'
-            SasToken       = ''
+          { $_ -in @('NextMinor', 'NextMajor') } {
+            $GetBcArtifactUrlParameters.StorageAccount = ''
+            $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
+            $GetBcArtifactUrlParameters.Select = $Matches.Version
+            break
           }
-          switch ($Matches.Version) {
-            'Current' {
-              $GetBcArtifactUrlParameters.Select = 'Current'
-              $GetBcArtifactUrlParameters.StorageAccount = ''
-              break
-            }
-            { $_ -in @('NextMinor', 'NextMajor') } {
-              $GetBcArtifactUrlParameters.StorageAccount = ''
-              $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
-              $GetBcArtifactUrlParameters.Select = $Matches.Version
-              break
-            }
-          }
-          Write-Host
-          Write-Host -Object "Artifact type:            $($GetBcArtifactUrlParameters.Type)"
-          Write-Host -Object "Artifact version:         $($GetBcArtifactUrlParameters.Version -creplace '^$', $Matches.Version)"
-          Write-Host -Object "Artifact country:         $($GetBcArtifactUrlParameters.Country)"
-          Write-Host -Object "Artifact storage account: $($GetBcArtifactUrlParameters.StorageAccount)"
+        }
+        Write-Host
+        Write-Host -Object "Artifact type:            $($GetBcArtifactUrlParameters.Type)"
+        Write-Host -Object "Artifact version:         $($GetBcArtifactUrlParameters.Version -creplace '^$', $Matches.Version)"
+        Write-Host -Object "Artifact country:         $($GetBcArtifactUrlParameters.Country)"
+        Write-Host -Object "Artifact storage account: $($GetBcArtifactUrlParameters.StorageAccount)"
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
         
+        $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
+        $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
+        [version]$Global:PlatformVersion = $BcArtifactManifest.platform
 
         $NewBCContainer = {
           param([hashtable]$Parameters)
@@ -209,10 +206,6 @@ stages:
             Write-Host -Object "Updating app version in '$AppFolder'..."
 
             [version]$CustomAppVersion = $env:CustomAppVersion
-            [version]$ContainerVersion = $(
-              Get-BCContainerDebugInfo -containerName $Parameters.containerName -ExcludeEnvVars -ExcludePing -ExcludeDockerLogs |
-              ConvertFrom-Json
-            ).'container.labels'.version
             [version]$ManifestVersion = $(
               Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json |
@@ -228,10 +221,10 @@ stages:
                 'Manifest.Minor' { $ManifestVersion.Minor }
                 'Manifest.Build' { $ManifestVersion.Build }
                 'Manifest.Revision' { $ManifestVersion.Revision }
-                'Container.Major' { $ContainerVersion.Major }
-                'Container.Minor' { $ContainerVersion.Minor }
-                'Container.Build' { $ContainerVersion.Build }
-                'Container.Revision' { $ContainerVersion.Revision }
+                'Container.Major' { $PlatformVersion.Major }
+                'Container.Minor' { $PlatformVersion.Minor }
+                'Container.Build' { $PlatformVersion.Build }
+                'Container.Revision' { $PlatformVersion.Revision }
                 'Custom.Major' { $CustomAppVersion.Major }
                 'Custom.Minor' { $CustomAppVersion.Minor }
                 'Custom.Build' { $CustomAppVersion.Build }
@@ -290,13 +283,20 @@ stages:
         Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
 
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
+
+        $LicensePath = $(
+          "\\filestorage\Files\! SB licencijos\! Naujausios\*BC$($PlatformVersion.Major)*.flf" |
+          Resolve-Path |
+          Select-Object -First 1 -ExpandProperty ProviderPath
+        )
 
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           artifact                    = $BcArtifactUrl
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $env:LicensePath
+          licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
@@ -310,14 +310,11 @@ stages:
           NewBCContainer              = $NewBCContainer
         }
         Run-AlPipeline @GetRunAlPipelineParameters
-
-        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
       env:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
-        LicensePath: $(DownloadBCLicense.SecureFilePath)
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: ${{ parameters.mainAppFolder }}
