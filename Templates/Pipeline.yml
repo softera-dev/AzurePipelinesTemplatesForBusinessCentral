@@ -29,7 +29,7 @@ parameters:
   default: '{Manifest.Build}.{Manifest.Revision}'
 - name: appVersionFormat
   type: string
-  default: '{Container.Major}.{Container.Minor}.{Release.Major}.{Release.Minor}'
+  default: '{Container.Major}.{Manifest.Minor}.{Release.Major}.{Release.Minor}'
 - name: customAppVersion
   type: string
   default: '0.0.0.0'
