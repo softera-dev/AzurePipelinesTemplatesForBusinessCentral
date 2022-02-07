@@ -387,7 +387,7 @@ stages:
 
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName
-        Flush-ContainerHelperCache -KeepDays 7
+        Flush-ContainerHelperCache -KeepDays 1
       condition: always()
       env:
         ContainerName: $(ContainerName)
