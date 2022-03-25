@@ -104,7 +104,9 @@ stages:
     - checkout: self
       clean: true
       
-    - powershell: wtf
+    - powershell: echo $env:MYVAR
+      env:
+        MYVAR: ${{ parameters.publishOutput }}
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
