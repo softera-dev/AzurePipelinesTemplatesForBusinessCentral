@@ -330,7 +330,7 @@ stages:
         LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
       displayName: Run Pipeline
 
-    - ${{ if and(eq(lower(parameters.publishOutput), 'true'), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-')) }}:
+    - ${{ if parameters.publishOutput }}:
       - powershell: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
