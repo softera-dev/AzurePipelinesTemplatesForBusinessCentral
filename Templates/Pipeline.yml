@@ -103,6 +103,8 @@ stages:
 
     - checkout: self
       clean: true
+      
+    - powershell: wtf
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
