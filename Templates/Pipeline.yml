@@ -139,20 +139,16 @@ stages:
         Write-Host -Object "Parsed artifact country: $($Matches.Country)"
         $GetBcArtifactUrlParameters = @{
           Type           = $Matches.Type
+          Select         = 'Latest'
           Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
           Country        = $Matches.Country
-          Select         = 'Latest'
-          StorageAccount = 'bcartifacts'
-          SasToken       = ''
         }
         switch ($Matches.Version) {
           'Current' {
             $GetBcArtifactUrlParameters.Select = 'Current'
-            $GetBcArtifactUrlParameters.StorageAccount = ''
             break
           }
           { $_ -in @('NextMinor', 'NextMajor') } {
-            $GetBcArtifactUrlParameters.StorageAccount = ''
             $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
             $GetBcArtifactUrlParameters.Select = $Matches.Version
             break
@@ -162,7 +158,6 @@ stages:
         Write-Host -Object "Artifact type:            $($GetBcArtifactUrlParameters.Type)"
         Write-Host -Object "Artifact version:         $($GetBcArtifactUrlParameters.Version -creplace '^$', $Matches.Version)"
         Write-Host -Object "Artifact country:         $($GetBcArtifactUrlParameters.Country)"
-        Write-Host -Object "Artifact storage account: $($GetBcArtifactUrlParameters.StorageAccount)"
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
         
