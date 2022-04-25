@@ -155,9 +155,7 @@ stages:
           }
         }
         Write-Host
-        Write-Host -Object "Artifact type:            $($GetBcArtifactUrlParameters.Type)"
-        Write-Host -Object "Artifact version:         $($GetBcArtifactUrlParameters.Version -creplace '^$', $Matches.Version)"
-        Write-Host -Object "Artifact country:         $($GetBcArtifactUrlParameters.Country)"
+        Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
         
