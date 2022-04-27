@@ -347,10 +347,12 @@ stages:
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
+            Write-Host $env:Build_SourceBranchName
             $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           else
           {
+            Write-Host $env:Build_SourceBranchName
             $CommonPath = "C:\AzureDevOps\!Prerelease\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           
