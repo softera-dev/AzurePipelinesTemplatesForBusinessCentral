@@ -343,7 +343,9 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
           )
-          if($env:Build_SourceBranchName.StartsWith("Release_")){
+          
+          
+          if($env:Build_SourceBranchName -contains 'Release*')){
                    $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           else{
