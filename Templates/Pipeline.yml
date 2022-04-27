@@ -334,7 +334,8 @@ stages:
       - powershell: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
-
+          
+         
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
@@ -348,6 +349,12 @@ stages:
           else{
           $CommonPath = "C:\AzureDevOps\!Prerelease\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
+          
+          Write-Host $BranchName
+          Write-Host $env
+          Write-Host $env:Build_SourceBranchName
+          
+          
           $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
           if ([System.IO.Directory]::Exists($TempPath)) {
               throw "TempPath ($TempPath) already exist"
