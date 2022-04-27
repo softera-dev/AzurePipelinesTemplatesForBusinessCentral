@@ -345,7 +345,7 @@ stages:
           )
           
           
-          if($env:Build_SourceBranchName -contains 'Release*')){
+          if($env:Build_SourceBranchName -contains 'Release*'){
                    $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           else{
