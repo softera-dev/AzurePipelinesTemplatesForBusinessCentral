@@ -353,6 +353,12 @@ stages:
           $CommonPath = "C:\AzureDevOps\!Prerelease\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           Write-Host $env:Build_SourceBranchName
           Write-Host $env:Build_SourceBranchName.Contains('Release*')
+          Write-Host $env:Build_SourceBranchName.Contains('Release')
+          Write-Host $env:Build_SourceBranchName.Contains('Release_*')
+          Write-Host $env:Build_SourceBranchName -contains 'Release'
+          Write-Host $env:Build_SourceBranchName -contains 'Release_*'
+          Write-Host $env:Build_SourceBranchName -contains 'Release_*'
+          Write-Host $env:Build_SourceBranchName -like 'Release'
           Write-Host 'NEKONTEININA '
           }
           
