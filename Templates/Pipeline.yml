@@ -342,7 +342,7 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
           )
-          if($BranchName.StartsWith("code/*"){
+          if($BranchName.StartsWith("code/*")){
           $CommonPath = "C:\AzureDevOps\!Prerelease\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           else{
