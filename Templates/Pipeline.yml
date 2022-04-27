@@ -343,16 +343,13 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
           )
-          if($env:Build_SourceBranchName.StartsWith("Release*")){
+          if($env:Build_SourceBranchName.StartsWith("Release_")){
                    $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           else{
           $CommonPath = "C:\AzureDevOps\!Prerelease\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           
-          Write-Host $BranchName
-
-          Write-Host $env:Build_SourceBranchName
           
           
           $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
