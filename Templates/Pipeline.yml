@@ -376,7 +376,7 @@ stages:
               [System.IO.Directory]::Delete($Path, $true)
           }
           if (-not ([System.IO.Directory]::Exists($Path))) {
-              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
+              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue   #Pasicheckinti reikes del kelimo tik .app i filestorage
               [System.IO.Directory]::Delete($TempPath, $true)
           }
         displayName: Copy files to BCApps
