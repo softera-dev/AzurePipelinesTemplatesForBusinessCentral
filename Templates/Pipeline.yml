@@ -364,6 +364,11 @@ stages:
           [System.IO.Directory]::CreateDirectory($TempPath)
           Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
 
+
+
+
+
+
           $OldPath = "$CommonPath-Old"
           if ([System.IO.Directory]::Exists($OldPath)) {
               [System.IO.Directory]::Delete($OldPath, $true)
@@ -376,7 +381,7 @@ stages:
               [System.IO.Directory]::Delete($Path, $true)
           }
           if (-not ([System.IO.Directory]::Exists($Path))) {
-              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue   #Pasicheckinti reikes del kelimo tik .app i filestorage
+              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
               [System.IO.Directory]::Delete($TempPath, $true)
           }
         displayName: Copy files to BCApps
@@ -387,9 +392,11 @@ stages:
           if($env:Build_SourceBranchName.Contains('Release'))
           {
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           }
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           }
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
@@ -398,6 +405,17 @@ stages:
               [System.IO.Directory]::CreateDirectory($Path)
               Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
           }
+          
+          if ([System.IO.Directory]::Exists($FileStoragePath)) {
+              [System.IO.Directory]::Delete($FileStoragePath, $true)
+          }
+          if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
+              [System.IO.Directory]::CreateDirectory($FileStoragePath)
+              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
+          }
+          
+          
+          
         env:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
