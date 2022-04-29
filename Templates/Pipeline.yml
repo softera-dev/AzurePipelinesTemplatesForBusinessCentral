@@ -392,11 +392,11 @@ stages:
           if($env:Build_SourceBranchName.Contains('Release'))
           {
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$env:Build_Repository_Name\$env:LatestFolder\$env:Build_SourceBranchName"
           }
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$env:Build_Repository_Name\$env:LatestFolder\$env:Build_SourceBranchName"
           }
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
