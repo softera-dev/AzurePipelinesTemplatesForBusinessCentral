@@ -396,7 +396,7 @@ stages:
           }
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases"
+          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$env:Build_Repository_Name\$env:LatestFolder\$env:Build_SourceBranchName"
           }
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
@@ -411,7 +411,7 @@ stages:
           }
           if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
-              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
+              Copy-Item -Path '.output/*' -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
           
           
