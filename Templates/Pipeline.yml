@@ -110,18 +110,6 @@ stages:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
 
-    - task: BuildQualityChecks@8
-      inputs:
-        checkWarnings: true
-        warningFailOption: 'build'
-        showStatistics: true
-        checkCoverage: true
-        coverageFailOption: 'build'
-        coverageType: 'lines'
-        coverageDeltaType: 'percentage'
-        buildConfiguration: '$(buildConfiguration)'
-        buildPlatform: '$(buildPlatform)'
-
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
@@ -341,6 +329,16 @@ stages:
         BeforeAppsInstallScript: ${{ parameters.beforeAppsInstallScript }}
         LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
       displayName: Run Pipeline
+
+
+    - task: BuildQualityChecks@8
+      inputs:
+        checkWarnings: true
+        warningFailOption: 'build'
+        showStatistics: true
+        buildConfiguration: '$(buildConfiguration)'
+        buildPlatform: '$(buildPlatform)'
+        
 
     - ${{ if parameters.publishOutput }}:
       - powershell: |
