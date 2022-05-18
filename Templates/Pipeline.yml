@@ -112,10 +112,15 @@ stages:
 
     - task: BuildQualityChecks@8
       inputs:
-        baseBranchRef: $(System.PullRequest.TargetBranch)
         checkWarnings: true
         warningFailOption: 'build'
         showStatistics: true
+        checkCoverage: true
+        coverageFailOption: 'build'
+        coverageType: 'lines'
+        coverageDeltaType: 'percentage'
+        buildConfiguration: '$(buildConfiguration)'
+        buildPlatform: '$(buildPlatform)'
 
     - powershell: |
         Set-StrictMode -Version Latest
