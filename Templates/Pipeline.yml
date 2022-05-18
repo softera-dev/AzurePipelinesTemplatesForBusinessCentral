@@ -110,6 +110,13 @@ stages:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
 
+    - task: BuildQualityChecks@8
+      inputs:
+        baseBranchRef: $(System.PullRequest.TargetBranch)
+        checkWarnings: true
+        warningFailOption: 'build'
+        showStatistics: true
+
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
@@ -420,12 +427,7 @@ stages:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
     
-    - task: BuildQualityChecks@8
-      inputs:
-        baseBranchRef: $(SOURCE_BRANCH)
-        checkWarnings: true
-        warningFailOption: 'build'
-        showStatistics: true
+
     
     
     - powershell: |
