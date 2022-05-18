@@ -419,7 +419,15 @@ stages:
         env:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
-
+    
+    - task: BuildQualityChecks@8
+      inputs:
+        baseBranchRef: $(SOURCE_BRANCH)
+        checkWarnings: true
+        warningFailOption: 'build'
+        showStatistics: true
+    
+    
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName
         Flush-ContainerHelperCache -KeepDays 1
