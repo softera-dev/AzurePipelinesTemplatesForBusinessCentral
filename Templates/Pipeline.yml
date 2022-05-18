@@ -331,13 +331,7 @@ stages:
       displayName: Run Pipeline
 
 
-    - task: BuildQualityChecks@8
-      inputs:
-        checkWarnings: true
-        warningFailOption: 'build'
-        showStatistics: true
-        buildConfiguration: '$(buildConfiguration)'
-        buildPlatform: '$(buildPlatform)'
+
         
 
     - ${{ if parameters.publishOutput }}:
