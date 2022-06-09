@@ -320,7 +320,7 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
-         $ManifestVersion = $(ManifestVersion)
+         [version]$ManifestVersion = $(ManifestVersion)
          [version]$ManifestVersionString = $ManifestVersion -replace '^.+((\d+\.){3}\d+).+', '$1' 
          Write-Host $ManifestVersionString.Build
          Write-Host $ManifestVersionString.Revision
