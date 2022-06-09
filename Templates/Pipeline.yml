@@ -356,20 +356,16 @@ stages:
         displayName: Copy files to BCApps
     - ${{ if ne(parameters.latestFolder, '') }}:
       - powershell: |
-      
-      
-                
-          $AppFolders = $(
+          Set-StrictMode -Version Latest
+          
+            $AppFolders = $(
           $env:AppFolders | ConvertFrom-Json
         )
-        
-         $ManifestApp = $(
-              Get-Content -Path $AppFolder/app.json |
-              ConvertFrom-Json )
-              
-          Write-Host  $ManifestApp.Version 
-  
-          Set-StrictMode -Version Latest
+        Write-Host -Object 'App folders:'
+        $AppFolders | Out-Host
+          
+          
+          
           if($env:Build_SourceBranchName.Contains('Release'))
           {
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
