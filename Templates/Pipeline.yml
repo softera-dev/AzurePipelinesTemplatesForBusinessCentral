@@ -320,6 +320,11 @@ stages:
           Set-StrictMode -Off
           $ErrorActionPreference = 'Stop'
 
+
+          $ManifestVersionIs = 10.0.0.1
+          Write-Host $ManifestVersionIs
+          $ManifestVersionIs = "$(ManifestVersion)"
+          Write-Host $ManifestVersionIs
           $ManifestVersionIs = $(ManifestVersion)
           Write-Host $ManifestVersionIs
           Write-Host $(ManifestVersion)
