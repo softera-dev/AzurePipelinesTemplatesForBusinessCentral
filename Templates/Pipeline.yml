@@ -381,8 +381,7 @@ stages:
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
-          
-          Write-Host $AppVersion
+
           Write-Host $SelectedAppReleaseVersion
           Write-Host $SelectedAppVersion
           Write-Host $ManifestApp.Version
