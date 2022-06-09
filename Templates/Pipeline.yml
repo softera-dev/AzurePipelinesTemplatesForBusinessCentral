@@ -190,11 +190,17 @@ stages:
             [version]$CustomAppVersion = $env:CustomAppVersion
             
             
-            [version]$Global:ManifestVersion = $(
+            [version]ManifestVersion = $(
               Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json |
               Select-Object -ExpandProperty version
             )
+            
+            
+            Write-Host "##vso[task.setvariable variable=ManifestVersion]$ManifestVersion"
+            
+            
+            
             $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
             [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
               param(
@@ -313,8 +319,10 @@ stages:
       - powershell: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
-          
-          Write-Host -Object $Global:ManifestVersion
+  
+        Write-Host $(ManifestVersion)
+  
+  
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
