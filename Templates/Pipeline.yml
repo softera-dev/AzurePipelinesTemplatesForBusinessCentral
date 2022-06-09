@@ -356,6 +356,19 @@ stages:
         displayName: Copy files to BCApps
     - ${{ if ne(parameters.latestFolder, '') }}:
       - powershell: |
+      
+      
+                
+          $AppFolders = $(
+          $env:AppFolders | ConvertFrom-Json
+        )
+        
+         $ManifestApp = $(
+              Get-Content -Path $AppFolder/app.json |
+              ConvertFrom-Json )
+              
+          Write-Host  $ManifestApp.Version 
+  
           Set-StrictMode -Version Latest
           if($env:Build_SourceBranchName.Contains('Release'))
           {
@@ -381,16 +394,8 @@ stages:
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
-          $AppFolders = $(
-          $env:AppFolders | ConvertFrom-Json
-        )
-        
-         $ManifestApp = $(
-              Get-Content -Path $AppFolder/app.json |
-              ConvertFrom-Json )
-              
-          Write-Host  $ManifestApp.Version 
-  
+          
+
          
         env:
           LatestFolder: ${{ parameters.latestFolder }}
