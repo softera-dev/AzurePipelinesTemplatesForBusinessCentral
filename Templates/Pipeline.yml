@@ -321,8 +321,8 @@ stages:
           $ErrorActionPreference = 'Stop'
 
           [version]$ManifestVersionIs = $(ManifestVersion)
-          $ManifestVersionIs.Build
-          $ManifestVersionIs.Revision      
+          Write-Host $ManifestVersionIs.Build
+          Write-Host $ManifestVersionIs.Revision      
          
           
           $BranchName = $(
