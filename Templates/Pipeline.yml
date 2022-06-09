@@ -319,8 +319,7 @@ stages:
       - powershell: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
-  
-        Write-Host $(ManifestVersion)
+
   
   
           $BranchName = $(
