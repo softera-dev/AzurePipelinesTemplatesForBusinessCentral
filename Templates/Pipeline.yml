@@ -188,6 +188,10 @@ stages:
             Write-Host
             Write-Host -Object "Updating app version in '$AppFolder'..."
             [version]$CustomAppVersion = $env:CustomAppVersion
+            
+            Write-Host $CustomAppVersion
+            
+            
             [version]$ManifestVersion = $(
               Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json |
@@ -358,11 +362,7 @@ stages:
       - powershell: |
           Set-StrictMode -Version Latest
           
-            $AppFolders = $(
-          $env:AppFolders | ConvertFrom-Json
-        )
-        Write-Host -Object 'App folders:'
-        $AppFolders | Out-Host
+          
           
           
           
