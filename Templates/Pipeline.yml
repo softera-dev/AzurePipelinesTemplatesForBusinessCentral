@@ -320,7 +320,7 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
-          [version]$ManifestVersion = [version]$(ManifestVersion)
+          [version]$ManifestVersion = $(ManifestVersion)
          Write-Host $ManifestVersion.Build
          Write-Host $ManifestVersion.Revision
          
