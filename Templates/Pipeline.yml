@@ -321,8 +321,9 @@ stages:
           $ErrorActionPreference = 'Stop'
 
      
-          Write-Host $(ManifestVersion)
-  
+          $VersionToConvert = '{2}.{3}' -f $ManifestVersion.Build,$ManifestVersion.Revision
+          Write-Host $VersionToConvert
+          
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
