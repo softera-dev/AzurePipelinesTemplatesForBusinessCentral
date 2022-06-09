@@ -100,7 +100,6 @@ stages:
         exit($ExitCode)
       condition: always()
       displayName: Checking free disk and ram space
-
     - checkout: self
       clean: true
 
@@ -113,20 +112,17 @@ stages:
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
-
         $AppFolders = $(
           $env:AppFolders | ConvertFrom-Json
         )
         Write-Host -Object 'App folders:'
         $AppFolders | Out-Host
-
         $TestFolders = $(
           $env:TestFolders | ConvertFrom-Json
         )
         Write-Host -Object 'Test app folders:'
         $TestFolders | Out-Host
         Write-Host
-
         Write-Host -Object "BC version given $env:BcVersion"
         $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
         if ($env:BcVersion -notmatch $Pattern) {
@@ -139,42 +135,32 @@ stages:
         Write-Host -Object "Parsed artifact country: $($Matches.Country)"
         $GetBcArtifactUrlParameters = @{
           Type           = $Matches.Type
+          Select         = 'Latest'
           Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
           Country        = $Matches.Country
-          Select         = 'Latest'
-          StorageAccount = 'bcartifacts'
-          SasToken       = ''
         }
         switch ($Matches.Version) {
           'Current' {
             $GetBcArtifactUrlParameters.Select = 'Current'
-            $GetBcArtifactUrlParameters.StorageAccount = ''
             break
           }
           { $_ -in @('NextMinor', 'NextMajor') } {
-            $GetBcArtifactUrlParameters.StorageAccount = ''
             $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
             $GetBcArtifactUrlParameters.Select = $Matches.Version
             break
           }
         }
         Write-Host
-        Write-Host -Object "Artifact type:            $($GetBcArtifactUrlParameters.Type)"
-        Write-Host -Object "Artifact version:         $($GetBcArtifactUrlParameters.Version -creplace '^$', $Matches.Version)"
-        Write-Host -Object "Artifact country:         $($GetBcArtifactUrlParameters.Country)"
-        Write-Host -Object "Artifact storage account: $($GetBcArtifactUrlParameters.StorageAccount)"
-
+        Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
         
         $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
         $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
         [version]$Global:PlatformVersion = $BcArtifactManifest.platform
-
         $NewBCContainer = {
           param([hashtable]$Parameters)
           $Parameters['isolation'] = $env:DockerIsolation
           New-BcContainer @parameters
-
           Write-Host -Object "Running script inside container: $env:BeforeAppsInstallScript"
           if ($env:BeforeAppsInstallScript) {
             Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $env:BeforeAppsInstallScript -scriptBlock {
@@ -184,7 +170,6 @@ stages:
               Invoke-Expression -Command $BeforeAppsInstallScript
             }
           }
-
           if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
             Invoke-ScriptInBcContainer $Parameters.containerName -scriptblock {
               $ProgressPreference = 'SilentlyContinue'
@@ -194,17 +179,14 @@ stages:
           if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
             Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
           }
-
           [version]$AppVersion = $(
             Get-Content -Path $env:MainAppFolder/app.json |
             ConvertFrom-Json |
             Select-Object -ExpandProperty application
           )
-
           foreach ($AppFolder in $AppFolders) {
             Write-Host
             Write-Host -Object "Updating app version in '$AppFolder'..."
-
             [version]$CustomAppVersion = $env:CustomAppVersion
             [version]$ManifestVersion = $(
               Get-Content -Path $AppFolder/app.json |
@@ -261,7 +243,6 @@ stages:
             Set-Content -LiteralPath $AppFolder/app.json
           }
         }
-
         $InstallAppsFolders = $(
           $env:LatestDependencyAppPaths | ConvertFrom-Json
         )
@@ -281,17 +262,14 @@ stages:
           }
         )
         Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
-
         $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
         Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
-
         $LicensePath = $(
           ($PlatformVersion.Major)..12 |
           ForEach-Object -Process { "\\filestorage\Files\! SB licencijos\! Naujausios\*BC$_*.flf" } |
           Resolve-Path |
           Select-Object -First 1 -ExpandProperty ProviderPath
         )
-
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
@@ -329,11 +307,6 @@ stages:
         BeforeAppsInstallScript: ${{ parameters.beforeAppsInstallScript }}
         LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
       displayName: Run Pipeline
-
-
-
-        
-
     - ${{ if parameters.publishOutput }}:
       - powershell: |
           Set-StrictMode -Version Latest
@@ -364,20 +337,12 @@ stages:
           if ([System.IO.Directory]::Exists($TempPath)) {
               throw "TempPath ($TempPath) already exist"
           }
-
           [System.IO.Directory]::CreateDirectory($TempPath)
           Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
-
-
-
-
-
-
           $OldPath = "$CommonPath-Old"
           if ([System.IO.Directory]::Exists($OldPath)) {
               [System.IO.Directory]::Delete($OldPath, $true)
           }
-
           $Path = $CommonPath
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::CreateDirectory($Path)
@@ -389,7 +354,6 @@ stages:
               [System.IO.Directory]::Delete($TempPath, $true)
           }
         displayName: Copy files to BCApps
-
     - ${{ if ne(parameters.latestFolder, '') }}:
       - powershell: |
           Set-StrictMode -Version Latest
@@ -415,7 +379,7 @@ stages:
           }
           if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
-              Copy-Item -Path '.output/*' -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
+              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
           
           
@@ -423,10 +387,6 @@ stages:
         env:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
-    
-
-    
-    
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName
         Flush-ContainerHelperCache -KeepDays 1
