@@ -190,7 +190,7 @@ stages:
             [version]$CustomAppVersion = $env:CustomAppVersion
             
             
-            [version]ManifestVersion = $(
+            [version]$ManifestVersion = $(
               Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json |
               Select-Object -ExpandProperty version
