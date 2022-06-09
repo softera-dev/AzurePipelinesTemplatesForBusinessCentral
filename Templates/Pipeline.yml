@@ -317,10 +317,10 @@ stages:
       displayName: Run Pipeline
     - ${{ if parameters.publishOutput }}:
       - powershell: |
-          Set-StrictMode -Version Latest
+          Set-StrictMode -Off
           $ErrorActionPreference = 'Stop'
 
-          $ManifestVersionIs = $ManifestVersion
+          $ManifestVersionIs = $(ManifestVersion)
        
          
           
