@@ -320,7 +320,7 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
-          $ManifestVersion = $(ManifestVersion)
+          $ManifestVersionIs = $(ManifestVersion)
        
          
           
