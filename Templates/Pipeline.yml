@@ -381,11 +381,12 @@ stages:
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
-
+         $ManifestApp = $(
+              Get-Content -Path $AppFolder/app.json |
+              ConvertFrom-Json )
+          Write-Host  $ManifestApp.Version 
   
-          Write-Host $ManifestApp.Version
-          Write-Host $ManifestApp
-          
+         
         env:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
