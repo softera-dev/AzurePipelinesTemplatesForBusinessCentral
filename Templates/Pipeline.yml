@@ -314,7 +314,7 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
           
-         Write-Host $ManifestVersion
+          Write-Host -Object $Global:ManifestVersion
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
