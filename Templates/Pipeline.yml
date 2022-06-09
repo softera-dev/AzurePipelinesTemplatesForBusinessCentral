@@ -381,9 +381,14 @@ stages:
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
+          $AppFolders = $(
+          $env:AppFolders | ConvertFrom-Json
+        )
+        
          $ManifestApp = $(
               Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json )
+              
           Write-Host  $ManifestApp.Version 
   
          
