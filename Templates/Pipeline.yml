@@ -189,10 +189,8 @@ stages:
             Write-Host -Object "Updating app version in '$AppFolder'..."
             [version]$CustomAppVersion = $env:CustomAppVersion
             
-            Write-Host $CustomAppVersion
             
-            
-            [version]$ManifestVersion = $(
+            [version]$Global:ManifestVersion = $(
               Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json |
               Select-Object -ExpandProperty version
