@@ -321,11 +321,8 @@ stages:
           $ErrorActionPreference = 'Stop'
 
 
-          $ManifestVersionIs = 10.0.0.1
-          Write-Host $ManifestVersionIs
-          $ManifestVersionIs = "$(ManifestVersion)"
-          Write-Host $ManifestVersionIs
-          $ManifestVersionIs = $(ManifestVersion)
+
+          [version]$ManifestVersionIs = "$(ManifestVersion)"
           Write-Host $ManifestVersionIs
           Write-Host $(ManifestVersion)
           Write-Host $ManifestVersionIs.Build
