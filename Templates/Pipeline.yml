@@ -320,7 +320,8 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
-  
+     
+          Write-Host $(ManifestVersion)
   
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
