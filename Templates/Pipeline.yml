@@ -369,17 +369,7 @@ stages:
               [System.IO.Directory]::Delete($TempPath, $true)
           }
           
-          
-          $TempPath = "$FileStoragePath-Temporary-$env:Build_BuildID"
-          if ([System.IO.Directory]::Exists($TempPath)) {
-              throw "TempPath ($TempPath) already exist"
-          }
-          [System.IO.Directory]::CreateDirectory($TempPath)
-          Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
-          $OldPath = "$FileStoragePath-Old"
-          if ([System.IO.Directory]::Exists($OldPath)) {
-              [System.IO.Directory]::Delete($OldPath, $true)
-          }
+        
           $Path = $FileStoragePath
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::CreateDirectory($Path)
