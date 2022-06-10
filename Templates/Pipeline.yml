@@ -390,7 +390,7 @@ stages:
               [System.IO.Directory]::Delete($Paths, $true)
           }
           if (-not ([System.IO.Directory]::Exists($Paths))) {
-              Copy-Item -Path $TempPath -Destination $Paths -Recurse -Force -ErrorAction SilentlyContinue
+              Copy-Item -Path $TempPaths -Destination $Paths -Recurse -Force -ErrorAction SilentlyContinue
               [System.IO.Directory]::Delete($TempPaths, $true)
           }
         
