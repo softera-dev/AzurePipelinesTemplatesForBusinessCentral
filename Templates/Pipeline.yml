@@ -323,7 +323,7 @@ stages:
 
 
           [version]$ManifestVersionIs = "$(ManifestVersion)" 
-          $ManifestVersion = $ManifestVersionIs.Build'.'$ManifestVersionIs.Revision
+          $ManifestVersion = $ManifestVersionIs.Build+'.'+$ManifestVersionIs.Revision
           Write-Host $ManifestVersion
           
           $BranchName = $(
