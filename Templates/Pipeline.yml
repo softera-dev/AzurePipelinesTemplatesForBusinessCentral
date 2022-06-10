@@ -371,17 +371,7 @@ stages:
           
           
           
-          $PathVersion = $CommonPathVersion
-          if ([System.IO.Directory]::Exists($PathVersion)) {
-              [System.IO.Directory]::CreateDirectory($PathVersion)
-              Copy-Item -Path $PathVersion\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($PathVersion, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Path))) {
-              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($TempPath, $true)
-          }
-          
+        
           
           
         displayName: Copy files to BCApps
