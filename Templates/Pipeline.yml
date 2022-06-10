@@ -370,15 +370,28 @@ stages:
           }
           
         
-          $Path = $FileStoragePath
-          if ([System.IO.Directory]::Exists($Path)) {
-              [System.IO.Directory]::CreateDirectory($Path)
-              Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($Path, $true)
+        
+        
+        
+          $TempPaths = "$FileStoragePath-Temporary-$env:Build_BuildID"
+          if ([System.IO.Directory]::Exists($TempPaths)) {
+              throw "TempPath ($TempPaths) already exist"
           }
-          if (-not ([System.IO.Directory]::Exists($Path))) {
-              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($TempPath, $true)
+          [System.IO.Directory]::CreateDirectory($TempPaths)
+          Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
+          $OldPaths = "$CommonPath-Old"
+          if ([System.IO.Directory]::Exists($OldPaths)) {
+              [System.IO.Directory]::Delete($OldPaths, $true)
+          }        
+          $Paths = $FileStoragePath
+          if ([System.IO.Directory]::Exists($Paths)) {
+              [System.IO.Directory]::CreateDirectory($Paths)
+              Copy-Item -Path $Paths\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
+              [System.IO.Directory]::Delete($Paths, $true)
+          }
+          if (-not ([System.IO.Directory]::Exists($Paths))) {
+              Copy-Item -Path $TempPath -Destination $Paths -Recurse -Force -ErrorAction SilentlyContinue
+              [System.IO.Directory]::Delete($TempPaths, $true)
           }
         
           
