@@ -323,11 +323,8 @@ stages:
 
 
           [version]$ManifestVersionIs = "$(ManifestVersion)"
-          Write-Host $ManifestVersionIs
-          Write-Host $(ManifestVersion)
-          Write-Host $ManifestVersionIs.Build
-          Write-Host $ManifestVersionIs.Revision      
-         
+          Write-Host $ManifestVersionIs.Build$ManifestVersionIs.Revision   
+
           
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
