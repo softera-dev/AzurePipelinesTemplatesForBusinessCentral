@@ -317,7 +317,7 @@ stages:
       displayName: Run Pipeline
     - ${{ if parameters.publishOutput }}:
       - powershell: |
-          Set-StrictMode -Off
+          Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
 
