@@ -401,6 +401,8 @@ stages:
       - powershell: |
           Set-StrictMode -Version Latest
 
+          Write-Host $env:LatestFolde
+          
           if($env:Build_SourceBranchName.Contains('Release'))
           {
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
