@@ -401,7 +401,7 @@ stages:
       - powershell: |
           Set-StrictMode -Version Latest
 
-          Write-Host $env:LatestFolde
+          Write-Host $env:LatestFolder
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
