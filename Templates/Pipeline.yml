@@ -402,6 +402,12 @@ stages:
           Set-StrictMode -Version Latest
 
           Write-Host $env:LatestFolder
+          Write-Host $env:Build_Repository_Name
+          $d = $env:LatestFolder
+          $b = $env:Build_Repository_Name
+          $c = $d$b
+          Write-Host $c
+          
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
