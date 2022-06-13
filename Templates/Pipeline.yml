@@ -405,7 +405,7 @@ stages:
           Write-Host $env:Build_Repository_Name
           $d = $env:LatestFolder
           $b = $env:Build_Repository_Name
-          $c = $d$b
+          $c = $d+$b
           Write-Host $c
           
           
