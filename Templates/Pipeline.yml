@@ -403,10 +403,8 @@ stages:
 
           Write-Host $env:LatestFolder
           Write-Host $env:Build_Repository_Name
-          $d = $env:LatestFolder
-          $b = $env:Build_SourceBranchName
-          $c = $d+$b
-          Write-Host $c
+          $Name = $env:LatestFolder + '-' + $env:Build_SourceBranchName.ToUpper()
+          Write-Host $Name
           
           
           if($env:Build_SourceBranchName.Contains('Release'))
