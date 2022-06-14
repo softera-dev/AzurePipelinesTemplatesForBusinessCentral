@@ -420,8 +420,14 @@ stages:
           }
           
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
+          Write-Host $NameFile.BaseName
           Write-Host $NameFile
           $NameFile.GetType()
+          
+          $outputFile = Split-Path $NameFile -leaf
+          Write-Host $outputFile
+          
+          
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
           }
