@@ -415,7 +415,7 @@ stages:
           }
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Preleases\$Name"
+          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$Name"
           }
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
