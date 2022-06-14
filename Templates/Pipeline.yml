@@ -405,7 +405,7 @@ stages:
           if($Name.Contains('RELEASE')){
           $NamePath = $NamePath -replace 'RELEASE-',''
           }
-          Write-Host $Name
+          Write-Host $NamePath
           
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           Write-Host $NameFile
