@@ -402,7 +402,7 @@ stages:
           Set-StrictMode -Version Latest
 
           $NamePath = $env:LatestFolder + '-' + $env:Build_SourceBranchName.ToUpper()
-          if($Name.Contains('RELEASE')){
+          if($NamePath.Contains('RELEASE')){
           $NamePath = $NamePath -replace 'RELEASE-',''
           }
           Write-Host $NamePath
