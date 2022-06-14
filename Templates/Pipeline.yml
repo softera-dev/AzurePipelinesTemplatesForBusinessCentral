@@ -421,7 +421,7 @@ stages:
           
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
           Write-Host $NameFile
-          
+          $NameFile.GetType()
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
           }
