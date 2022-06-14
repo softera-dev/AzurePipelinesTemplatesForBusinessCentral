@@ -434,7 +434,7 @@ stages:
           
           
                     
-           if ([System.IO.File]::Exists($FileStoragePath\$outputFile) {
+           if ([System.IO.File]::Exists($FileStoragePath\$outputFile)) {
               Write-Host "File Exists"
               #[System.IO.File]::Delete($FileStoragePath\$outputFile, $true)
           }
