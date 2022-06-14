@@ -427,6 +427,7 @@ stages:
           
           if ([System.IO.Directory]::Exists($FileStoragePath)) {
               #[System.IO.Directory]::Delete($FileStoragePath, $true)
+              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
           if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
