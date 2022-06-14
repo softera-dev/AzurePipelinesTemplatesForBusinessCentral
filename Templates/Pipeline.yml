@@ -420,13 +420,9 @@ stages:
           }
           
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
-          Write-Host $NameFile.BaseName
-          Write-Host $NameFile
-          $NameFile.GetType()
-          
           $outputFile = Split-Path $NameFile -leaf
           Write-Host $outputFile
-          
+
           
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
@@ -435,6 +431,14 @@ stages:
               [System.IO.Directory]::CreateDirectory($Path)
               Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
           }
+          
+          
+                    
+           if ([System.IO.File]::Exists($FileStoragePath\$outputFile)) {
+              Write-Host "File Exists"
+              #[System.IO.File]::Delete($FileStoragePath\$outputFile, $true)
+          }
+          
           
           if ([System.IO.Directory]::Exists($FileStoragePath)) {
               #[System.IO.Directory]::Delete($FileStoragePath, $true)
