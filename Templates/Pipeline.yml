@@ -419,9 +419,8 @@ stages:
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
           }
           
-          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
+          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
           Write-Host $NameFile
-          
           
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
