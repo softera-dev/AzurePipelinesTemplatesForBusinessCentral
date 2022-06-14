@@ -407,8 +407,7 @@ stages:
           }
           Write-Host $NamePath
           
-          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
-          Write-Host $NameFile
+        
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
@@ -419,6 +418,11 @@ stages:
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
           }
+          
+          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
+          Write-Host $NameFile
+          
+          
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
           }
