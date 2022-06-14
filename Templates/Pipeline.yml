@@ -402,8 +402,8 @@ stages:
           Set-StrictMode -Version Latest
 
           $Name = $env:LatestFolder + '-' + $env:Build_SourceBranchName.ToUpper()
-          if($Name.Contains('Release')){
-          $Name = $Name -replace 'Release-',''
+          if($Name.Contains('RELEASE')){
+          $Name = $Name -replace 'RELEASE-',''
           }
           Write-Host $Name
           
