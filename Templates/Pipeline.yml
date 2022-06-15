@@ -415,7 +415,7 @@ stages:
           if($env:Build_SourceBranchName.Contains('Release'))
           {
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$env:Build_Repository_Name\$env:LatestFolder\$env:Build_SourceBranchName"
+          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
           $Outputfilepath = "\\filestorage\Projects\DevOps\!Releases\$NamePath\$outputFile"
           Write-Host $Outputfilepath
           }
