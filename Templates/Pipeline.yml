@@ -412,7 +412,8 @@ stages:
           $outputFile = Split-Path $NameFile -leaf
           
           $Outputfilepath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$outputFile"
-          $Outputfilepath = $Outputfilepath -replace ".{8}$"
+          $Outputfilepath = $Outputfilepath -replace ".{10}$"
+          Write-Host $Outputfilepath
           
           if (Test-Path -Path "$Outputfilepath*") {
           Write-Host "File Exists"
