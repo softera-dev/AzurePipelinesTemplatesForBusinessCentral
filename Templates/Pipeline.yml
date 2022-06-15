@@ -417,7 +417,6 @@ stages:
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
           $Outputfilepath = "\\filestorage\Projects\DevOps\!Releases\$NamePath\$outputFile"
-          Write-Host $Outputfilepath
           }
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
@@ -428,10 +427,9 @@ stages:
            
 
           $Outputfilepath = $Outputfilepath -replace ".{10}$"
-          Write-Host $Outputfilepath
           
           if (Test-Path -Path "$Outputfilepath*") {
-          Write-Host "File Exists"
+          Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
           (Get-ChildItem -Path "$Outputfilepath*").Delete()
           }
  
@@ -455,7 +453,7 @@ stages:
           }
           
           if (-not (Test-Path -Path "$Outputfilepath*")) {
-          Write-Host "File $NameFile does not copied to Filestorage. Take it from Bcapps, or filestorage\Projects\DevOps\softera-baltic"
+          Write-Host "File $Outputfilepath does not copied to Filestorage. Take it from Bcapps, or filestorage\Projects\DevOps\softera-baltic" -ForegroundColor red -BackgroundColor white
           }
          
         env:
