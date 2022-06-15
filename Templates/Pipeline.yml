@@ -410,7 +410,6 @@ stages:
                  
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
           $outputFile = Split-Path $NameFile -leaf
-          Write-Host $outputFile
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
