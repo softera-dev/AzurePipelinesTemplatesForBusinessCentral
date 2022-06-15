@@ -410,9 +410,14 @@ stages:
                  
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
           $outputFile = Split-Path $NameFile -leaf
-          Write-Host $outputFile
           
           $Outputfilepath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$outputFile"
+          $Outputfilepath = $Outputfilepath -replace ".{8}$"
+          
+          if (Test-Path -Path "$Outputfilepath*") {
+          Write-Host "File Exists"
+          (Get-ChildItem -Path "$Outputfilepath*").Delete()
+          }
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
