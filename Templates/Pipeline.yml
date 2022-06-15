@@ -453,7 +453,9 @@ stages:
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
           
-
+          if (Test-Path -Path "$Outputfilepath*") {
+          Write-Host "File $NameFile does not copied to Filestorage. Take it from Bcapps, or filestorage\Projects\DevOps\softera-baltic"
+          }
          
         env:
           LatestFolder: ${{ parameters.latestFolder }}
