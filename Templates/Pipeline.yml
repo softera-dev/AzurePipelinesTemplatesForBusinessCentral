@@ -407,7 +407,12 @@ stages:
           }
           Write-Host $NamePath
           
-        
+                 
+          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
+          $outputFile = Split-Path $NameFile -leaf
+          Write-Host $outputFile
+          
+          $Outputfilepath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$outputFile"
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
@@ -418,12 +423,7 @@ stages:
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
           }
-          
-          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
-          $outputFile = Split-Path $NameFile -leaf
-          Write-Host $outputFile
-
-          
+ 
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
           }
@@ -434,9 +434,9 @@ stages:
           
           
                     
-           if ([System.IO.File]::Exists($FileStoragePath\$outputFile)) {
+           if ([System.IO.File]::Exists($Outputfilepath)) {
               Write-Host "File Exists"
-              #[System.IO.File]::Delete($FileStoragePath\$outputFile, $true)
+              #[System.IO.File]::Delete($Outputfilepath, $true)
           }
           
           
