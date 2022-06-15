@@ -401,7 +401,7 @@ stages:
       - powershell: |
           Set-StrictMode -Version Latest
 
-          $NamePath = $env:LatestFolder + '-' + $env:Build_SourceBranchName.ToUpper()
+          $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
           if($NamePath.Contains('RELEASE')){
           $NamePath = $NamePath -replace 'RELEASE-',''
           }
