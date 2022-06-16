@@ -333,16 +333,13 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
           )
-          
-          Write-Host $env:Build_SourceBranchName
-          Write-Host $env:Build_SourceBranch -replace 'refs/heads/', ''      
+             
           
           
           if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
           {
             $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-            Write-Host 'Turi releases/'
           }
           else
           {
@@ -420,7 +417,6 @@ stages:
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
           $Outputfilepath = "\\filestorage\Projects\DevOps\!Releases\$NamePath\$outputFile"
-          Write-Host 'Turi releases/'
           }
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
@@ -432,12 +428,6 @@ stages:
 
           $Outputfilepath = $Outputfilepath -replace ".{10}$"
           
-          if (Test-Path -Path "$Outputfilepath*") {
-          Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
-          (Get-ChildItem -Path "$Outputfilepath*").Delete()
-          }
- 
- 
  
           if ([System.IO.Directory]::Exists($Path)) {
               [System.IO.Directory]::Delete($Path, $true)
@@ -448,11 +438,18 @@ stages:
           }
               
           if ([System.IO.Directory]::Exists($FileStoragePath)) {
-              #[System.IO.Directory]::Delete($FileStoragePath, $true)
+              if (Test-Path -Path "$Outputfilepath*") {
+              Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
+              (Get-ChildItem -Path "$Outputfilepath*").Delete()
+              }     
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
           if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
+              if (Test-Path -Path "$Outputfilepath*") {
+              Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
+              (Get-ChildItem -Path "$Outputfilepath*").Delete()
+              }     
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
           
