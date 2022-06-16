@@ -338,7 +338,7 @@ stages:
           Write-Host $env:Build_SourceBranch -replace 'refs/heads/', ''      
           
           
-          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match '*releases*')
+          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'releases')
           {
             $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
@@ -415,7 +415,7 @@ stages:
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
           $outputFile = Split-Path $NameFile -leaf
           
-          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match '*releases*')
+          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'releases')
           {
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
