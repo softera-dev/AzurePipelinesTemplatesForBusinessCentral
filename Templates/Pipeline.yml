@@ -336,10 +336,9 @@ stages:
           
           Write-Host $env:Build_SourceBranchName
           Write-Host $env:Build_SourceBranch -replace 'refs/heads/', ''      
-          Write-Host $env:System_PullRequest_TargetBranch
           
           
-          if($env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch.Contains('release*'))
+          if($env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch.Contains('releases*'))
           {
             $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
