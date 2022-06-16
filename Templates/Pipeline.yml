@@ -334,6 +334,10 @@ stages:
             }
           )
           
+          Write-Host $env:Build_SourceBranchName
+          Write-Host $env:System_PullRequest_TargetBranch
+          
+          
           
           if($env:Build_SourceBranchName.Contains('Release'))
           {
