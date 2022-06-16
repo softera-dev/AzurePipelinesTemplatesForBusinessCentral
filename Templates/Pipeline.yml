@@ -423,12 +423,9 @@ stages:
           {
           $i = $i -replace ".{10}$"
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
-          Write-Host 'Cikle'
-          Write-Host $Outputfilepath
           }
-          Write-Host 'Bandau' 
-          Write-Host $Outputfilepath
           }
+          
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
@@ -437,20 +434,12 @@ stages:
           {
           $i = $i -replace ".{10}$"
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
-          Write-Host 'Cikle'
-          Write-Host $Outputfilepath
           }
-          Write-Host 'Bandau' 
-          Write-Host $Outputfilepath
           }
-
-          
-          
           
           
           foreach ($o2 in $Outputfilepath){
           if (Test-Path -Path "$o2*") {
-          Write-Host $o2
           Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
           (Get-ChildItem -Path "$o2*").Delete()
           } 
