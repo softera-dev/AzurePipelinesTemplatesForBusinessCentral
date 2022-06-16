@@ -335,6 +335,7 @@ stages:
           )
           
           Write-Host $env:Build_SourceBranchName
+          Write-Host $env:Build_SourceBranch         
           Write-Host $env:System_PullRequest_TargetBranch
           
           
