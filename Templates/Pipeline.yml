@@ -437,6 +437,13 @@ stages:
           }
           }
           
+          if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
+              [System.IO.Directory]::CreateDirectory($FileStoragePath)
+          }
+          
+          
+          
+          
           
           foreach ($o2 in $Outputfilepath){
           if (Test-Path -Path "$o2*") {
@@ -464,10 +471,7 @@ stages:
           if ([System.IO.Directory]::Exists($FileStoragePath)) {
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
-          if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
-              [System.IO.Directory]::CreateDirectory($FileStoragePath)
-              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
-          }
+
           
           #if (-not (Test-Path -Path "$Outputfilepath*")) {
           #Write-Host "File $Outputfilepath does not copied to Filestorage. Take it from Bcapps, or filestorage\Projects\DevOps\softera-baltic" -ForegroundColor red -BackgroundColor white
