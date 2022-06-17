@@ -415,7 +415,7 @@ stages:
           foreach ($i in $outputFile)
           {
           $i = $i -replace ".{10}$"
-          $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
+          $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
           }
           }
           
