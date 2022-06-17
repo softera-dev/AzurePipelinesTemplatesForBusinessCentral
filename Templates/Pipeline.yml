@@ -152,6 +152,7 @@ stages:
         }
         Write-Host
         Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
+
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
         
         $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
