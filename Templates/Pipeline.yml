@@ -193,6 +193,7 @@ stages:
               ConvertFrom-Json |
               Select-Object -ExpandProperty version
             )
+            Write-Host "##vso[task.setvariable variable=ManifestVersion]$ManifestVersion"
             $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
             [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
               param(
