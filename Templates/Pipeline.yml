@@ -272,6 +272,7 @@ stages:
           Resolve-Path |
           Select-Object -First 1 -ExpandProperty ProviderPath
         )
+        Write-Host -Object "Selected license path for platform BC$($PlatformVersion.Major): $LicensePath"
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
