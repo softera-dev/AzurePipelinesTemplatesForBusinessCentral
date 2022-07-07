@@ -364,7 +364,7 @@ stages:
         
           $TempPaths = "$FileStoragePath-Temporary-$env:Build_BuildID"
           if ([System.IO.Directory]::Exists($TempPaths)) {
-              throw "TempPath ($TempPaths) already exist"
+               [System.IO.Directory]::Delete($TempPaths, $true)
           }
           [System.IO.Directory]::CreateDirectory($TempPaths)
           Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
