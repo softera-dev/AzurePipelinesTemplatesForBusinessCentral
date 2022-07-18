@@ -20,6 +20,7 @@ steps:
 
     New-BCContainer `
       -accept_eula `
+      -accept_outdated `
       -containerName $ContainerName `
       -imageName $env:BC_IMAGE_NAME `
       -licenseFile $env:BC_LICENSE_FILE `
