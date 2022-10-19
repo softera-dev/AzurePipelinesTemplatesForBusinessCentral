@@ -7,7 +7,7 @@ parameters:
 - name: alDotNetAssemblyProbingPaths
   type: string
   default: C:/Windows/Assembly,./.netPackages
-- checkout: Core
+
 
 - name: organizationName
   type: string
@@ -66,6 +66,8 @@ parameters:
   default: []
 
 stages:
+
+- checkout: Core
 - stage: Main
   displayName: Main
   jobs:
