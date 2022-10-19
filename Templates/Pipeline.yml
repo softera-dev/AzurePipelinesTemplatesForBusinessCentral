@@ -126,6 +126,12 @@ stages:
         $TestFolders | Out-Host
         Write-Host  'a'
         Write-Host  $(Build.SourcesDirectory)
+        Write-Host $(Build.Repository.ID)
+        Write-Host $(Build.Repository.Name)
+        Write-Host $(Build.Repository.Provider)
+        Write-Host $(Build.Repository.Uri)
+        Write-Host $(Build.SourceBranch)
+        Write-Host $(Build.SourceBranchName)
         Write-Host  'a'
         Write-Host  'a'
         Write-Host  'a'
