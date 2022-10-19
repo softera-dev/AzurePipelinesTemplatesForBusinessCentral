@@ -7,6 +7,7 @@ parameters:
 - name: alDotNetAssemblyProbingPaths
   type: string
   default: C:/Windows/Assembly,./.netPackages
+- checkout: Core
 
 - name: organizationName
   type: string
@@ -100,8 +101,7 @@ stages:
         exit($ExitCode)
       condition: always()
       displayName: Checking free disk and ram space
-    - checkout: Core
-    - script: dir $(Build.SourcesDirectory)
+
     
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
@@ -150,6 +150,7 @@ stages:
             break
           }
         }
+        
         Write-Host
         Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
 
