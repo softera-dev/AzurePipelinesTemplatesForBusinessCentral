@@ -87,9 +87,6 @@ stages:
     - name: BcApplicationVersion
       value: ''
     steps:
-    
-    
-    - checkout: Core
     - powershell: |
         $ExitCode = 0
         $FreeDiskSpace = Get-PSDrive -Name C | Select-Object -ExpandProperty Free
@@ -113,7 +110,7 @@ stages:
       inputs:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
-
+    - checkout: Core
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
@@ -127,7 +124,9 @@ stages:
         )
         Write-Host -Object 'Test app folders:'
         $TestFolders | Out-Host
-        Write-Host
+        
+        Write-Host  $(Build.SourcesDirectory)
+        
         Write-Host -Object "BC version given $env:BcVersion"
         $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
         if ($env:BcVersion -notmatch $Pattern) {
