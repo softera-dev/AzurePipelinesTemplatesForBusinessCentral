@@ -101,7 +101,8 @@ stages:
       condition: always()
       displayName: Checking free disk and ram space
     - checkout: Core
-
+    - script: dir $(Build.SourcesDirectory)
+    
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
       inputs:
