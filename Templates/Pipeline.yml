@@ -101,7 +101,6 @@ stages:
       condition: always()
       displayName: Checking free disk and ram space
     - checkout: Core
-      clean: true
 
     - task: DownloadSecureFile@1
       name: DownloadBCAppSigningCertificate
