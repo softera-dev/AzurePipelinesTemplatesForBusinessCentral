@@ -67,8 +67,11 @@ parameters:
 
 stages:
 
-- checkout: Core
 - stage: Main
+
+
+- checkout: Core
+
   displayName: Main
   jobs:
   - job: Main
