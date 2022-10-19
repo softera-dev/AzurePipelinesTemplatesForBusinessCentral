@@ -124,8 +124,11 @@ stages:
         )
         Write-Host -Object 'Test app folders:'
         $TestFolders | Out-Host
-        
+        Write-Host  'a'
         Write-Host  $(Build.SourcesDirectory)
+        Write-Host  'a'
+        Write-Host  'a'
+        Write-Host  'a'
         
         Write-Host -Object "BC version given $env:BcVersion"
         $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
