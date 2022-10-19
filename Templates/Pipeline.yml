@@ -100,6 +100,7 @@ stages:
         exit($ExitCode)
       condition: always()
       displayName: Checking free disk and ram space
+    - checkout: Core
     - checkout: self
       clean: true
 
