@@ -1,35 +1,55 @@
 parameters:
-- name: bcVersion
-  type: string
-- name: alLanguageExtensionFileName
-  type: string
-  default: ''
 
+# Required information:
+  
 - name: organizationName
   type: string
-  default: ''
+
+- name: bcVersion
+  type: string
+
+
+# Folders:
+
 - name: appFolders
   type: object
   default:
   - MainApp
+
 - name: testFolders
   type: object
   default: []
-- name: masterBranch
-  type: string
-  default: WIP
+
 - name: mainAppFolder
   type: string
   default: MainApp
+
+- name: latestDependencyAppPaths
+  type: object
+  default: []
+
+
+# SCM information:
+
+- name: masterBranch
+  type: string
+  default: WIP
+
+
+# App versioning policy:
+
 - name: appReleaseVersionFormat
   type: string
   default: '{Manifest.Build}.{Manifest.Revision}'
+
 - name: appVersionFormat
   type: string
   default: '{Container.Major}.{Manifest.Minor}.{Release.Major}.{Release.Minor}'
+
 - name: customAppVersion
   type: string
   default: '0.0.0.0'
+
 - name: manifestVersionMismatchAction
   type: string
   default: error
@@ -38,9 +58,17 @@ parameters:
   - warning
   - none
 
+
+# Advanced build configuration:
+
+- name: beforeAppsInstallScript
+  type: string
+  default: ''
+
 - name: dockerMemory
   type: string
   default: 4g
+
 - name: dockerIsolation
   type: string
   default: hyperv
@@ -48,84 +76,118 @@ parameters:
   - hyperv
   - process
 
-- name: publishOutput
-  type: boolean
-  default: true
-- name: latestFolder
-  type: string
-  default: Latest
-- name: beforeAppsInstallScript
+- name: alLanguageExtensionFileName
   type: string
   default: ''
-- name: latestDependencyAppPaths
-  type: object
-  default: []
+
+- name: appSigningCertificatePath
+  type: string
+  default: \\filestorage\Projects\DevOps\!Pipeline\Certificates\Softera_Comodo_Code_Signing_Certificate_2020_11_09.pfx
+
 
 stages:
 - stage: Main
   displayName: Main
   jobs:
   - job: Main
-    condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
     variables:
-    - name: OrganizationName
-      value: ${{ parameters.organizationName }}
-
-    - name: DockerMemory
-      value: ${{ parameters.dockerMemory }}
-
-    - name: IsPullRequest
-      value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
-    - name: MasterBranch
-      value: ${{ parameters.masterBranch }}
     - name: BcApplicationVersion
+      value: ''
+    - name: ContainerName
+      value: ''
+    - name: LatestFolder
       value: ''
     steps:
     - powershell: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+
         $ExitCode = 0
+
         $FreeDiskSpace = Get-PSDrive -Name C | Select-Object -ExpandProperty Free
         if ($FreeDiskSpace -lt 10gb) {
             Write-Host -Object '##[error]There is no free disk space left. There must be atleast 10 GB.'
             $ExitCode = 1
         }
-        Add-Type -AssemblyName Microsoft.VisualBasic
+
+        Add-Type -AssemblyName 'Microsoft.VisualBasic'
         $ComputerInfo = [Microsoft.VisualBasic.Devices.ComputerInfo]::new()
         if ($ComputerInfo.AvailablePhysicalMemory -lt 4gb) {
             Write-Host -Object '##[error]There is no free memory space left. There must be atleast 4 GB.'
             $ExitCode = 1
         }
+
         exit($ExitCode)
       condition: always()
       displayName: Checking free disk and ram space
+
     - checkout: self
+      path: self
       clean: true
 
-    - task: DownloadSecureFile@1
-      name: DownloadBCAppSigningCertificate
-      inputs:
-        secureFile: $(BCAppSigningCertificateSecureFileName)
-      displayName: Download certificate for BC app signing
+    - checkout: softeraDevTasks
+      clean: true
 
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
-        $AppFolders = $(
-          $env:AppFolders | ConvertFrom-Json
+
+        $Ref = $(
+          if ($env:SYSTEM_PULLREQUEST_PULLREQUESTID) {
+            $env:BUILD_PULLREQUEST_TARGETBRANCH
+          } else {
+            $env:BUILD_SOURCEBRANCH
+          }
         )
-        Write-Host -Object 'App folders:'
-        $AppFolders | Out-Host
-        $TestFolders = $(
-          $env:TestFolders | ConvertFrom-Json
-        )
-        Write-Host -Object 'Test app folders:'
-        $TestFolders | Out-Host
+        Write-Host -Object "Target ref: $Ref"
+
+        if ($Ref -notmatch '^refs/(?<RefType>heads|tags)/(?<RefName>.*)$') {
+          throw "Unsupported ref '$Ref'."
+        }
+        $RefType, $RefName = $Matches['RefType', 'RefName']
+        Write-Host -Object "  Type: $RefType"
+        Write-Host -Object "  Name: $RefName"
+
+        $Prerelease = $false
+        $Release = $false
+        $BranchBcVersion = 0
+        switch ($RefType) {
+          'heads': {
+            if (($RefName -ne 'WIP') -and ($RefName -match '^(?<BranchName>code|releases)/bc(?<ExpectedBcArtifactMajorVersion>\d+)$')) {
+              $Prerelease = $Matches['BranchName'] -eq 'code'
+              $Release = $Matches['BranchName'] -eq 'releases'
+              $ExpectedBcArtifactMajorVersion = [int]$Matches['ExpectedBcArtifactMajorVersion']
+            }
+            break
+          }
+          'tags': {
+            if ($RefName -match '^release/(?<ReleaseVersion>\d+(?:\.\d+){0,3})/bc(?<ExpectedBcArtifactMajorVersion>\d+)$') {
+              $Release = $true
+              $ExpectedBcArtifactMajorVersion = [int]$Matches['ExpectedBcArtifactMajorVersion']
+            }
+            break
+          }
+        }
+        Write-Host -Object "  Prerelease: $Prerelease"
+        Write-Host -Object "  Release: $Prerelease"
+        if ($ExpectedBcArtifactMajorVersion) {
+          Write-Host -Object "  Expected Container Major Version: $ExpectedBcArtifactMajorVersion"
+        }
+
+        [string[]]$Global:AppFolders = ConvertFrom-Json -InputObject $env:AppFolders
+        [string[]]$Global:TestFolders = ConvertFrom-Json -InputObject $env:TestFolders
+        Write-Host
+        Write-Host -Object "App folders: $($AppFolders | ConvertTo-Json)"
+        Write-Host -Object "Test app folders: $($TestFolders | ConvertTo-Json)"
+
         Write-Host
         Write-Host -Object "BC version given $env:BcVersion"
         $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
         if ($env:BcVersion -notmatch $Pattern) {
-          Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
+          Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 20.0>/<base or w1 or country>'' (case sensitive)'
           throw 'BC version doesn''t match pattern. '
         }
+
         Write-Host
         Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
         Write-Host -Object "Parsed artifact version: $($Matches.Version)"
@@ -147,65 +209,113 @@ stages:
             break
           }
         }
-        Write-Host
-        Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
+        Write-Host -Object "Get-BCArtifactUrl parameters: $($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)"
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
+        Write-Host -Object "BC artifact URL: $BcArtifactUrl"
         
         $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
+        
         $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
+        [version]$Global:ArtifactVersion = $BcArtifactManifest.version
         [version]$Global:PlatformVersion = $BcArtifactManifest.platform
+
+        if ($ExpectedBcArtifactMajorVersion) {
+          if ($ArtifactVersion.Major -ne $ExpectedBcArtifactMajorVersion)) {
+            throw "BC version in ref name ($ExpectedBcArtifactMajorVersion) does not match received BC artifact ($ArtifactVersion.Major)."
+          }
+          if ($ArtifactVersion.Minor -ne 0) {
+            throw "Use only RTM versions (minor version = 0) to ensure that app functionality works on all BC CUs."
+          }
+        }
+
+        Write-Host
+
+        $Global:BaseFolder = "$env:BUILD_SOURCESDIRECTORY\self"
+        Write-Host -Object "Base folder: '$BaseFolder'"
+
+        $Global:DependenciesFolder = "\\filestorage\Projects\DevOps\!Prereleases\BC$($ArtifactVersion.Major)"
+        Write-Host -Object "Dependencies folder: '$DependenciesFolder'"
+
+        $LatestFolder = ''
+        switch ($true) {
+          $Prerelease {
+            $LatestFolder = "\\filestorage\Projects\DevOps\!Prereleases\BC$($ArtifactVersion.Major)"
+            break
+          }
+          $Release {
+            $LatestFolder = "\\filestorage\Projects\DevOps\!Releases\BC$($ArtifactVersion.Major)"
+            break
+          }
+        }
+        Write-Host -Object "Latest folder: '$LatestFolder'"
+
+
+        $FilestorageCredential = (Import-Clixml -Path '\\filestorage\Projects\DevOps\!Pipeline\Credentials\SOFTERA.Azure_Pipelines.clixml')
+        $FilestorageCredential | Add-Member -MemberType NoteProperty -Name UnsafePassword -Value $FilestorageCredential.GetNetworkCredential()
+
+        
         $NewBCContainer = {
-          param([hashtable]$Parameters)
+          param(
+            [hashtable]$Parameters
+          )
+
           $Parameters['isolation'] = $env:DockerIsolation
-          New-BcContainer @parameters
+
+          New-BcContainer @Parameters
+
           Write-Host -Object "Running script inside container: $env:BeforeAppsInstallScript"
           if ($env:BeforeAppsInstallScript) {
             Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $env:BeforeAppsInstallScript -scriptBlock {
               param(
-                $BeforeAppsInstallScript
+                [string]$BeforeAppsInstallScript
               )
+
               Invoke-Expression -Command $BeforeAppsInstallScript
             }
           }
-          if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
+
+          if (-not $env:ALLanguageExtensionFileName) {
             Invoke-ScriptInBcContainer $Parameters.containerName -scriptblock {
               $ProgressPreference = 'SilentlyContinue'
               Remove-Item -Path 'C:\run\*.vsix'
             }
           }
+
           if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
             Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
           }
+
           [version]$AppVersion = $(
-            Get-Content -Path $env:MainAppFolder/app.json |
+            Get-Content -Path "$BaseFolder\$env:MainAppFolder\app.json" |
             ConvertFrom-Json |
             Select-Object -ExpandProperty application
           )
           foreach ($AppFolder in $AppFolders) {
             Write-Host
             Write-Host -Object "Updating app version in '$AppFolder'..."
+
             [version]$CustomAppVersion = $env:CustomAppVersion
-            [version]$ManifestVersion = $(
-              Get-Content -Path $AppFolder/app.json |
-              ConvertFrom-Json |
-              Select-Object -ExpandProperty version
-            )
-            Write-Host "##vso[task.setvariable variable=ManifestVersion]$ManifestVersion"
+
+            $AppManifestPath = "$BaseFolder\$AppFolder\app.json"
+            $AppManifest = Get-Content -Path $AppManifestPath | ConvertFrom-Json
+            [version]$ManifestVersion = $AppManifest.version
+  
             $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
             [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
               param(
                 [System.Text.RegularExpressions.Match]$Match
               )
+
               switch -CaseSensitive ($Match.Groups['Identifier'].Value) {
                 'Manifest.Major' { $ManifestVersion.Major }
                 'Manifest.Minor' { $ManifestVersion.Minor }
                 'Manifest.Build' { $ManifestVersion.Build }
                 'Manifest.Revision' { $ManifestVersion.Revision }
-                'Container.Major' { $PlatformVersion.Major }
-                'Container.Minor' { $PlatformVersion.Minor }
-                'Container.Build' { $PlatformVersion.Build }
-                'Container.Revision' { $PlatformVersion.Revision }
+                'Container.Major' { $BcArtifactVersion.Major }
+                'Container.Minor' { $BcArtifactVersion.Minor }
+                'Container.Build' { $BcArtifactVersion.Build }
+                'Container.Revision' { $BcArtifactVersion.Revision }
                 'Custom.Major' { $CustomAppVersion.Major }
                 'Custom.Minor' { $CustomAppVersion.Minor }
                 'Custom.Build' { $CustomAppVersion.Build }
@@ -216,6 +326,7 @@ stages:
                 'Release.Revision' { $SelectedAppReleaseVersion.Revision }
               }
             }
+
             [version]$SelectedAppReleaseVersion = [regex]::Replace($env:AppReleaseVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
             [version]$SelectedAppVersion = [regex]::Replace($env:AppVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
             if ($ManifestVersion.Major -ne $SelectedAppVersion.Major -or `
@@ -231,27 +342,72 @@ stages:
             }
             Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
             Write-Host -Object "Selected application version: $SelectedAppVersion"
-            Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-            Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
-            $ManifestApp = $(
-              Get-Content -Path $AppFolder/app.json |
-              ConvertFrom-Json )
-            $ManifestApp.Version = [string]$SelectedAppVersion
-            $ManifestApp |
-            ConvertTo-Json |
-            Set-Content -LiteralPath $AppFolder/app.json
+
+            $AppManifest.version = [string]$SelectedAppVersion
+            $AppManifest | ConvertTo-Json | Set-Content -LiteralPath $AppManifestPath
           }
+
+
+          Write-Host
+          Write-Host -Object "Reading potential dependencies..."
+          $PotencialDependencies = $(
+            Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $Global:FilestorageCredential.UserName, $Global:FilestorageCredential.UnsafePassword, $Global:DependenciesFolder -scriptblock {
+              params(
+                [string]$FilestorageUserName,
+                [string]$FilestoragePassword,
+                [string]$DependenciesFolder
+              )
+
+              # Containers do not have access to filestorage by default. Login does not persist between Invoke-ScriptInBcContainer invocations even with /persistent!
+              net use '\\filestorage.softera.lt' /USER:$FilestorageUserName $FilestoragePassword
+
+              Get-ChildItem -LiteralPath $DependenciesFolder -Filter '*.app' -Recurse |
+              ForEach-Object -Process {
+                Get-NAVAppInfo -Path $_.FullName |
+                Add-Member -MemberType NoteProperty -Name FilePath -Value $_.FullName -PassThru
+              }
+            }
+          }
+
+
+          $UnknownDependencies = @()
+          $SortedFolders = Sort-AppFoldersByDependencies -baseFolder $Global:BaseFolder -appFolders @($Global:AppFolders; $Global:TestFolders) -unknownDependencies ([ref]$UnknownDependencies)
+          
+
+
+          while ($UnknownDependencies) {
+                       
+
+          }
+
+
+
+
+          # Todo: resolve deps
+          Write-Host
+          Write-Host -Object "Resolving dependencies..."
+          net use \\filestorage.softera.lt /u:SOFTERA\Azure_Pipelines zsk3QH93zwx6PLibp2vcr
+
+
+          
+          
+
+          # Enable Filestorage access
+          # net use \\filestorage.softera.lt /u:SOFTERA\Azure_Pipelines zsk3QH93zwx6PLibp2vcr
+          Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $Filestorage
         }
-        $InstallAppsFolders = $(
-          $env:LatestDependencyAppPaths | ConvertFrom-Json
-        )
+
+
+
+
+        [string[]]$InstallAppsFolders = ConvertFrom-Json -InputObject $env:LatestDependencyAppPaths | Where-Object -FilterScript { $_ }
         $AppsFromDependencies = @(
           $InstallAppsFolders |
-          Where-Object -FilterScript { $_ } |
           ForEach-Object -Process {
-            $AppFiles = `
+            $AppFiles = $(
               Get-ChildItem -LiteralPath $_ -Filter '*.app' -Recurse |
-            Select-Object -ExpandProperty FullName
+              Select-Object -ExpandProperty FullName
+            )
             if ($AppFiles) {
               $AppFiles
             } else {
@@ -260,27 +416,26 @@ stages:
             }
           }
         )
-        Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
-        $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
-        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
-        $LicensePath = $(
-          ($PlatformVersion.Major)..12 |
-          ForEach-Object -Process { "\\filestorage\Projects\DevOps\!Pipeline\Licenses\BC$_.flf" } |
-          Resolve-Path |
-          Select-Object -First 1 -ExpandProperty ProviderPath
-        )
+        Write-Host -Object "Install apps folders: $($InstallAppsFolders -join ', ')"
+
+        $LicensePath = "\\filestorage\Projects\DevOps\!Pipeline\Licenses\BC$($PlatformVersion.Major)_.flf"
+        Resolve-Path -LiteralPath $LicensePath | Out-Null
         Write-Host -Object "Selected license path for platform BC$($PlatformVersion.Major): $LicensePath"
+
+        $ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$ContainerName"
+
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
-          containerName               = $Global:ContainerName
+          containerName               = $ContainerName
           artifact                    = $BcArtifactUrl
-          baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $LicensePath
+          baseFolder                  = $BaseFolder
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
+          licenseFile                 = $LicensePath
           memoryLimit                 = $env:DockerMemory
-          codeSignCertPfxFile         = $env:CodeSignCertPfxFile
-          codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
+          codeSignCertPfxFile         = $CodeSignCertPfxFile
+          codeSignCertPfxPassword     = Get-Content -LiteralPath "$CodeSignCertPfxFile.password" | ConvertTo-SecureString
           installApps                 = $AppsFromDependencies
           installTestRunner           = $true
           installTestFramework        = $true
@@ -289,165 +444,35 @@ stages:
           NewBCContainer              = $NewBCContainer
         }
         Run-AlPipeline @GetRunAlPipelineParameters
+
+
+        if ($LatestFolder) {
+          Write-Host
+          Write-Host -Object "Copying built apps to '$LatestFolder'..."
+          New-Item -ItemType Directory -Path $LatestFolder -Force
+          Copy-Item -Path "$BaseFolder\.output\*.app" -Destination $LatestFolder -Force
+        }
       env:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
-        CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
-        CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
+        CodeSignCertPfxFile: ${{ parameters.appSigningCertificatePath }}
         MainAppFolder: ${{ parameters.mainAppFolder }}
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
         TestFolders: ${{ convertToJson(parameters.testFolders) }}
         AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
         AppVersionFormat: ${{ parameters.appVersionFormat }}
         CustomAppVersion: ${{ parameters.customAppVersion }}
-        DockerMemory: $(DockerMemory)
-        DockerIsolation: ${{ parameters.dockerIsolation }}
         BeforeAppsInstallScript: ${{ parameters.beforeAppsInstallScript }}
         LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
+        DockerMemory: ${{ parameters.dockerMemory }}
+        DockerIsolation: ${{ parameters.dockerIsolation }}
       displayName: Run Pipeline
-    - ${{ if parameters.publishOutput }}:
-      - powershell: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = 'Stop'
-
-
-
-          [version]$ManifestVersionIs = "$(ManifestVersion)" 
-          $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
-          Write-Host $ManifestVersion
-          
-          $BranchName = $(
-            if ($env:IsPullRequest -eq 'false') {
-                $env:Build_SourceBranchName
-            } else {
-                $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
-            }
-          )
-              
-          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
-          {
-            $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-          }
-          else
-          {
-            $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-          }
-          
-          $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-          if ([System.IO.Directory]::Exists($TempPath)) {
-              throw "TempPath ($TempPath) already exist"
-          }
-          [System.IO.Directory]::CreateDirectory($TempPath)
-          Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
-          $OldPath = "$CommonPath-Old"
-          if ([System.IO.Directory]::Exists($OldPath)) {
-              [System.IO.Directory]::Delete($OldPath, $true)
-          }
-          $Path = $CommonPath
-          if ([System.IO.Directory]::Exists($Path)) {
-              [System.IO.Directory]::CreateDirectory($Path)
-              Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($Path, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Path))) {
-              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($TempPath, $true)
-          }
-          
-        
-          $TempPaths = "$FileStoragePath-Temporary-$env:Build_BuildID"
-          if ([System.IO.Directory]::Exists($TempPaths)) {
-               [System.IO.Directory]::Delete($TempPaths, $true)
-          }
-          [System.IO.Directory]::CreateDirectory($TempPaths)
-          Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
-          $OldPaths = "$CommonPath-Old"
-          if ([System.IO.Directory]::Exists($OldPaths)) {
-              [System.IO.Directory]::Delete($OldPaths, $true)
-          }        
-          $Paths = $FileStoragePath
-          if ([System.IO.Directory]::Exists($Paths)) {
-              [System.IO.Directory]::CreateDirectory($Paths)
-              Copy-Item -Path $Paths\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($Paths, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Paths))) {
-              Copy-Item -Path $TempPaths -Destination $Paths -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($TempPaths, $true)
-          }
-        
-          
-          
-        displayName: Copy files to BCApps
-    - ${{ if ne(parameters.latestFolder, '') }}:
-      - powershell: |
-          Set-StrictMode -Version Latest
-
-          $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
-          if($NamePath.Contains('RELEASE')){
-          $NamePath = $NamePath -replace 'RELEASE-',''
-          }
-           
-          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
-          $outputFile = Split-Path $NameFile -leaf
-          
-          
-          $Outputfilepath = @()
-          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
-          {
-          $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
-          foreach ($i in $outputFile)
-          {
-          $i = $i -replace ".{10}$"
-          $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
-          }
-          }
-          
-          else{
-          $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
-          foreach ($i in $outputFile)
-          {
-          $i = $i -replace ".{10}$"
-          $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
-          }
-          }
-          
-          if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
-              [System.IO.Directory]::CreateDirectory($FileStoragePath)
-          }
-                       
-          foreach ($o2 in $Outputfilepath){
-          if (Test-Path -Path "$o2*") {
-          Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
-          (Get-ChildItem -Path "$o2*").Delete()
-          } 
-          }
-
-          if ([System.IO.Directory]::Exists($Path)) {
-              [System.IO.Directory]::Delete($Path, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Path))) {
-              [System.IO.Directory]::CreateDirectory($Path)
-              Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-          }
-              
-          if ([System.IO.Directory]::Exists($FileStoragePath)) {
-              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
-          }
-
-         
-        env:
-          LatestFolder: ${{ parameters.latestFolder }}
-        displayName: Copy files to Latest folder
+  
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName
         Flush-ContainerHelperCache -KeepDays 1
       condition: always()
       env:
         ContainerName: $(ContainerName)
-      displayName: 'Cleanup'
+      displayName: Ensure container is removed.
