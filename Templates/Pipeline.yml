@@ -4,9 +4,6 @@ parameters:
 - name: alLanguageExtensionFileName
   type: string
   default: ''
-- name: alDotNetAssemblyProbingPaths
-  type: string
-  default: C:/Windows/Assembly,./.netPackages
 
 - name: organizationName
   type: string
@@ -296,7 +293,6 @@ stages:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
-        AlDotNetAssemblyProbingPaths: ${{ parameters.alDotNetAssemblyProbingPaths }}
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: ${{ parameters.mainAppFolder }}
