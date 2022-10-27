@@ -174,11 +174,11 @@ stages:
           Write-Host -Object "  Expected Container Major Version: $ExpectedBcArtifactMajorVersion"
         }
 
-        [string[]]$Global:AppFolders = ConvertFrom-Json -InputObject $env:AppFolders
-        [string[]]$Global:TestFolders = ConvertFrom-Json -InputObject $env:TestFolders
+        [string[]]$Global:AppFolders = $env:AppFolders | ConvertFrom-Json
+        [string[]]$Global:TestFolders = $env:TestFolders | ConvertFrom-Json
         Write-Host
-        Write-Host -Object "App folders: $($AppFolders | ConvertTo-Json)"
-        Write-Host -Object "Test app folders: $($TestFolders | ConvertTo-Json)"
+        Write-Host -Object "App folders: $(ConvertTo-Json -InputObject $AppFolders)"
+        Write-Host -Object "Test app folders: $(ConvertTo-Json -InputObject $TestFolders)"
 
         Write-Host
         Write-Host -Object "BC version given $env:BcVersion"
@@ -209,7 +209,7 @@ stages:
             break
           }
         }
-        Write-Host -Object "Get-BCArtifactUrl parameters: $($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)"
+        Write-Host -Object "Get-BCArtifactUrl parameters: $(ConvertTo-Json -InputObject $GetBcArtifactUrlParameters -Depth 1)"
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
         Write-Host -Object "BC artifact URL: $BcArtifactUrl"
@@ -251,8 +251,8 @@ stages:
         Write-Host -Object "Latest folder: '$LatestFolder'"
 
 
-        $FilestorageCredential = (Import-Clixml -Path '\\filestorage\Projects\DevOps\!Pipeline\Credentials\SOFTERA.Azure_Pipelines.clixml')
-        $FilestorageCredential | Add-Member -MemberType NoteProperty -Name UnsafePassword -Value $FilestorageCredential.GetNetworkCredential()
+        $FilestorageCredential = Import-Clixml -Path '\\filestorage\Projects\DevOps\!Pipeline\Credentials\SOFTERA.Azure_Pipelines.clixml'
+        $FilestorageCredential | Add-Member -MemberType NoteProperty -Name UnsafePassword -Value $FilestorageCredential.GetNetworkCredential().Password
 
         
         $NewBCContainer = {
@@ -344,12 +344,12 @@ stages:
             Write-Host -Object "Selected application version: $SelectedAppVersion"
 
             $AppManifest.version = [string]$SelectedAppVersion
-            $AppManifest | ConvertTo-Json | Set-Content -LiteralPath $AppManifestPath
+            ConvertTo-Json -InputObject $AppManifest | Set-Content -LiteralPath $AppManifestPath
           }
 
 
           Write-Host
-          Write-Host -Object "Reading potential dependencies..."
+          Write-Host -Object 'Reading potential dependencies...'
           $PotencialDependencies = $(
             Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $Global:FilestorageCredential.UserName, $Global:FilestorageCredential.UnsafePassword, $Global:DependenciesFolder -scriptblock {
               params(
@@ -357,6 +357,9 @@ stages:
                 [string]$FilestoragePassword,
                 [string]$DependenciesFolder
               )
+
+              Set-StrictMode -Version Latest
+              $ErrorActionPreference = 'Stop'
 
               # Containers do not have access to filestorage by default. Login does not persist between Invoke-ScriptInBcContainer invocations even with /persistent!
               net use '\\filestorage.softera.lt' /USER:$FilestorageUserName $FilestoragePassword
@@ -368,55 +371,19 @@ stages:
               }
             }
           }
-
-
-          $UnknownDependencies = @()
-          $SortedFolders = Sort-AppFoldersByDependencies -baseFolder $Global:BaseFolder -appFolders @($Global:AppFolders; $Global:TestFolders) -unknownDependencies ([ref]$UnknownDependencies)
-          
-
-
-          while ($UnknownDependencies) {
-                       
-
-          }
-
-
-
-
-          # Todo: resolve deps
-          Write-Host
-          Write-Host -Object "Resolving dependencies..."
-          net use \\filestorage.softera.lt /u:SOFTERA\Azure_Pipelines zsk3QH93zwx6PLibp2vcr
-
-
-          
-          
-
-          # Enable Filestorage access
-          # net use \\filestorage.softera.lt /u:SOFTERA\Azure_Pipelines zsk3QH93zwx6PLibp2vcr
-          Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $Filestorage
         }
+        Write-Host -Object "Potential dependencies: $(ConvertTo-Json -InputObject $PotencialDependencies)"
 
-
-
-
-        [string[]]$InstallAppsFolders = ConvertFrom-Json -InputObject $env:LatestDependencyAppPaths | Where-Object -FilterScript { $_ }
-        $AppsFromDependencies = @(
-          $InstallAppsFolders |
-          ForEach-Object -Process {
-            $AppFiles = $(
-              Get-ChildItem -LiteralPath $_ -Filter '*.app' -Recurse |
-              Select-Object -ExpandProperty FullName
-            )
-            if ($AppFiles) {
-              $AppFiles
-            } else {
-              Write-Host -Object "No app files found in folder $_."
-              throw 'No app files found in folder.'
-            }
-          }
-        )
-        Write-Host -Object "Install apps folders: $($InstallAppsFolders -join ', ')"
+        Write-Host
+        Write-Host -Object 'Sorting app folders...'
+        $UnknownAppDependencies = @()
+        $SortedAppFolders = Sort-AppFoldersByDependencies -baseFolder $Global:BaseFolder -appFolders @($Global:AppFolders; $Global:TestFolders) -unknownDependencies ([ref]$UnknownAppDependencies)
+        
+        Write-Host
+        Write-Host -Object 'Sorting app folders...'
+        $UnknownAppDependencies = @()
+        $SortedAppFolders = Sort-AppFoldersByDependencies -baseFolder $Global:BaseFolder -appFolders @($Global:AppFolders; $Global:TestFolders) -unknownDependencies ([ref]$UnknownAppDependencies)
+        
 
         $LicensePath = "\\filestorage\Projects\DevOps\!Pipeline\Licenses\BC$($PlatformVersion.Major)_.flf"
         Resolve-Path -LiteralPath $LicensePath | Out-Null
@@ -436,7 +403,7 @@ stages:
           memoryLimit                 = $env:DockerMemory
           codeSignCertPfxFile         = $CodeSignCertPfxFile
           codeSignCertPfxPassword     = Get-Content -LiteralPath "$CodeSignCertPfxFile.password" | ConvertTo-SecureString
-          installApps                 = $AppsFromDependencies
+          installApps                 = @()
           installTestRunner           = $true
           installTestFramework        = $true
           installTestLibraries        = $true
