@@ -441,7 +441,7 @@ stages:
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
           foreach ($i in $outputFile)
           {
-          $i = $i -replace ".{11}$"
+          $i = $i -replace ".{12}$"
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
           }
           }
@@ -451,7 +451,7 @@ stages:
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
           foreach ($i in $outputFile)
           {
-          $i = $i -replace ".{11}$"
+          $i = $i -replace ".{12}$"
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
           }
           }
