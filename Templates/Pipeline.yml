@@ -365,6 +365,9 @@ stages:
           
             
           foreach ($o2 in $Outputfilepath){
+          Write-Host $o2
+          Write-Host $Outputfilepath
+          Write-Host $i
           if (Test-Path -Path "$o2*") {
           Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
           (Get-ChildItem -Path "$o2*").Delete()
