@@ -335,16 +335,42 @@ stages:
             }
           )
               
+          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
+          $outputFile = Split-Path $NameFile -leaf
+          $Outputfilepath = @()    
+              
           if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
           {
             $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+            
+            foreach ($i in $outputFile)
+            {
+              $i = $i -replace ".{11}$"
+              $Outputfilepath += "$FileStoragePath\$i"
+            }
           }
           else
           {
             $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+            
+             foreach ($i in $outputFile)
+            {
+              $i = $i -replace ".{11}$"
+              $Outputfilepath += "$FileStoragePath\$i"
+            }
+            
           }
+          
+            
+          foreach ($o2 in $Outputfilepath){
+          if (Test-Path -Path "$o2*") {
+          Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
+          (Get-ChildItem -Path "$o2*").Delete()
+          } 
+          }
+          
           
           $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
           if ([System.IO.Directory]::Exists($TempPath)) {
@@ -403,16 +429,16 @@ stages:
            
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
           $outputFile = Split-Path $NameFile -leaf
-          
-          
           $Outputfilepath = @()
+          
+          
           if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
           {
           $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
           foreach ($i in $outputFile)
           {
-          $i = $i -replace ".{10}$"
+          $i = $i -replace ".{11}$"
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
           }
           }
@@ -422,7 +448,7 @@ stages:
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
           foreach ($i in $outputFile)
           {
-          $i = $i -replace ".{10}$"
+          $i = $i -replace ".{11}$"
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
           }
           }
