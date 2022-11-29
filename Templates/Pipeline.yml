@@ -110,7 +110,7 @@ stages:
       inputs:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
-    - checkout: Core
+    - checkout: LBC-iSAF
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
