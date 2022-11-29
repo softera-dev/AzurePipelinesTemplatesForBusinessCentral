@@ -111,6 +111,10 @@ stages:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
     - checkout: LBC-iSAF
+    
+    - script:  cd $(Build.SourcesDirectory)/ ; ls;
+      displayName: 'sources directories'
+    
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
