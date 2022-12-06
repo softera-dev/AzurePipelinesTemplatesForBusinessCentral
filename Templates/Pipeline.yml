@@ -440,6 +440,7 @@ stages:
           }
                        
           foreach ($o2 in $Outputfilepath){
+          Write-Host $o2
           if (Test-Path -Path "$o2*") {
           Write-Host 'O2 yra $O2'
           Write-Host $o2
