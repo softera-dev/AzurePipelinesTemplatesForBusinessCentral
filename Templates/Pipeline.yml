@@ -152,13 +152,13 @@ stages:
         Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
 
         # Exit early because BC22 builds do not work because the license error.
-        if ($GetBcArtifactUrlParameters.Select -eq 'NextMajor') {
-          Write-Host -Object 'Exiting early until BC22 builds are fixed.'
-          if ([datetime]::Now -ge [datetime]'2023-01-01') {
-            throw 'Are BC22 builds finally fixed?'
-          }
-          exit
-        }
+       #if ($GetBcArtifactUrlParameters.Select -eq 'NextMajor') {
+          #Write-Host -Object 'Exiting early until BC22 builds are fixed.'
+          #if ([datetime]::Now -ge [datetime]'2023-01-01') {
+          #  throw 'Are BC22 builds finally fixed?'
+          #}
+          #exit
+        #}
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
         
