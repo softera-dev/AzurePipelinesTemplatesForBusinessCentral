@@ -336,11 +336,13 @@ stages:
               
           if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
           {
+             Write-Host -Object "if"
             $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
           else
           {
+          Write-Host -Object "else"
             $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
@@ -366,8 +368,9 @@ stages:
               [System.IO.Directory]::Delete($TempPath, $true)
           }
           
-        
+          Write-Host -Object "FileStoragePath: " $FileStoragePath
           $TempPaths = "$FileStoragePath-Temporary-$env:Build_BuildID"
+          Write-Host -Object "TempPaths: " $TempPaths
           if ([System.IO.Directory]::Exists($TempPaths)) {
                [System.IO.Directory]::Delete($TempPaths, $true)
           }
