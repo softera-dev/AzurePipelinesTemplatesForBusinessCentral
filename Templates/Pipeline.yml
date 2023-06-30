@@ -319,7 +319,7 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
-          $MainAppManifestPath = $MainAppFolder | Join-Path -ChildPath 'app.json'
+          $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
           $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath
           $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
           [version]$ManifestVersionIs = $MainAppManifest.version
