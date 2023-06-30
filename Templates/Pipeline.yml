@@ -320,7 +320,7 @@ stages:
           $ErrorActionPreference = 'Stop'
 
           $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
-          $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath
+          $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
           $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
           [version]$ManifestVersionIs = $MainAppManifest.version
 
