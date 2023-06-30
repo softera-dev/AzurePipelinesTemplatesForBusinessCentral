@@ -194,7 +194,6 @@ stages:
               ConvertFrom-Json |
               Select-Object -ExpandProperty version
             )
-            Write-Host "##vso[task.setvariable variable=ManifestVersion]$ManifestVersion"
             $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
             [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
               param(
@@ -320,9 +319,12 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
+          $MainAppManifestPath = $MainAppFolder | Join-Path -ChildPath 'app.json'
+          $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath
+          $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
+          [version]$ManifestVersionIs = $MainAppManifest.version
 
 
-          [version]$ManifestVersionIs = "$(ManifestVersion)" 
           $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
           Write-Host $ManifestVersion
           
@@ -389,7 +391,8 @@ stages:
           }
         
           
-          
+        env:
+          MainAppFolder: ${{ parameters.mainAppFolder }}
         displayName: Copy files to BCApps
     - ${{ if ne(parameters.latestFolder, '') }}:
       - powershell: |
