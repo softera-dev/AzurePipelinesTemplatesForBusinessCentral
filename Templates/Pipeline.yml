@@ -472,7 +472,7 @@ stages:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
     - ${{ if ne(parameters.appSourceProductBcVersion, '') }}:
-      - powershell: |
+      - pwsh: |
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
           $InformationPreference = 'Continue'
