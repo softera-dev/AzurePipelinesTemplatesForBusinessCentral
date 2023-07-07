@@ -74,10 +74,6 @@ parameters:
   - softera
   default: none
 
-variables:
-- name: 7zExePath
-  value: C:\Program Files\7-Zip\7z.exe
-
 stages:
 - stage: Main
   displayName: Main
@@ -559,7 +555,7 @@ stages:
             Get-ChildItem -LiteralPath $AppSourceProductAppsPath
           )
           foreach ($AppFile in $AppFiles) {
-            [xml]$AppManifest = & $7zExePath e -so $AppFilePath 'NavxManifest.xml'
+            [xml]$AppManifest = & 'C:\Program Files\7-Zip\7z.exe' e -so $AppFilePath 'NavxManifest.xml'
             $AppFile | Add-Member -MemberType NoteProperty -Name AppId -Value $AppManifest.Package.App.Id
             $AppFile | Add-Member -MemberType NoteProperty -Name AppName -Value $AppManifest.Package.App.Name
             $AppFile | Add-Member -MemberType NoteProperty -Name AppPublisher -Value $AppManifest.Package.App.Publisher
