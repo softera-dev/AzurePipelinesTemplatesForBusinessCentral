@@ -502,7 +502,7 @@ stages:
             (($RefType -ceq 'tag') -and ($RefName -clike "prerelease/*/$BcVersion"))
           )
           if (-not $RefSuitableForAppSourcePublishing) {
-            Write-Information -Message 'Source code version is not suitable for AppSource publishing.'
+            Write-Information -Message 'Source code ref is not suitable for AppSource publishing.'
             return
           }
 
