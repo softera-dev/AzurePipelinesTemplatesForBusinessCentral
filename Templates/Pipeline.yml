@@ -61,6 +61,23 @@ parameters:
   type: object
   default: []
 
+- name: appSourceProductId
+  type: string
+  default: ''
+- name: appSourceProductBcVersion
+  type: string
+  default: ''
+- name: appSourceCredential
+  type: string
+  values:
+  - none
+  - softera
+  default: none
+
+variables:
+- name: 7zExePath
+  value: C:\Program Files\7-Zip\7z.exe
+
 stages:
 - stage: Main
   displayName: Main
@@ -453,6 +470,124 @@ stages:
         env:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
+    - ${{ if ne(parameters.appSourceProductBcVersion, '') }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          if (-not $env:APPSOURCE_PRODUCT_ID) {
+            Write-Error -Message 'AppSource product ID was not specified.'
+            return
+          }
+
+          Write-Host -Object "Ref: $env:BUILD_SOURCEBRANCH"
+
+          $RefType, $RefName = $(
+            if ($env:BUILD_SOURCEBRANCH -cmatch '^refs/(?<Type>\w+)s/(?<Name>.*)$') {
+              $Matches['Type', 'Name']
+            }
+          )
+          Write-Host -Object "Ref Type: $RefType"
+          Write-Host -Object "Ref Name: $RefName"
+          if ((-not $RefType) -and (-not $RefName)) {
+            Write-Warning -Message 'Unrecognized source code version.'
+            return
+          }
+
+          $BcVersion = $env:APP_SOURCE_PRODUCT_BC_VERSION
+          $RefSuitableForAppSourcePublishing = $(
+            ($RefType -ceq 'head') -and ($RefName -ceq "code/$BcVersion") -or
+            ($RefType -ceq 'tag') -and ($RefName -clike "prerelease/*/$BcVersion")
+          )
+          if (-not $RefSuitableForAppSourcePublishing) {
+            Write-Information -Message 'Source code version is not suitable for AppSource publishing.'
+            return
+          }
+
+          $OutputAppsPath = '.output' | Join-Path -ChildPath '*.app'
+          if (-not (Test-Path -Path $OutputAppsPath)) {
+            Write-Warning -Message 'No apps to publish.'
+            return
+          }
+
+          $FilestorageAppSourcePath = '\\filestorage\Projects\DevOps\!Pipeline\AppSource'
+          $AppSourceProductPath = $(
+            $FilestorageAppSourcePath |
+            Join-Path -ChildPath 'Products' |
+            Join-Path -ChildPath $env:APPSOURCE_PRODUCT_ID |
+            Join-Path -ChildPath $BcVersion
+          )
+          Write-Host -Object "Initializing AppSource product folder '$AppSourceProductPath'..."
+          New-Item -ItemType Directory -Path $AppSourceProductPath -Force | Out-Null
+          
+          $AppSourcePrereleaseManifestPath = $(
+            $AppSourceProductPath |
+            Join-Path -ChildPath 'prerelease.json'
+          )
+          if (Test-Path -LiteralPath $AppSourcePrereleaseManifestPath) {
+            Remove-Item -LiteralPath $AppSourcePrereleaseManifestPath
+          }
+
+          $AppSourceProductAppsPath = $(
+            $FilestorageAppSourcePath |
+            Join-Path -ChildPath 'PrereleaseApps'
+          )
+          New-Item -ItemType Directory -Path $AppSourceProductAppsPath -Force | Out-Null
+          Remove-Item -Path ($AppSourceProductAppsPath | Join-Path -ChildPath '*')
+
+          Write-Host -Object "Copying AppSource product apps to '$AppSourceProductAppsPath'..."
+          Get-Item -Path $OutputAppsPath |
+          Copy-Item -Destination $AppSourceProductAppsPath
+
+          $MainAppManifestPath = $(
+            $PWD.ProviderPath |
+            Join-Path -ChildPath $env:MAIN_APP_FOLDER |
+            Join-Path -ChildPath 'app.json'
+          )
+          $MainAppManifest = $(
+            $MainAppManifestJson |
+            Get-Content -LiteralPath $MainAppManifestPath |
+            ConvertFrom-Json
+          )
+
+          $AppFiles = @(
+            Get-ChildItem -LiteralPath $AppSourceProductAppsPath
+          )
+          foreach ($AppFile in $AppFiles) {
+            [xml]$AppManifest = & $7zExePath e -so $AppFilePath 'NavxManifest.xml'
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppId -Value $AppManifest.Package.App.Id
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppName -Value $AppManifest.Package.App.Name
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppPublisher -Value $AppManifest.Package.App.Publisher
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppVersionText -Value $AppManifest.Package.App.Version
+          }
+
+          $MainAppFile = $AppFiles | Where-Object -Property AppId -EQ -Value $MainAppManifest.id
+          $LibraryAppFiles = $AppFiles | Where-Object -Property AppId -NE -Value $MainAppManifest.id
+
+          $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
+            [ordered]@{
+              productId = $env:APPSOURCE_PRODUCT_ID
+              bcVersion = $BcVersion
+              productPath = $AppSourceProductPath
+              mainAppId = $MainAppFile.AppId
+              offerAppFilePath = $MainAppFile.FullName
+              libraryAppFilePaths = @($LibraryAppFiles.FullName)
+              credential = $env:APPSOURCE_CREDENTIAL
+            }
+          )
+          
+          Write-Information -Object "Writing AppSource prerelease manifest to '$AppSourcePrereleaseManifestPath'..."
+          $AppSourcePrereleaseManifest |
+          ConvertTo-Json |
+          Out-File -LiteralPath $AppSourcePrereleaseManifestPath -Encoding utf8
+
+          Write-Information -Object 'To publish app to AppSource run ''\\filestorage\Projects\DevOps\!Tools\Publish BC App to AppSource.bat'''.'
+        env:
+          APPSOURCE_PRODUCT_ID: ${{ parameters.appSourceProductId }}
+          APPSOURCE_PRODUCT_BC_VERSION: ${{ parameters.appSourceProductBcVersion }}
+          APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
+          MAIN_APP_FOLDER: ${{ parameters.mainAppFolder }}
+        displayName: Prepare AppSource product for publishing
     - powershell: |
         Remove-BcContainer -containerName $env:ContainerName
         Flush-ContainerHelperCache -KeepDays 1
