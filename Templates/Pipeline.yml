@@ -211,7 +211,6 @@ stages:
               ConvertFrom-Json |
               Select-Object -ExpandProperty version
             )
-            Write-Host "##vso[task.setvariable variable=ManifestVersion]$ManifestVersion"
             $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
             [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
               param(
@@ -251,8 +250,10 @@ stages:
             }
             Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
             Write-Host -Object "Selected application version: $SelectedAppVersion"
-            Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-            Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
+            if ($AppFolder -eq $env:MainAppFolder) {
+              Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
+              Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
+            }
             $ManifestApp = $(
               Get-Content -Path $AppFolder/app.json |
               ConvertFrom-Json )
@@ -337,9 +338,12 @@ stages:
           Set-StrictMode -Version Latest
           $ErrorActionPreference = 'Stop'
 
+          $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
+          $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
+          $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
+          [version]$ManifestVersionIs = $MainAppManifest.version
 
 
-          [version]$ManifestVersionIs = "$(ManifestVersion)" 
           $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
           Write-Host $ManifestVersion
           
@@ -406,7 +410,8 @@ stages:
           }
         
           
-          
+        env:
+          MainAppFolder: ${{ parameters.mainAppFolder }}
         displayName: Copy files to BCApps
     - ${{ if ne(parameters.latestFolder, '') }}:
       - powershell: |
