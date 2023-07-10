@@ -563,8 +563,30 @@ stages:
             $AppFile | Add-Member -MemberType NoteProperty -Name AppVersionText -Value $AppManifest.Package.App.Version
           }
 
+          $AppFolders = @(
+            $env:APP_FOLDERS | ConvertFrom-Json
+          )
+          $AppIds = @(
+            foreach ($AppFolder in $AppFolders) {
+              $AppManifestPath = $(
+                $PWD.ProviderPath |
+                Join-Path -ChildPath $AppFolder |
+                Join-Path -ChildPath 'app.json'
+              )
+              $AppManifest = $(
+                Get-Content -LiteralPath $AppManifestPath |
+                ConvertFrom-Json
+              )
+              $AppManifest.id
+            }
+          )
+
           $MainAppFile = $AppFiles | Where-Object -Property AppId -EQ -Value $MainAppManifest.id
-          $LibraryAppFiles = $AppFiles | Where-Object -Property AppId -NE -Value $MainAppManifest.id
+          $LibraryAppFiles = @(
+            $AppFiles |
+            Where-Object -Property AppId -NE -Value $MainAppManifest.id |
+            Where-Object -Property AppId -NotIn -Value $AppIds
+          )
 
           $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
             [ordered]@{
@@ -587,6 +609,7 @@ stages:
           Write-Information -MessageData 'To publish app to AppSource run ''\\filestorage\Projects\DevOps\!Tools\Publish BC App to AppSource.bat''.'
         env:
           MAIN_APP_FOLDER: ${{ parameters.mainAppFolder }}
+          APP_FOLDERS: ${{ parameters.appFolders }}
           APPSOURCE_PRODUCT_ID: ${{ parameters.appSourceProductId }}
           APPSOURCE_PRODUCT_BC_VERSION: ${{ parameters.appSourceProductBcVersion }}
           APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
