@@ -522,7 +522,7 @@ stages:
           )
           Write-Information -MessageData "Initializing AppSource product folder '$AppSourceProductPath'..."
           New-Item -ItemType Directory -Path $AppSourceProductPath -Force | Out-Null
-          
+
           $AppSourcePrereleaseManifestPath = $(
             $AppSourceProductPath |
             Join-Path -ChildPath 'manifest.json'
@@ -591,29 +591,25 @@ stages:
           $LibraryAppFiles = @(
             $AppFiles |
             Where-Object -Property AppId -NE -Value $MainAppManifest.id |
-            Where-Object -Property AppId -NotIn -Value $AppIds
+            Where-Object -Property AppId -In -Value $AppIds
           )
-          Write-Information -MessageData $(
-            @{
-              MainAppFile = $MainAppFile
-              LibraryAppFiles = $LibraryAppFiles
-            } |
-            Format-List |
-            Out-String
-          )
+          Write-Information -MessageData 'Offer App:'
+          Write-Information -MessageData $MainAppFile.FullName
+          Write-Information -MessageData 'Library Apps:'
+          $LibraryAppFiles | Select-Object -ExpandProperty FullName | Write-Information
 
           $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
             [ordered]@{
-              productId = $env:APPSOURCE_PRODUCT_ID
-              bcVersion = $BcVersion
-              productPath = $AppSourceProductPath
-              mainAppId = $MainAppFile.AppId
-              offerAppFilePath = $MainAppFile.FullName
+              productId           = $env:APPSOURCE_PRODUCT_ID
+              bcVersion           = $BcVersion
+              productPath         = $AppSourceProductPath
+              mainAppId           = $MainAppFile.AppId
+              offerAppFilePath    = $MainAppFile.FullName
               libraryAppFilePaths = @($LibraryAppFiles.FullName)
-              credential = $env:APPSOURCE_CREDENTIAL
+              credential          = $env:APPSOURCE_CREDENTIAL
             }
           )
-          
+
           Write-Information -MessageData "Writing AppSource prerelease manifest to '$AppSourcePrereleaseManifestPath'..."
           $AppSourcePrereleaseManifest |
           ConvertTo-Json |
