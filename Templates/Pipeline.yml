@@ -593,10 +593,14 @@ stages:
             Where-Object -Property AppId -NE -Value $MainAppManifest.id |
             Where-Object -Property AppId -NotIn -Value $AppIds
           )
-          Write-Information -MessageData @{
-            MainAppFile = $MainAppFile
-            LibraryAppFiles = $LibraryAppFiles
-          }
+          Write-Information -MessageData $(
+            @{
+              MainAppFile = $MainAppFile
+              LibraryAppFiles = $LibraryAppFiles
+            } |
+            Format-List |
+            Out-String
+          )
 
           $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
             [ordered]@{
