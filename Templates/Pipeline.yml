@@ -609,7 +609,7 @@ stages:
           Write-Information -MessageData 'To publish app to AppSource run ''\\filestorage\Projects\DevOps\!Tools\Publish BC App to AppSource.bat''.'
         env:
           MAIN_APP_FOLDER: ${{ parameters.mainAppFolder }}
-          APP_FOLDERS: ${{ parameters.appFolders }}
+          APP_FOLDERS: ${{ convertToJson(parameters.appFolders) }}
           APPSOURCE_PRODUCT_ID: ${{ parameters.appSourceProductId }}
           APPSOURCE_PRODUCT_BC_VERSION: ${{ parameters.appSourceProductBcVersion }}
           APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
