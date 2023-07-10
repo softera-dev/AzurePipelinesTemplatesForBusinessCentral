@@ -517,14 +517,15 @@ stages:
             $FilestorageAppSourcePath |
             Join-Path -ChildPath 'Products' |
             Join-Path -ChildPath $env:APPSOURCE_PRODUCT_ID |
-            Join-Path -ChildPath $BcVersion
+            Join-Path -ChildPath $BcVersion |
+            Join-Path -ChildPath 'Prerelease'
           )
           Write-Information -MessageData "Initializing AppSource product folder '$AppSourceProductPath'..."
           New-Item -ItemType Directory -Path $AppSourceProductPath -Force | Out-Null
           
           $AppSourcePrereleaseManifestPath = $(
             $AppSourceProductPath |
-            Join-Path -ChildPath 'prerelease.json'
+            Join-Path -ChildPath 'manifest.json'
           )
           if (Test-Path -LiteralPath $AppSourcePrereleaseManifestPath) {
             Remove-Item -LiteralPath $AppSourcePrereleaseManifestPath
@@ -532,7 +533,7 @@ stages:
 
           $AppSourceProductAppsPath = $(
             $AppSourceProductPath |
-            Join-Path -ChildPath 'PrereleaseApps'
+            Join-Path -ChildPath 'Apps'
           )
           New-Item -ItemType Directory -Path $AppSourceProductAppsPath -Force | Out-Null
           Remove-Item -Path ($AppSourceProductAppsPath | Join-Path -ChildPath '*')
