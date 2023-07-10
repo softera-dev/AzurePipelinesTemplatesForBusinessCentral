@@ -573,7 +573,7 @@ stages:
                 Join-Path -ChildPath $AppFolder |
                 Join-Path -ChildPath 'app.json'
               )
-              $AppManifest = $(
+              [psobject]$AppManifest = $(
                 Get-Content -LiteralPath $AppManifestPath -Raw |
                 ConvertFrom-Json
               )
