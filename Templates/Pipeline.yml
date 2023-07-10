@@ -548,10 +548,11 @@ stages:
             Join-Path -ChildPath 'app.json'
           )
           $MainAppManifest = $(
-            Get-Content -LiteralPath $MainAppManifestPath |
+            Get-Content -LiteralPath $MainAppManifestPath -Raw |
             ConvertFrom-Json
           )
 
+          Write-Information -MessageData 'Reading apps...'
           $AppFiles = @(
             Get-ChildItem -LiteralPath $AppSourceProductAppsPath
           )
@@ -562,6 +563,11 @@ stages:
             $AppFile | Add-Member -MemberType NoteProperty -Name AppPublisher -Value $AppManifest.Package.App.Publisher
             $AppFile | Add-Member -MemberType NoteProperty -Name AppVersionText -Value $AppManifest.Package.App.Version
           }
+          $AppFiles |
+          Select-Object -Property AppId, AppName, AppPublisher, FullName } |
+          Format-Table -AutoSize |
+          Out-String -Width 1000 |
+          Write-Information
 
           $AppFolders = @(
             $env:APP_FOLDERS | ConvertFrom-Json
@@ -587,6 +593,10 @@ stages:
             Where-Object -Property AppId -NE -Value $MainAppManifest.id |
             Where-Object -Property AppId -NotIn -Value $AppIds
           )
+          Write-Information -MessageData @{
+            MainAppFile = $MainAppFile
+            LibraryAppFiles = $LibraryAppFiles
+          }
 
           $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
             [ordered]@{
