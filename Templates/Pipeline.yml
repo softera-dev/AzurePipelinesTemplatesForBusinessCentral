@@ -574,7 +574,7 @@ stages:
                 Join-Path -ChildPath 'app.json'
               )
               $AppManifest = $(
-                Get-Content -LiteralPath $AppManifestPath |
+                Get-Content -LiteralPath $AppManifestPath -Raw |
                 ConvertFrom-Json
               )
               $AppManifest.id
