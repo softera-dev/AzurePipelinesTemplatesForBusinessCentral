@@ -54,6 +54,9 @@
         #>
         'PSUseConsistentIndentation' = @{
             Enable = $true
+            IndentationSize = 4
+            Kind = 'space'
+            PipelineIndentation = 'NoIndentation'
         }
         'PSUseConsistentWhitespace' = @{
             Enable = $true
@@ -61,10 +64,11 @@
         'PSUseCorrectCasing' = @{
             Enable = $true
         }
-        'PSPSUseConsistentIndentation' = @{
-            Enable = $true
-            IndentationSize = 4
-            Kind = 'space'
+        'PSAvoidUsingInvokeExpression' = @{
+            Enable = $false
+        }
+        'PSAvoidUsingConvertToSecureStringWithPlainText' = @{
+            Enable = $false
         }
     }
 }

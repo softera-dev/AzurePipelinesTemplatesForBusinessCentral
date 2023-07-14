@@ -96,15 +96,9 @@ stages:
     steps:
     - checkout: self
       path: s/self
+      clean: true
     - checkout: softeraDevTasks
       path: s/softeraDevTasks
-
-    - pwsh: |
-        & ./softeraDevTasks/Scripts/CheckSystemResources.ps1
-      condition: always()
-      displayName: Checking computer resources
-
-    - checkout: self
       clean: true
 
     - task: DownloadSecureFile@1
@@ -113,199 +107,29 @@ stages:
         secureFile: $(BCAppSigningCertificateSecureFileName)
       displayName: Download certificate for BC app signing
 
+    - pwsh: |
+        & $(
+          $env:BUILD_SOURCESDIRECTORY |
+          Join-Path -ChildPath 'softeraDevTasks' |
+          Join-Path -ChildPath 'Scripts' |
+          Join-Path -ChildPath 'CheckSystemResources.ps1'
+        )
+      condition: always()
+      displayName: Checking computer resources
+
     - powershell: |
-        Set-StrictMode -Version Latest
-        $ErrorActionPreference = 'Stop'
-        $AppFolders = $(
-          $env:AppFolders | ConvertFrom-Json
+        $env:WorkspaceRoot = $(
+          $env:BUILD_SOURCESDIRECTORY |
+          Join-Path -ChildPath 'self'
         )
-        Write-Host -Object 'App folders:'
-        $AppFolders | Out-Host
-        $TestFolders = $(
-          $env:TestFolders | ConvertFrom-Json
+        Set-Location -LiteralPath $env:WorkspaceRoot
+
+        & $(
+          $env:BUILD_SOURCESDIRECTORY |
+          Join-Path -ChildPath 'softeraDevTasks' |
+          Join-Path -ChildPath 'Scripts' |
+          Join-Path -ChildPath 'BuildApps.ps1'
         )
-        Write-Host -Object 'Test app folders:'
-        $TestFolders | Out-Host
-        Write-Host
-        Write-Host -Object "BC version given $env:BcVersion"
-        $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
-        if ($env:BcVersion -notmatch $Pattern) {
-          Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
-          throw 'BC version doesn''t match pattern. '
-        }
-        Write-Host
-        Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
-        Write-Host -Object "Parsed artifact version: $($Matches.Version)"
-        Write-Host -Object "Parsed artifact country: $($Matches.Country)"
-        $GetBcArtifactUrlParameters = @{
-          Type           = $Matches.Type
-          Select         = 'Latest'
-          Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
-          Country        = $Matches.Country
-        }
-        switch ($Matches.Version) {
-          'Current' {
-            $GetBcArtifactUrlParameters.Select = 'Current'
-            break
-          }
-          { $_ -in @('NextMinor', 'NextMajor') } {
-            $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
-            $GetBcArtifactUrlParameters.Select = $Matches.Version
-            break
-          }
-        }
-
-        Write-Host
-        Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
-
-
-
-        $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
-
-        $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
-        $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
-        [version]$Global:PlatformVersion = $BcArtifactManifest.platform
-        $NewBCContainer = {
-          param([hashtable]$Parameters)
-          $Parameters['isolation'] = $env:DockerIsolation
-          New-BcContainer @parameters
-          Write-Host -Object "Running script inside container: $env:BeforeAppsInstallScript"
-          if ($env:BeforeAppsInstallScript) {
-            Invoke-ScriptInBcContainer -containerName $Parameters.containerName -argumentList $env:BeforeAppsInstallScript -scriptBlock {
-              param(
-                $BeforeAppsInstallScript
-              )
-              Invoke-Expression -Command $BeforeAppsInstallScript
-            }
-          }
-          if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
-            Invoke-ScriptInBcContainer $Parameters.containerName -scriptblock {
-              $ProgressPreference = 'SilentlyContinue'
-              Remove-Item -Path 'C:\run\*.vsix'
-            }
-          }
-          if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
-            Copy-FileToBCContainer -containerName $Parameters.containerName -localPath $env:ALLanguageExtensionFileName -containerPath 'C:\run\ALLanguage.vsix'
-          }
-          [version]$AppVersion = $(
-            Get-Content -Path $env:MainAppFolder/app.json |
-            ConvertFrom-Json |
-            Select-Object -ExpandProperty application
-          )
-          foreach ($AppFolder in $AppFolders) {
-            Write-Host
-            Write-Host -Object "Updating app version in '$AppFolder'..."
-            [version]$CustomAppVersion = $env:CustomAppVersion
-            [version]$ManifestVersion = $(
-              Get-Content -Path $AppFolder/app.json |
-              ConvertFrom-Json |
-              Select-Object -ExpandProperty version
-            )
-            $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
-            [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
-              param(
-                [System.Text.RegularExpressions.Match]$Match
-              )
-              switch -CaseSensitive ($Match.Groups['Identifier'].Value) {
-                'Manifest.Major' { $ManifestVersion.Major }
-                'Manifest.Minor' { $ManifestVersion.Minor }
-                'Manifest.Build' { $ManifestVersion.Build }
-                'Manifest.Revision' { $ManifestVersion.Revision }
-                'Container.Major' { $PlatformVersion.Major }
-                'Container.Minor' { $PlatformVersion.Minor }
-                'Container.Build' { $PlatformVersion.Build }
-                'Container.Revision' { $PlatformVersion.Revision }
-                'Custom.Major' { $CustomAppVersion.Major }
-                'Custom.Minor' { $CustomAppVersion.Minor }
-                'Custom.Build' { $CustomAppVersion.Build }
-                'Custom.Revision' { $CustomAppVersion.Revision }
-                'Release.Major' { $SelectedAppReleaseVersion.Major }
-                'Release.Minor' { $SelectedAppReleaseVersion.Minor }
-                'Release.Build' { $SelectedAppReleaseVersion.Build }
-                'Release.Revision' { $SelectedAppReleaseVersion.Revision }
-              }
-            }
-            [version]$SelectedAppReleaseVersion = [regex]::Replace($env:AppReleaseVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
-            [version]$SelectedAppVersion = [regex]::Replace($env:AppVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
-            if ($ManifestVersion.Major -ne $SelectedAppVersion.Major -or `
-                $ManifestVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
-                $ManifestVersion.Build -ne $SelectedAppVersion.Build -and `
-                $ManifestVersion.Revision -ne $SelectedAppVersion.Revision) {
-              if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
-                Write-Warning -Message "Manifest app version does not match selected app version."
-              }
-              if ($ManifestVersionMismatchAction -eq 'error') {
-                exit(1)
-              }
-            }
-            Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
-            Write-Host -Object "Selected application version: $SelectedAppVersion"
-            if ($AppFolder -eq $env:MainAppFolder) {
-              Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
-              Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
-            }
-            $ManifestApp = $(
-              Get-Content -Path $AppFolder/app.json |
-              ConvertFrom-Json )
-            $ManifestApp.Version = [string]$SelectedAppVersion
-            $ManifestApp |
-            ConvertTo-Json |
-            Set-Content -LiteralPath $AppFolder/app.json
-          }
-        }
-        $InstallAppsFolders = $(
-          $env:LatestDependencyAppPaths | ConvertFrom-Json
-        )
-        $AppsFromDependencies = @(
-          $InstallAppsFolders |
-          Where-Object -FilterScript { $_ } |
-          ForEach-Object -Process {
-            $AppFiles = `
-              Get-ChildItem -LiteralPath $_ -Filter '*.app' -Recurse |
-            Select-Object -ExpandProperty FullName
-            if ($AppFiles) {
-              $AppFiles
-            } else {
-              Write-Host -Object "No app files found in folder $_."
-              throw 'No app files found in folder.'
-            }
-          }
-        )
-        Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
-        $Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
-        Write-Host -Object "##vso[task.setvariable variable=ContainerName;]$Global:ContainerName"
-        $LicensePath = $(
-          ($PlatformVersion.Major)..12 |
-          ForEach-Object -Process {
-            $LicenseFileExtension = 'bclicense'
-            if ($_ -lt 20) {
-              $LicenseFileExtension = 'flf'
-            }
-            "\\filestorage\Projects\DevOps\!Pipeline\Licenses\BC$_.$LicenseFileExtension"
-          } |
-          Resolve-Path |
-          Select-Object -First 1 -ExpandProperty ProviderPath
-        )
-        Write-Host -Object "Selected license path for platform BC$($PlatformVersion.Major): $LicensePath"
-        $GetRunAlPipelineParameters = @{
-          pipelinename                = 'Build'
-          containerName               = $Global:ContainerName
-          artifact                    = $BcArtifactUrl
-          baseFolder                  = $env:BUILD_SOURCESDIRECTORY
-          licenseFile                 = $LicensePath
-          appFolders                  = $AppFolders
-          testFolders                 = $TestFolders
-          memoryLimit                 = $env:DockerMemory
-          codeSignCertPfxFile         = $env:CodeSignCertPfxFile
-          codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
-          installApps                 = $AppsFromDependencies
-          installTestRunner           = $true
-          installTestFramework        = $true
-          installTestLibraries        = $true
-          azureDevOps                 = $true
-          NewBCContainer              = $NewBCContainer
-        }
-        Run-AlPipeline @GetRunAlPipelineParameters
       env:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
@@ -323,302 +147,303 @@ stages:
         BeforeAppsInstallScript: ${{ parameters.beforeAppsInstallScript }}
         LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
       displayName: Run Pipeline
-    - ${{ if parameters.publishOutput }}:
-      - powershell: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = 'Stop'
+    # - ${{ if parameters.publishOutput }}:
+    #   - powershell: |
+    #       Set-StrictMode -Version Latest
+    #       $ErrorActionPreference = 'Stop'
 
-          $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
-          $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
-          $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
-          [version]$ManifestVersionIs = $MainAppManifest.version
-
-
-          $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
-          Write-Host $ManifestVersion
-
-          $BranchName = $(
-            if ($env:IsPullRequest -eq 'false') {
-                $env:Build_SourceBranchName
-            } else {
-                $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
-            }
-          )
-
-          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
-          {
-            $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-          }
-          else
-          {
-            $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-          }
-
-          $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
-          if ([System.IO.Directory]::Exists($TempPath)) {
-              throw "TempPath ($TempPath) already exist"
-          }
-          [System.IO.Directory]::CreateDirectory($TempPath)
-          Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
-          $OldPath = "$CommonPath-Old"
-          if ([System.IO.Directory]::Exists($OldPath)) {
-              [System.IO.Directory]::Delete($OldPath, $true)
-          }
-          $Path = $CommonPath
-          if ([System.IO.Directory]::Exists($Path)) {
-              [System.IO.Directory]::CreateDirectory($Path)
-              Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($Path, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Path))) {
-              Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($TempPath, $true)
-          }
+    #       $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
+    #       $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
+    #       $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
+    #       [version]$ManifestVersionIs = $MainAppManifest.version
 
 
-          $TempPaths = "$FileStoragePath-Temporary-$env:Build_BuildID"
-          if ([System.IO.Directory]::Exists($TempPaths)) {
-               [System.IO.Directory]::Delete($TempPaths, $true)
-          }
-          [System.IO.Directory]::CreateDirectory($TempPaths)
-          Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
-          $OldPaths = "$CommonPath-Old"
-          if ([System.IO.Directory]::Exists($OldPaths)) {
-              [System.IO.Directory]::Delete($OldPaths, $true)
-          }
-          $Paths = $FileStoragePath
-          if ([System.IO.Directory]::Exists($Paths)) {
-              [System.IO.Directory]::CreateDirectory($Paths)
-              Copy-Item -Path $Paths\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($Paths, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Paths))) {
-              Copy-Item -Path $TempPaths -Destination $Paths -Recurse -Force -ErrorAction SilentlyContinue
-              [System.IO.Directory]::Delete($TempPaths, $true)
-          }
+    #       $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
+    #       Write-Host $ManifestVersion
+
+    #       $BranchName = $(
+    #         if ($env:IsPullRequest -eq 'false') {
+    #             $env:Build_SourceBranchName
+    #         } else {
+    #             $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+    #         }
+    #       )
+
+    #       if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
+    #       {
+    #         $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+    #         $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+    #       }
+    #       else
+    #       {
+    #         $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+    #         $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+    #       }
+
+    #       $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
+    #       if ([System.IO.Directory]::Exists($TempPath)) {
+    #           throw "TempPath ($TempPath) already exist"
+    #       }
+    #       [System.IO.Directory]::CreateDirectory($TempPath)
+    #       Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
+    #       $OldPath = "$CommonPath-Old"
+    #       if ([System.IO.Directory]::Exists($OldPath)) {
+    #           [System.IO.Directory]::Delete($OldPath, $true)
+    #       }
+    #       $Path = $CommonPath
+    #       if ([System.IO.Directory]::Exists($Path)) {
+    #           [System.IO.Directory]::CreateDirectory($Path)
+    #           Copy-Item -Path $Path\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
+    #           [System.IO.Directory]::Delete($Path, $true)
+    #       }
+    #       if (-not ([System.IO.Directory]::Exists($Path))) {
+    #           Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
+    #           [System.IO.Directory]::Delete($TempPath, $true)
+    #       }
 
 
-        env:
-          MainAppFolder: ${{ parameters.mainAppFolder }}
-        displayName: Copy files to BCApps
-    - ${{ if ne(parameters.latestFolder, '') }}:
-      - powershell: |
-          Set-StrictMode -Version Latest
-
-          $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
-          if($NamePath.Contains('RELEASE')){
-          $NamePath = $NamePath -replace 'RELEASE-',''
-          }
-
-          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
-          $outputFile = Split-Path $NameFile -leaf
-
-
-          $Outputfilepath = @()
-          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
-          {
-          $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
-          foreach ($i in $outputFile)
-          {
-          $i = $i -replace ".{12}$"
-          $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
-          }
-          }
-
-          else{
-          $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
-          foreach ($i in $outputFile)
-          {
-          $i = $i -replace ".{12}$"
-          $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
-          }
-          }
-
-          if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
-              [System.IO.Directory]::CreateDirectory($FileStoragePath)
-          }
-
-          foreach ($o2 in $Outputfilepath){
-          if (Test-Path -Path "$o2*") {
-          Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
-          (Get-ChildItem -Path "$o2*").Delete()
-          }
-          }
-
-          if ([System.IO.Directory]::Exists($Path)) {
-              [System.IO.Directory]::Delete($Path, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Path))) {
-              [System.IO.Directory]::CreateDirectory($Path)
-              Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-          }
-
-          if ([System.IO.Directory]::Exists($FileStoragePath)) {
-              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
-          }
+    #       $TempPaths = "$FileStoragePath-Temporary-$env:Build_BuildID"
+    #       if ([System.IO.Directory]::Exists($TempPaths)) {
+    #            [System.IO.Directory]::Delete($TempPaths, $true)
+    #       }
+    #       [System.IO.Directory]::CreateDirectory($TempPaths)
+    #       Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
+    #       $OldPaths = "$CommonPath-Old"
+    #       if ([System.IO.Directory]::Exists($OldPaths)) {
+    #           [System.IO.Directory]::Delete($OldPaths, $true)
+    #       }
+    #       $Paths = $FileStoragePath
+    #       if ([System.IO.Directory]::Exists($Paths)) {
+    #           [System.IO.Directory]::CreateDirectory($Paths)
+    #           Copy-Item -Path $Paths\* -Destination $OldPath -Recurse -Force -ErrorAction SilentlyContinue
+    #           [System.IO.Directory]::Delete($Paths, $true)
+    #       }
+    #       if (-not ([System.IO.Directory]::Exists($Paths))) {
+    #           Copy-Item -Path $TempPaths -Destination $Paths -Recurse -Force -ErrorAction SilentlyContinue
+    #           [System.IO.Directory]::Delete($TempPaths, $true)
+    #       }
 
 
-        env:
-          LatestFolder: ${{ parameters.latestFolder }}
-        displayName: Copy files to Latest folder
-    - ${{ if ne(parameters.appSourceProductBcVersion, '') }}:
-      - pwsh: |
-          Set-StrictMode -Version Latest
-          $ErrorActionPreference = 'Stop'
-          $InformationPreference = 'Continue'
+    #     env:
+    #       MainAppFolder: ${{ parameters.mainAppFolder }}
+    #     displayName: Copy files to BCApps
+    # - ${{ if ne(parameters.latestFolder, '') }}:
+    #   - powershell: |
+    #       Set-StrictMode -Version Latest
 
-          if (-not $env:APPSOURCE_PRODUCT_ID) {
-            Write-Error -Message 'AppSource product ID was not specified.'
-            return
-          }
+    #       $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
+    #       if($NamePath.Contains('RELEASE')){
+    #       $NamePath = $NamePath -replace 'RELEASE-',''
+    #       }
 
-          Write-Information -MessageData "Ref: $env:BUILD_SOURCEBRANCH"
+    #       $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
+    #       $outputFile = Split-Path $NameFile -leaf
 
-          $RefType, $RefName = $(
-            if ($env:BUILD_SOURCEBRANCH -cmatch '^refs/(?<Type>\w+)s/(?<Name>.*)$') {
-              $Matches['Type', 'Name']
-            }
-          )
-          Write-Information -MessageData "Ref Type: $RefType"
-          Write-Information -MessageData "Ref Name: $RefName"
-          if ((-not $RefType) -and (-not $RefName)) {
-            Write-Warning -Message 'Unrecognized source code version.'
-            return
-          }
 
-          $BcVersion = $env:APPSOURCE_PRODUCT_BC_VERSION
-          $RefSuitableForAppSourcePublishing = $(
-            (($RefType -ceq 'head') -and ($RefName -ceq "code/$BcVersion")) -or
-            (($RefType -ceq 'tag') -and ($RefName -clike "prerelease/*/$BcVersion"))
-          )
-          if (-not $RefSuitableForAppSourcePublishing) {
-            Write-Information -Message 'Source code ref is not suitable for AppSource publishing.'
-            return
-          }
+    #       $Outputfilepath = @()
+    #       if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
+    #       {
+    #       $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+    #       $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
+    #       foreach ($i in $outputFile)
+    #       {
+    #       $i = $i -replace ".{12}$"
+    #       $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
+    #       }
+    #       }
 
-          $OutputAppsPath = '.output' | Join-Path -ChildPath '*.app'
-          if (-not (Test-Path -Path $OutputAppsPath)) {
-            Write-Warning -Message 'No apps to publish.'
-            return
-          }
+    #       else{
+    #       $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
+    #       $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
+    #       foreach ($i in $outputFile)
+    #       {
+    #       $i = $i -replace ".{12}$"
+    #       $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
+    #       }
+    #       }
 
-          $FilestorageAppSourcePath = '\\filestorage\Projects\DevOps\!Pipeline\AppSource'
-          $AppSourceProductPath = $(
-            $FilestorageAppSourcePath |
-            Join-Path -ChildPath 'Products' |
-            Join-Path -ChildPath $env:APPSOURCE_PRODUCT_ID |
-            Join-Path -ChildPath $BcVersion |
-            Join-Path -ChildPath 'Prerelease'
-          )
-          Write-Information -MessageData "Initializing AppSource product folder '$AppSourceProductPath'..."
-          New-Item -ItemType Directory -Path $AppSourceProductPath -Force | Out-Null
+    #       if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
+    #           [System.IO.Directory]::CreateDirectory($FileStoragePath)
+    #       }
 
-          $AppSourcePrereleaseManifestPath = $(
-            $AppSourceProductPath |
-            Join-Path -ChildPath 'manifest.json'
-          )
-          if (Test-Path -LiteralPath $AppSourcePrereleaseManifestPath) {
-            Remove-Item -LiteralPath $AppSourcePrereleaseManifestPath
-          }
+    #       foreach ($o2 in $Outputfilepath){
+    #       if (Test-Path -Path "$o2*") {
+    #       Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
+    #       (Get-ChildItem -Path "$o2*").Delete()
+    #       }
+    #       }
 
-          $AppSourceProductAppsPath = $(
-            $AppSourceProductPath |
-            Join-Path -ChildPath 'Apps'
-          )
-          New-Item -ItemType Directory -Path $AppSourceProductAppsPath -Force | Out-Null
-          Remove-Item -Path ($AppSourceProductAppsPath | Join-Path -ChildPath '*')
+    #       if ([System.IO.Directory]::Exists($Path)) {
+    #           [System.IO.Directory]::Delete($Path, $true)
+    #       }
+    #       if (-not ([System.IO.Directory]::Exists($Path))) {
+    #           [System.IO.Directory]::CreateDirectory($Path)
+    #           Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
+    #       }
 
-          Write-Information -MessageData "Copying AppSource product apps to '$AppSourceProductAppsPath'..."
-          Get-Item -Path $OutputAppsPath |
-          Copy-Item -Destination $AppSourceProductAppsPath
+    #       if ([System.IO.Directory]::Exists($FileStoragePath)) {
+    #           Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
+    #       }
 
-          $MainAppManifestPath = $(
-            $PWD.ProviderPath |
-            Join-Path -ChildPath $env:MAIN_APP_FOLDER |
-            Join-Path -ChildPath 'app.json'
-          )
-          $MainAppManifest = $(
-            Get-Content -LiteralPath $MainAppManifestPath -Raw |
-            ConvertFrom-Json
-          )
 
-          Write-Information -MessageData 'Reading apps...'
-          $AppFiles = @(
-            Get-ChildItem -LiteralPath $AppSourceProductAppsPath
-          )
-          foreach ($AppFile in $AppFiles) {
-            [xml]$AppManifest = & 'C:\Program Files\7-Zip\7z.exe' e -so $AppFile.FullName 'NavxManifest.xml'
-            $AppFile | Add-Member -MemberType NoteProperty -Name AppId -Value $AppManifest.Package.App.Id
-            $AppFile | Add-Member -MemberType NoteProperty -Name AppName -Value $AppManifest.Package.App.Name
-            $AppFile | Add-Member -MemberType NoteProperty -Name AppPublisher -Value $AppManifest.Package.App.Publisher
-            $AppFile | Add-Member -MemberType NoteProperty -Name AppVersionText -Value $AppManifest.Package.App.Version
-          }
-          $AppFiles |
-          Select-Object -Property AppId, AppName, AppPublisher, FullName |
-          Format-Table -AutoSize |
-          Out-String -Width 1000 |
-          Write-Information
+    #     env:
+    #       LatestFolder: ${{ parameters.latestFolder }}
+    #     displayName: Copy files to Latest folder
+    # - ${{ if ne(parameters.appSourceProductBcVersion, '') }}:
+    #   - pwsh: |
+    #       Set-StrictMode -Version Latest
+    #       $ErrorActionPreference = 'Stop'
+    #       $InformationPreference = 'Continue'
 
-          $AppFolders = @(
-            $env:APP_FOLDERS | ConvertFrom-Json
-          )
-          $AppIds = @(
-            foreach ($AppFolder in $AppFolders) {
-              $AppManifestPath = $(
-                $PWD.ProviderPath |
-                Join-Path -ChildPath $AppFolder |
-                Join-Path -ChildPath 'app.json'
-              )
-              [psobject]$AppManifest = $(
-                Get-Content -LiteralPath $AppManifestPath -Raw |
-                ConvertFrom-Json
-              )
-              $AppManifest.id
-            }
-          )
+    #       if (-not $env:APPSOURCE_PRODUCT_ID) {
+    #         Write-Error -Message 'AppSource product ID was not specified.'
+    #         return
+    #       }
 
-          $MainAppFile = $AppFiles | Where-Object -Property AppId -EQ -Value $MainAppManifest.id
-          $LibraryAppFiles = @(
-            $AppFiles |
-            Where-Object -Property AppId -NE -Value $MainAppManifest.id |
-            Where-Object -Property AppId -In -Value $AppIds
-          )
-          Write-Information -MessageData 'Offer App:'
-          Write-Information -MessageData $MainAppFile.FullName
-          Write-Information -MessageData 'Library Apps:'
-          $LibraryAppFiles | Select-Object -ExpandProperty FullName | Write-Information
+    #       Write-Information -MessageData "Ref: $env:BUILD_SOURCEBRANCH"
 
-          $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
-            [ordered]@{
-              productId           = $env:APPSOURCE_PRODUCT_ID
-              bcVersion           = $BcVersion
-              productPath         = $AppSourceProductPath
-              mainAppId           = $MainAppFile.AppId
-              offerAppFilePath    = $MainAppFile.FullName
-              libraryAppFilePaths = @($LibraryAppFiles.FullName)
-              credential          = $env:APPSOURCE_CREDENTIAL
-            }
-          )
+    #       $RefType, $RefName = $(
+    #         if ($env:BUILD_SOURCEBRANCH -cmatch '^refs/(?<Type>\w+)s/(?<Name>.*)$') {
+    #           $Matches['Type', 'Name']
+    #         }
+    #       )
+    #       Write-Information -MessageData "Ref Type: $RefType"
+    #       Write-Information -MessageData "Ref Name: $RefName"
+    #       if ((-not $RefType) -and (-not $RefName)) {
+    #         Write-Warning -Message 'Unrecognized source code version.'
+    #         return
+    #       }
 
-          Write-Information -MessageData "Writing AppSource prerelease manifest to '$AppSourcePrereleaseManifestPath'..."
-          $AppSourcePrereleaseManifest |
-          ConvertTo-Json |
-          Out-File -LiteralPath $AppSourcePrereleaseManifestPath -Encoding utf8
+    #       $BcVersion = $env:APPSOURCE_PRODUCT_BC_VERSION
+    #       $RefSuitableForAppSourcePublishing = $(
+    #         (($RefType -ceq 'head') -and ($RefName -ceq "code/$BcVersion")) -or
+    #         (($RefType -ceq 'tag') -and ($RefName -clike "prerelease/*/$BcVersion"))
+    #       )
+    #       if (-not $RefSuitableForAppSourcePublishing) {
+    #         Write-Information -Message 'Source code ref is not suitable for AppSource publishing.'
+    #         return
+    #       }
 
-          Write-Information -MessageData ''
-          Write-Information -MessageData 'To publish app to AppSource run ''\\filestorage\Projects\DevOps\!Tools\Publish BC App to AppSource.bat''.'
-        env:
-          MAIN_APP_FOLDER: ${{ parameters.mainAppFolder }}
-          APP_FOLDERS: ${{ convertToJson(parameters.appFolders) }}
-          APPSOURCE_PRODUCT_ID: ${{ parameters.appSourceProductId }}
-          APPSOURCE_PRODUCT_BC_VERSION: ${{ parameters.appSourceProductBcVersion }}
-          APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
-        displayName: Prepare AppSource product for publishing
-    - powershell: |
+    #       $OutputAppsPath = '.output' | Join-Path -ChildPath '*.app'
+    #       if (-not (Test-Path -Path $OutputAppsPath)) {
+    #         Write-Warning -Message 'No apps to publish.'
+    #         return
+    #       }
+
+    #       $FilestorageAppSourcePath = '\\filestorage\Projects\DevOps\!Pipeline\AppSource'
+    #       $AppSourceProductPath = $(
+    #         $FilestorageAppSourcePath |
+    #         Join-Path -ChildPath 'Products' |
+    #         Join-Path -ChildPath $env:APPSOURCE_PRODUCT_ID |
+    #         Join-Path -ChildPath $BcVersion |
+    #         Join-Path -ChildPath 'Prerelease'
+    #       )
+    #       Write-Information -MessageData "Initializing AppSource product folder '$AppSourceProductPath'..."
+    #       New-Item -ItemType Directory -Path $AppSourceProductPath -Force | Out-Null
+
+    #       $AppSourcePrereleaseManifestPath = $(
+    #         $AppSourceProductPath |
+    #         Join-Path -ChildPath 'manifest.json'
+    #       )
+    #       if (Test-Path -LiteralPath $AppSourcePrereleaseManifestPath) {
+    #         Remove-Item -LiteralPath $AppSourcePrereleaseManifestPath
+    #       }
+
+    #       $AppSourceProductAppsPath = $(
+    #         $AppSourceProductPath |
+    #         Join-Path -ChildPath 'Apps'
+    #       )
+    #       New-Item -ItemType Directory -Path $AppSourceProductAppsPath -Force | Out-Null
+    #       Remove-Item -Path ($AppSourceProductAppsPath | Join-Path -ChildPath '*')
+
+    #       Write-Information -MessageData "Copying AppSource product apps to '$AppSourceProductAppsPath'..."
+    #       Get-Item -Path $OutputAppsPath |
+    #       Copy-Item -Destination $AppSourceProductAppsPath
+
+    #       $MainAppManifestPath = $(
+    #         $PWD.ProviderPath |
+    #         Join-Path -ChildPath $env:MAIN_APP_FOLDER |
+    #         Join-Path -ChildPath 'app.json'
+    #       )
+    #       $MainAppManifest = $(
+    #         Get-Content -LiteralPath $MainAppManifestPath -Raw |
+    #         ConvertFrom-Json
+    #       )
+
+    #       Write-Information -MessageData 'Reading apps...'
+    #       $AppFiles = @(
+    #         Get-ChildItem -LiteralPath $AppSourceProductAppsPath
+    #       )
+    #       foreach ($AppFile in $AppFiles) {
+    #         [xml]$AppManifest = & 'C:\Program Files\7-Zip\7z.exe' e -so $AppFile.FullName 'NavxManifest.xml'
+    #         $AppFile | Add-Member -MemberType NoteProperty -Name AppId -Value $AppManifest.Package.App.Id
+    #         $AppFile | Add-Member -MemberType NoteProperty -Name AppName -Value $AppManifest.Package.App.Name
+    #         $AppFile | Add-Member -MemberType NoteProperty -Name AppPublisher -Value $AppManifest.Package.App.Publisher
+    #         $AppFile | Add-Member -MemberType NoteProperty -Name AppVersionText -Value $AppManifest.Package.App.Version
+    #       }
+    #       $AppFiles |
+    #       Select-Object -Property AppId, AppName, AppPublisher, FullName |
+    #       Format-Table -AutoSize |
+    #       Out-String -Width 1000 |
+    #       Write-Information
+
+    #       $AppFolders = @(
+    #         $env:APP_FOLDERS | ConvertFrom-Json
+    #       )
+    #       $AppIds = @(
+    #         foreach ($AppFolder in $AppFolders) {
+    #           $AppManifestPath = $(
+    #             $PWD.ProviderPath |
+    #             Join-Path -ChildPath $AppFolder |
+    #             Join-Path -ChildPath 'app.json'
+    #           )
+    #           [psobject]$AppManifest = $(
+    #             Get-Content -LiteralPath $AppManifestPath -Raw |
+    #             ConvertFrom-Json
+    #           )
+    #           $AppManifest.id
+    #         }
+    #       )
+
+    #       $MainAppFile = $AppFiles | Where-Object -Property AppId -EQ -Value $MainAppManifest.id
+    #       $LibraryAppFiles = @(
+    #         $AppFiles |
+    #         Where-Object -Property AppId -NE -Value $MainAppManifest.id |
+    #         Where-Object -Property AppId -In -Value $AppIds
+    #       )
+    #       Write-Information -MessageData 'Offer App:'
+    #       Write-Information -MessageData $MainAppFile.FullName
+    #       Write-Information -MessageData 'Library Apps:'
+    #       $LibraryAppFiles | Select-Object -ExpandProperty FullName | Write-Information
+
+    #       $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
+    #         [ordered]@{
+    #           productId           = $env:APPSOURCE_PRODUCT_ID
+    #           bcVersion           = $BcVersion
+    #           productPath         = $AppSourceProductPath
+    #           mainAppId           = $MainAppFile.AppId
+    #           offerAppFilePath    = $MainAppFile.FullName
+    #           libraryAppFilePaths = @($LibraryAppFiles.FullName)
+    #           credential          = $env:APPSOURCE_CREDENTIAL
+    #         }
+    #       )
+
+    #       Write-Information -MessageData "Writing AppSource prerelease manifest to '$AppSourcePrereleaseManifestPath'..."
+    #       $AppSourcePrereleaseManifest |
+    #       ConvertTo-Json |
+    #       Out-File -LiteralPath $AppSourcePrereleaseManifestPath -Encoding utf8
+
+    #       Write-Information -MessageData ''
+    #       Write-Information -MessageData 'To publish app to AppSource run ''\\filestorage\Projects\DevOps\!Tools\Publish BC App to AppSource.bat''.'
+    #     env:
+    #       MAIN_APP_FOLDER: ${{ parameters.mainAppFolder }}
+    #       APP_FOLDERS: ${{ convertToJson(parameters.appFolders) }}
+    #       APPSOURCE_PRODUCT_ID: ${{ parameters.appSourceProductId }}
+    #       APPSOURCE_PRODUCT_BC_VERSION: ${{ parameters.appSourceProductBcVersion }}
+    #       APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
+    #     displayName: Prepare AppSource product for publishing
+    - pwsh: |
+        Import-Module -Name BcContainerHelper -DisableNameChecking -Force
         Remove-BcContainer -containerName $env:ContainerName
         Flush-ContainerHelperCache -KeepDays 1
       condition: always()

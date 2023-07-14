@@ -30,6 +30,10 @@ $ResourceErrors = @(
 )
 
 if ($ResourceErrors) {
-    $ResourceErrors | Out-Host
-    Write-Error -Message 'Insufficient resources to run pipeline.'
+    $ResourceErrors += -join @(
+        '##vso[task.logissue type=error;]'
+        'Insufficient resources to run pipeline.'
+    )
+    $ResourceErrors | Out-Information
+    exit(1)
 }
