@@ -443,9 +443,18 @@ stages:
     #       APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
     #     displayName: Prepare AppSource product for publishing
     - pwsh: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        $InformationPreference = 'Continue'
+
         Import-Module -Name BcContainerHelper -DisableNameChecking -Force
-        Remove-BcContainer -containerName $env:ContainerName
-        Flush-ContainerHelperCache -KeepDays 1
+
+        if ($env:ContainerName) {
+          Write-Information -MessageData "Removing BC container '$env:ContainerName'..."
+          Remove-BcContainer -containerName $env:ContainerName
+        }
+
+        Flush-ContainerHelperCache -keepDays 1
       condition: always()
       env:
         ContainerName: $(ContainerName)
