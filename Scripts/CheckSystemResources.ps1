@@ -10,7 +10,7 @@ $FreeSystemDriveSpaceInBytes = (Get-PSDrive -Name $SystemDrive).Free
 $FreePhysicalMemoryInBytes = $OS.FreePhysicalMemory * 1KB
 
 $ResourceErrors = @(
-    $RequiredFreeSystemDriveSpaceInBytes = 10000GB
+    $RequiredFreeSystemDriveSpaceInBytes = 10GB
     if ($FreeSystemDriveSpaceInBytes -lt $RequiredFreeSystemDriveSpaceInBytes) {
         -join @(
             '##vso[task.logissue type=error;]'
@@ -19,7 +19,7 @@ $ResourceErrors = @(
         )
     }
 
-    $RequiredFreePhysicalMemoryInBytes = 4000GB
+    $RequiredFreePhysicalMemoryInBytes = 4GB
     if ($FreePhysicalMemoryInBytes -lt $RequiredFreePhysicalMemoryInBytes) {
         -join @(
             '##vso[task.logissue type=error;]'
