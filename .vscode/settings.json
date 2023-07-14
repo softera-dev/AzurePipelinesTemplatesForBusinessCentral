@@ -1,0 +1,45 @@
+{
+    "files.exclude": {
+        "Code": true,
+        "*.code-workspace": true,
+    },
+    "[powershell]": {
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
+    },
+    "[azure-pipelines]": {
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
+    },
+    "[yaml]": {
+        "editor.formatOnSave": true,
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
+    },
+    "[json]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "vscode.json-language-features",
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
+    },
+    "[jsonc]": {
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "vscode.json-language-features",
+        "files.trimTrailingWhitespace": true,
+        "files.trimFinalNewlines": true,
+        "files.insertFinalNewline": true,
+    },
+    "powershell.codeFormatting.preset": "OTBS",
+    "powershell.scriptAnalysis.enable": true,
+    "powershell.scriptAnalysis.settingsPath": "C:\\Users\\ernjus\\My\\Git\\github.com\\softera-dev\\AzurePipelinesTemplatesForBusinessCentral\\Code\\PSScriptAnalyzerSettings.psd1",
+    "powershell.cwd": "C:\\Users\\ernjus\\My\\Git\\github.com\\softera-dev\\AzurePipelinesTemplatesForBusinessCentral\\Code",
+    "git.enableSmartCommit": true,
+    "git.autofetch": true,
+    "git.confirmSync": false,
+}

@@ -94,22 +94,16 @@ stages:
     - name: BcApplicationVersion
       value: ''
     steps:
-    - powershell: |
-        $ExitCode = 0
-        $FreeDiskSpace = Get-PSDrive -Name C | Select-Object -ExpandProperty Free
-        if ($FreeDiskSpace -lt 10gb) {
-            Write-Host -Object '##[error]There is no free disk space left. There must be atleast 10 GB.'
-            $ExitCode = 1
-        }
-        Add-Type -AssemblyName Microsoft.VisualBasic
-        $ComputerInfo = [Microsoft.VisualBasic.Devices.ComputerInfo]::new()
-        if ($ComputerInfo.AvailablePhysicalMemory -lt 4gb) {
-            Write-Host -Object '##[error]There is no free memory space left. There must be atleast 4 GB.'
-            $ExitCode = 1
-        }
-        exit($ExitCode)
+    - checkout: self
+      path: workspace
+    - checkout: softeraDevTasks
+      path: softeraDevTasks
+
+    - pwsh: |
+        Get-ChildItem -LiteralPath $env:BUILD_SOURCESDIRECTORY
       condition: always()
-      displayName: Checking free disk and ram space
+      displayName: Checking computer resources
+
     - checkout: self
       clean: true
 
@@ -156,7 +150,7 @@ stages:
           }
           { $_ -in @('NextMinor', 'NextMajor') } {
             $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
-            $GetBcArtifactUrlParameters.Select = $Matches.Version            
+            $GetBcArtifactUrlParameters.Select = $Matches.Version
             break
           }
         }
@@ -167,7 +161,7 @@ stages:
 
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
-        
+
         $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
         $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
         [version]$Global:PlatformVersion = $BcArtifactManifest.platform
@@ -342,7 +336,7 @@ stages:
 
           $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
           Write-Host $ManifestVersion
-          
+
           $BranchName = $(
             if ($env:IsPullRequest -eq 'false') {
                 $env:Build_SourceBranchName
@@ -350,7 +344,7 @@ stages:
                 $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
             }
           )
-              
+
           if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
           {
             $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
@@ -361,7 +355,7 @@ stages:
             $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
             $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
-          
+
           $TempPath = "$CommonPath-Temporary-$env:Build_BuildID"
           if ([System.IO.Directory]::Exists($TempPath)) {
               throw "TempPath ($TempPath) already exist"
@@ -382,8 +376,8 @@ stages:
               Copy-Item -Path $TempPath -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
               [System.IO.Directory]::Delete($TempPath, $true)
           }
-          
-        
+
+
           $TempPaths = "$FileStoragePath-Temporary-$env:Build_BuildID"
           if ([System.IO.Directory]::Exists($TempPaths)) {
                [System.IO.Directory]::Delete($TempPaths, $true)
@@ -393,7 +387,7 @@ stages:
           $OldPaths = "$CommonPath-Old"
           if ([System.IO.Directory]::Exists($OldPaths)) {
               [System.IO.Directory]::Delete($OldPaths, $true)
-          }        
+          }
           $Paths = $FileStoragePath
           if ([System.IO.Directory]::Exists($Paths)) {
               [System.IO.Directory]::CreateDirectory($Paths)
@@ -404,8 +398,8 @@ stages:
               Copy-Item -Path $TempPaths -Destination $Paths -Recurse -Force -ErrorAction SilentlyContinue
               [System.IO.Directory]::Delete($TempPaths, $true)
           }
-        
-          
+
+
         env:
           MainAppFolder: ${{ parameters.mainAppFolder }}
         displayName: Copy files to BCApps
@@ -417,11 +411,11 @@ stages:
           if($NamePath.Contains('RELEASE')){
           $NamePath = $NamePath -replace 'RELEASE-',''
           }
-           
+
           $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
           $outputFile = Split-Path $NameFile -leaf
-          
-          
+
+
           $Outputfilepath = @()
           if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
           {
@@ -433,7 +427,7 @@ stages:
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
           }
           }
-          
+
           else{
           $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
           $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
@@ -443,16 +437,16 @@ stages:
           $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
           }
           }
-          
+
           if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
               [System.IO.Directory]::CreateDirectory($FileStoragePath)
           }
-                       
+
           foreach ($o2 in $Outputfilepath){
           if (Test-Path -Path "$o2*") {
           Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
           (Get-ChildItem -Path "$o2*").Delete()
-          } 
+          }
           }
 
           if ([System.IO.Directory]::Exists($Path)) {
@@ -462,12 +456,12 @@ stages:
               [System.IO.Directory]::CreateDirectory($Path)
               Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
           }
-              
+
           if ([System.IO.Directory]::Exists($FileStoragePath)) {
               Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
           }
 
-         
+
         env:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
