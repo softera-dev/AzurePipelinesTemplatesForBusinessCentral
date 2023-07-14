@@ -227,6 +227,7 @@ $NewBCContainer = {
 }
 
 Write-Information -MessageData 'Install apps folders:'
+$env:LatestDependencyAppPaths
 $InstallAppsFolders = @($env:LatestDependencyAppPaths | ConvertFrom-Json -NoEnumerate)
 Write-Information -MessageData $InstallAppsFolders
 
