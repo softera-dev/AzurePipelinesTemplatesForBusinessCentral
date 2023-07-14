@@ -72,15 +72,14 @@ if (-not $BcArtifactUrl) {
     Write-Information -MessageData $(
         -join @(
             '##vso[task.logissue type=error;]'
-            'There is not enough disk space left. There must be at least '
-            "$('{0:0.#,.}' -f ($RequiredFreeSystemDriveSpaceInBytes / 1GB)) GB."
+            'BC artifact could not be resolved.'
         )
     )
     exit(1)
 }
 Write-Information -MessageData "BC artifact URL: $BcArtifactUrl"
 
-
+Write-Information -MessageData ''
 $CountryArtifactPath, $PlatformArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl -includePlatform
 Write-Information -MessageData "Country artifact path: $CountryArtifactPath"
 Write-Information -MessageData "Platform artifact: path $PlatformArtifactPath"
