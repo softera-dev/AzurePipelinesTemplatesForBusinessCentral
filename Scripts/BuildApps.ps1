@@ -11,11 +11,11 @@ Import-Module -Name BcContainerHelper -DisableNameChecking -Force
 
 
 Write-Information -MessageData 'Main app folders:'
-$AppFolders = @($env:AppFolders | ConvertFrom-Json -NoEnumerate)
+$AppFolders = $($env:AppFolders | ConvertFrom-Json -NoEnumerate)
 Write-Information -MessageData ($AppFolders | ConvertTo-Json)
 
 Write-Information -MessageData 'Test app folders:'
-$TestAppFolders = @($env:TestFolders | ConvertFrom-Json -NoEnumerate)
+$TestAppFolders = $($env:TestFolders | ConvertFrom-Json -NoEnumerate)
 Write-Information -MessageData  ($TestAppFolders | ConvertTo-Json)
 
 
@@ -145,7 +145,7 @@ $NewBCContainer = {
         Write-Information -MessageData "Updating app version in '$AppFolder'..."
 
         $AppManifestPath = $AppFolder | Join-Path -ChildPath 'app.json'
-        $AppManifest = Get-Content -Path $AppManifestPath -Raw | ConvertFrom-Json
+        $AppManifest = $(Get-Content -Path $AppManifestPath -Raw | ConvertFrom-Json)
 
         [version]$CustomAppVersion = $env:CustomAppVersion
         [version]$ManifestVersion = $AppManifest.version
@@ -227,8 +227,7 @@ $NewBCContainer = {
 }
 
 Write-Information -MessageData 'Install apps folders:'
-$env:LatestDependencyAppPaths
-$InstallAppsFolders = @($env:LatestDependencyAppPaths | ConvertFrom-Json -NoEnumerate)
+$InstallAppsFolders = $($env:LatestDependencyAppPaths | ConvertFrom-Json -NoEnumerate)
 Write-Information -MessageData $InstallAppsFolders
 
 $AppsFromDependencies = @(
