@@ -46,24 +46,25 @@ Write-Information -MessageData "Parsed artifact version: $($Matches.Version)"
 Write-Information -MessageData "Parsed artifact country: $($Matches.Country)"
 
 $GetBcArtifactUrlParameters = @{
-    Type = $Matches.Type
-    Select = 'Latest'
-    Version = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
-    Country = $Matches.Country
+    type = $Matches.Type
+    select = 'Latest'
+    version = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
+    country = $Matches.Country
 }
 switch ($Matches.Version) {
     'Current' {
-        $GetBcArtifactUrlParameters.Select = 'Current'
+        $GetBcArtifactUrlParameters.select = 'Current'
         break
     }
     { $_ -in @('NextMinor', 'NextMajor') } {
-        $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
-        $GetBcArtifactUrlParameters.Select = $Matches.Version
+        $GetBcArtifactUrlParameters.sasToken = $env:BcInsiderSasToken
+        $GetBcArtifactUrlParameters.select = $Matches.Version
         break
     }
 }
 
 Write-Information -MessageData ''
+Write-Information -MessageData 'Get-BCArtifactUrl parameters:'
 Write-Information -MessageData ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
 
 $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
