@@ -95,9 +95,9 @@ stages:
       value: ''
     steps:
     - checkout: self
-      path: workspace
+      path: s/self
     - checkout: softeraDevTasks
-      path: softeraDevTasks
+      path: s/softeraDevTasks
 
     - pwsh: |
         Get-ChildItem -LiteralPath $env:BUILD_SOURCESDIRECTORY
