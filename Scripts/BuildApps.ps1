@@ -11,12 +11,12 @@ Import-Module -Name BcContainerHelper -DisableNameChecking -Force
 
 
 Write-Information -MessageData 'Main app folders:'
-$AppFolders = $($env:AppFolders | ConvertFrom-Json -NoEnumerate)
-Write-Information -MessageData ($AppFolders | ConvertTo-Json)
+$AppFolders = ($env:AppFolders | ConvertFrom-Json -NoEnumerate)
+Write-Information -MessageData (ConvertTo-Json -InputObject $AppFolders)
 
 Write-Information -MessageData 'Test app folders:'
 $TestAppFolders = $($env:TestFolders | ConvertFrom-Json -NoEnumerate)
-Write-Information -MessageData  ($TestAppFolders | ConvertTo-Json)
+Write-Information -MessageData  (ConvertTo-Json -InputObject $TestAppFolders)
 
 
 Write-Information -MessageData ''
@@ -65,7 +65,7 @@ switch ($Matches.Version) {
 
 Write-Information -MessageData ''
 Write-Information -MessageData 'Get-BCArtifactUrl parameters:'
-Write-Information -MessageData ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
+Write-Information -MessageData (ConvertTo-Json -InputObject $GetBcArtifactUrlParameters -Depth 1)
 
 $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
 if (-not $BcArtifactUrl) {
@@ -89,7 +89,7 @@ $BcArtifactManifest = $(
     ConvertFrom-Json
 )
 Write-Information -MessageData 'BC artifact manifest:'
-Write-Information -MessageData $($BcArtifactManifest | ConvertTo-Json)
+Write-Information -MessageData $(ConvertTo-Json -InputObject $BcArtifactManifest)
 
 [version]$Global:PlatformVersion = $BcArtifactManifest.platform
 $SomethingNotGlobal = 123
@@ -98,6 +98,8 @@ $NewBCContainer = {
     param([hashtable]$Parameters)
 
     if (-not $SomethingNotGlobal) {
+        throw 'Nope. $Global: is needed.'
+    } else {
         throw 'Yep. $Global: is not needed.'
     }
 
@@ -190,7 +192,7 @@ $NewBCContainer = {
             if ($ManifestVersionMismatchAction -in @('warning', 'error')) {
                 Write-Information -MessageData $(
                     -join @(
-                        '##vso[task.logissue type=warning;]'
+                        '' + '##vso[task.logissue type=warning;]'
                         "App manifest '$AppManifestPath' version '$ManifestVersion' "
                         "does not match selected app version '$SelectedAppVersion'."
                     )
@@ -220,15 +222,15 @@ $NewBCContainer = {
 
         $AppManifest.version = [string]$SelectedAppVersion
 
-        $AppManifest |
-        ConvertTo-Json |
+        ConvertTo-Json -InputObject $AppManifest |
         Set-Content -LiteralPath $AppManifestPath
     }
 }
 
+Write-Information -MessageData ''
 Write-Information -MessageData 'Install apps folders:'
 $InstallAppsFolders = $($env:LatestDependencyAppPaths | ConvertFrom-Json -NoEnumerate)
-Write-Information -MessageData $InstallAppsFolders
+Write-Information -MessageData (ConvertTo-Json -InputObject $InstallAppsFolders)
 
 $AppsFromDependencies = @(
     $InstallAppsFolders |
