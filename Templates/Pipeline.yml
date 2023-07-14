@@ -100,7 +100,7 @@ stages:
       path: s/softeraDevTasks
 
     - pwsh: |
-        Get-ChildItem -LiteralPath $env:BUILD_SOURCESDIRECTORY
+        & ./softeraDevTasks/Scripts/CheckSystemResources.ps1
       condition: always()
       displayName: Checking computer resources
 

@@ -1,8 +1,4 @@
 {
-    "files.exclude": {
-        "Code": true,
-        "*.code-workspace": true,
-    },
     "[powershell]": {
         "editor.formatOnSave": true,
         "files.trimTrailingWhitespace": true,
@@ -37,8 +33,8 @@
     },
     "powershell.codeFormatting.preset": "OTBS",
     "powershell.scriptAnalysis.enable": true,
-    "powershell.scriptAnalysis.settingsPath": "C:\\Users\\ernjus\\My\\Git\\github.com\\softera-dev\\AzurePipelinesTemplatesForBusinessCentral\\Code\\PSScriptAnalyzerSettings.psd1",
-    "powershell.cwd": "C:\\Users\\ernjus\\My\\Git\\github.com\\softera-dev\\AzurePipelinesTemplatesForBusinessCentral\\Code",
+    "powershell.scriptAnalysis.settingsPath": "C:\\Users\\ernjus\\My\\Git\\github.com\\softera-dev\\AzurePipelinesTemplatesForBusinessCentral\\Scripts\\PSScriptAnalyzerSettings.psd1",
+    "powershell.cwd": "C:\\Users\\ernjus\\My\\Git\\github.com\\softera-dev\\AzurePipelinesTemplatesForBusinessCentral\\Scripts",
     "git.enableSmartCommit": true,
     "git.autofetch": true,
     "git.confirmSync": false,
