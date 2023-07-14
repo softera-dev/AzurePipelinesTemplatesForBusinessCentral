@@ -117,7 +117,7 @@ stages:
       condition: always()
       displayName: Checking computer resources
 
-    - powershell: |
+    - pwsh: |
         $env:WorkspaceRoot = $(
           $env:BUILD_SOURCESDIRECTORY |
           Join-Path -ChildPath 'self'
