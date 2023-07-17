@@ -141,6 +141,27 @@ $NewBCContainer = {
         Copy-FileToBCContainer @ReplaceCompilerParameter
     }
 
+    $OriginalAppSourceCopSettings = @{}
+    foreach ($AppFolder in $AppFolders) {
+        $AppSourceCopJsonPath = $(
+            $AppFolder |
+            Join-Path -ChildPath 'AppSourceCop.json' |
+            Resolve-Path |
+            Select-Object -ExpandProperty Path
+        )
+        if (Test-Path -ChildPath $AppSourceCopJsonPath) {
+            Write-Information -MessageData ''
+            Write-Information -MessageData "Saving copy of AppSourceCop.json in '$AppFolder'..."
+            $OriginalAppSourceCopSettings[$AppSourceCopJsonPath] = $(
+                Get-Content -LiteralPath $AppSourceCopJsonPath -Raw
+            )
+        } else {
+            $OriginalAppSourceCopSettings[$AppSourceCopJsonPath] = $(
+                '{"placeholderProperty":""}'
+            )
+        }
+    }
+
     foreach ($AppFolder in $AppFolders) {
         Write-Information -MessageData ''
         Write-Information -MessageData "Updating app version in '$AppFolder'..."
@@ -309,6 +330,28 @@ $PreCompileApp = {
             $compilationParams.Value.appOutputFolder = '.output/bcptApps'
         }
     }
+
+    $AppSourceCopJsonPath = $(
+        $compilationParams.Value.appProjectFolder |
+        Join-Path -ChildPath 'AppSourceCop.json'
+    )
+    $AppSourceCopJsonSettings = $(
+        $OriginalAppSourceCopSettings[$AppSourceCopJsonPath] |
+        ConvertFrom-Json
+    )
+    Write-Information -MessageData ''
+    Write-Information -MessageData 'Original AppSourceCop.json:'
+    Write-Information -MessageData $($AppSourceCopJsonSettings | ConvertTo-Json)
+    if (Test-Path -LiteralPath $AppSourceCopJsonPath) {
+        $RunAlPipelineAppSourceCopJsonSettings = $(
+            Get-Content -LiteralPath $AppSourceCopJsonPath -Raw |
+            ConvertFrom-Json
+        )
+        Write-Information -MessageData ''
+        Write-Information -MessageData 'Run-AlPipeline modified AppSourceCop.json:'
+        Write-Information -MessageData $($RunAlPipelineAppSourceCopJsonSettings | ConvertTo-Json)
+    }
+    Set-Content -LiteralPath $AppSourceCopJsonPath -Value ($AppSourceCopJsonSettings | ConvertTo-Json) -Encoding utf8
 }
 
 $ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
