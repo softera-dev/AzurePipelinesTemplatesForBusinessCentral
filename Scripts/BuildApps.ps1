@@ -1,5 +1,7 @@
 [CmdletBinding()]
 param (
+    [Parameter(Mandatory)]
+    [securestring]$CodeSignCertPfxPassword
 )
 
 Set-StrictMode -Version Latest
@@ -286,7 +288,7 @@ $GetRunAlPipelineParameters = @{
     testFolders = $TestAppFolders
     memoryLimit = $env:DockerMemory
     codeSignCertPfxFile = $env:CodeSignCertPfxFile
-    codeSignCertPfxPassword = ($env:CodeSignCertPfxPassword | ConvertTo-SecureString -AsPlainText -Force)
+    codeSignCertPfxPassword = $CodeSignCertPfxPassword
     installApps = $AppsFromDependencies
     installTestRunner = $true
     installTestFramework = $true

@@ -124,12 +124,18 @@ stages:
         )
         Set-Location -LiteralPath $env:WorkspaceRoot
 
+        $BuildAppsParameters = @{
+          CodeSignCertPfxPassword = $(
+            $env:CodeSignCertPfxPassword |
+            ConvertTo-SecureString -AsPlainText -Force
+          )
+        }
         & $(
           $env:BUILD_SOURCESDIRECTORY |
           Join-Path -ChildPath 'softeraDevTasks' |
           Join-Path -ChildPath 'Scripts' |
           Join-Path -ChildPath 'BuildApps.ps1'
-        )
+        ) @BuildAppsParameters
       env:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
