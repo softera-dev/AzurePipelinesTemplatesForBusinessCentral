@@ -292,7 +292,7 @@ $PreCompileApp = {
         [ref] $compilationParams
     )
 
-    $compilationParams.Value.rulesetFile = $(
+    $compilationParams.Value.ruleset = $(
         $compilationParams.Value.appProjectFolder |
         Join-Path -ChildPath 'al.ruleset.json'
     )
