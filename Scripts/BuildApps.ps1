@@ -95,6 +95,8 @@ Write-Information -MessageData $(ConvertTo-Json -InputObject $BcArtifactManifest
 
 [version]$PlatformVersion = $BcArtifactManifest.platform
 
+$OriginalAppSourceCopSettings = @{}
+
 $NewBCContainer = {
     param([hashtable]$Parameters)
 
@@ -141,7 +143,6 @@ $NewBCContainer = {
         Copy-FileToBCContainer @ReplaceCompilerParameter
     }
 
-    $OriginalAppSourceCopSettings = @{}
     foreach ($AppFolder in $AppFolders) {
         $AppSourceCopJsonPath = $(
             $AppFolder |
