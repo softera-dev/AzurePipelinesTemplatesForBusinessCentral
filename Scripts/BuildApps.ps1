@@ -149,7 +149,7 @@ $NewBCContainer = {
             Resolve-Path |
             Select-Object -ExpandProperty Path
         )
-        if (Test-Path -ChildPath $AppSourceCopJsonPath) {
+        if (Test-Path -LiteralPath $AppSourceCopJsonPath) {
             Write-Information -MessageData ''
             Write-Information -MessageData "Saving copy of AppSourceCop.json in '$AppFolder'..."
             $OriginalAppSourceCopSettings[$AppSourceCopJsonPath] = $(
@@ -275,8 +275,7 @@ $NewBCContainer = {
 
         $AppManifest.version = [string]$SelectedAppVersion
 
-        ConvertTo-Json -InputObject $AppManifest |
-        Set-Content -LiteralPath $AppManifestPath
+        Set-Content -LiteralPath $AppManifestPath -Value (ConvertTo-Json -InputObject $AppManifest)
     }
 }
 
