@@ -292,7 +292,7 @@ $PreCompileApp = {
         [ref] $compilationParams
     )
 
-    $compilationParams.enableExternalRulesets = $true
+    $compilationParams.Value.enableExternalRulesets = $true
 
     switch ($appType) {
         'app' {
