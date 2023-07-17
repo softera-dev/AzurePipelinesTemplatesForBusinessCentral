@@ -93,17 +93,10 @@ $BcArtifactManifest = $(
 Write-Information -MessageData 'BC artifact manifest:'
 Write-Information -MessageData $(ConvertTo-Json -InputObject $BcArtifactManifest)
 
-[version]$Global:PlatformVersion = $BcArtifactManifest.platform
-$SomethingNotGlobal = 123
+[version]$PlatformVersion = $BcArtifactManifest.platform
 
 $NewBCContainer = {
     param([hashtable]$Parameters)
-
-    if (-not $SomethingNotGlobal) {
-        throw 'Nope. $Global: is needed.'
-    } else {
-        throw 'Yep. $Global: is not needed.'
-    }
 
     $Parameters['isolation'] = $env:DockerIsolation
     New-BcContainer @parameters
@@ -261,11 +254,11 @@ $AppsFromDependencies = @(
     }
 )
 
-$Global:ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+$ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
 Write-Information -MessageData $(
     -join @(
         '##vso[task.setvariable variable=ContainerName;]'
-        $Global:ContainerName
+        $ContainerName
     )
 )
 
@@ -285,7 +278,7 @@ Write-Information -MessageData "Selected license path for platform BC$($Platform
 
 $GetRunAlPipelineParameters = @{
     pipelinename = 'Build'
-    containerName = $Global:ContainerName
+    containerName = $ContainerName
     artifact = $BcArtifactUrl
     baseFolder = $env:WorkspaceRoot
     licenseFile = $LicensePath
