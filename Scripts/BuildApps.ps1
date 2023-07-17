@@ -158,27 +158,55 @@ $NewBCContainer = {
                 [System.Text.RegularExpressions.Match]$Match
             )
 
-            $Values = @{
-                'Manifest.Major' = $ManifestVersion.Major
-                'Manifest.Minor' = $ManifestVersion.Minor
-                'Manifest.Build' = $ManifestVersion.Build
-                'Manifest.Revision' = $ManifestVersion.Revision
-                'Container.Major' = $PlatformVersion.Major
-                'Container.Minor' = $PlatformVersion.Minor
-                'Container.Build' = $PlatformVersion.Build
-                'Container.Revision' = $PlatformVersion.Revision
-                'Custom.Major' = $CustomAppVersion.Major
-                'Custom.Minor' = $CustomAppVersion.Minor
-                'Custom.Build' = $CustomAppVersion.Build
-                'Custom.Revision' = $CustomAppVersion.Revision
-                'Release.Major' = $SelectedAppReleaseVersion.Major
-                'Release.Minor' = $SelectedAppReleaseVersion.Minor
-                'Release.Build' = $SelectedAppReleaseVersion.Build
-                'Release.Revision' = $SelectedAppReleaseVersion.Revision
-            }
-            $Key = $Match.Groups['Identifier'].Value
-            if ($Values.ContainsKey($Key)) {
-                $Values[$Key]
+            switch -CaseSensitive ($Match.Groups['Identifier'].Value) {
+                'Manifest.Major' {
+                    $ManifestVersion.Major
+                }
+                'Manifest.Minor' {
+                    $ManifestVersion.Minor
+                }
+                'Manifest.Build' {
+                    $ManifestVersion.Build
+                }
+                'Manifest.Revision' {
+                    $ManifestVersion.Revision
+                }
+                'Container.Major' {
+                    $PlatformVersion.Major
+                }
+                'Container.Minor' {
+                    $PlatformVersion.Minor
+                }
+                'Container.Build' {
+                    $PlatformVersion.Build
+                }
+                'Container.Revision' {
+                    $PlatformVersion.Revision
+                }
+                'Custom.Major' {
+                    $CustomAppVersion.Major
+                }
+                'Custom.Minor' {
+                    $CustomAppVersion.Minor
+                }
+                'Custom.Build' {
+                    $CustomAppVersion.Build
+                }
+                'Custom.Revision' {
+                    $CustomAppVersion.Revision
+                }
+                'Release.Major' {
+                    $SelectedAppReleaseVersion.Major
+                }
+                'Release.Minor' {
+                    $SelectedAppReleaseVersion.Minor
+                }
+                'Release.Build' {
+                    $SelectedAppReleaseVersion.Build
+                }
+                'Release.Revision' {
+                    $SelectedAppReleaseVersion.Revision
+                }
             }
         }
         [version]$SelectedAppReleaseVersion = [regex]::Replace(
