@@ -316,7 +316,9 @@ $PreCompileApp = {
     $compilationParams.Value.appSymbolsFolder = $(
         $compilationParams.Value.appProjectFolder |
         Join-Path -ChildPath '..' |
-        Join-Path -ChildPath '.alpackages'
+        Join-Path -ChildPath '.alpackages' |
+        Resolve-Path |
+        Select-Object -ExpandProperty Path
     )
     $compilationParams.Value.ruleset = $(
         $compilationParams.Value.appProjectFolder |
