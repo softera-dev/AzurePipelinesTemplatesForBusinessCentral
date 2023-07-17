@@ -98,6 +98,10 @@ Write-Information -MessageData $(ConvertTo-Json -InputObject $BcArtifactManifest
 $NewBCContainer = {
     param([hashtable]$Parameters)
 
+    Set-StrictMode -Version Latest
+    $ErrorActionPreference = 'Stop'
+    $InformationPreference = 'Continue'
+
     $Parameters['isolation'] = $env:DockerIsolation
     New-BcContainer @parameters
 
