@@ -19,9 +19,15 @@
         }
         'PSPlaceCloseBrace' = @{
             Enable = $true
+            NoEmptyLineBefore = $true
+            IgnoreOneLineBlock = $false
+            NewLineAfter = $false
         }
         'PSPlaceOpenBrace' = @{
             Enable = $true
+            NoEmptyLineBefore = $true
+            IgnoreOneLineBlock = $false
+            NewLineAfter = $true
         }
         <#
         'PSUseCompatibleCommands' = @{
