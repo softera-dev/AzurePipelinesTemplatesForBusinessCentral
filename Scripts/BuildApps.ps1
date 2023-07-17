@@ -292,6 +292,10 @@ $PreCompileApp = {
         [ref] $compilationParams
     )
 
+    $compilationParams.Value.rulesetFile = $(
+        $compilationParams.Value.appProjectFolder |
+        Join-Path -ChildPath 'al.ruleset.json'
+    )
     $compilationParams.Value.enableExternalRulesets = $true
 
     switch ($appType) {
