@@ -286,6 +286,27 @@ $AppsFromDependencies = @(
     }
 )
 
+$PreCompileApp = {
+    param(
+        [string] $appType,
+        [ref] $compilationParams
+    )
+
+    $compilationParams.enableExternalRulesets = $true
+
+    switch ($appType) {
+        'app' {
+            $compilationParams.Value.appOutputFolder = '.output/app'
+        }
+        'testApp' {
+            $compilationParams.Value.appOutputFolder = '.output/testApps'
+        }
+        'bcptApp' {
+            $compilationParams.Value.appOutputFolder = '.output/bcptApps'
+        }
+    }
+}
+
 $ContainerName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
 Write-Information -MessageData $(
     -join @(
@@ -323,7 +344,14 @@ $GetRunAlPipelineParameters = @{
     installTestRunner = $true
     installTestFramework = $true
     installTestLibraries = $true
+    useCompilerFolder = $true
+    enableCodeCop = $true
+    enableUICop = $true
+    enablePerTenantExtensionCop = $true
+    enableAppSourceCop = $true
+    rulesetFile = 'al.ruleset.json'
     azureDevOps = $true
     NewBCContainer = $NewBCContainer
+    PreCompileApp = $PreCompileApp
 }
 Run-AlPipeline @GetRunAlPipelineParameters
