@@ -313,6 +313,11 @@ $PreCompileApp = {
         [ref] $compilationParams
     )
 
+    $compilationParams.Value.appSymbolsFolder = $(
+        $compilationParams.Value.appProjectFolder |
+        Join-Path -ChildPath '..' |
+        Join-Path -ChildPath '.alpackages'
+    )
     $compilationParams.Value.ruleset = $(
         $compilationParams.Value.appProjectFolder |
         Join-Path -ChildPath 'al.ruleset.json'
