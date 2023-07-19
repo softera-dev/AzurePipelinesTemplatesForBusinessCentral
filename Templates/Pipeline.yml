@@ -593,10 +593,20 @@ stages:
             Where-Object -Property AppId -NE -Value $MainAppManifest.id |
             Where-Object -Property AppId -In -Value $AppIds
           )
+
+          $MainAppFilePath = $MainAppFile.FullName
+          $LibraryAppFilePaths = @(
+            if ($LibraryAppFiles) {
+              $LibraryAppFiles | Select-Object -ExpandProperty FullName
+            } else {
+              @()
+            }
+          )
+
           Write-Information -MessageData 'Offer App:'
-          Write-Information -MessageData $MainAppFile.FullName
+          Write-Information -MessageData $MainAppFilePath
           Write-Information -MessageData 'Library Apps:'
-          $LibraryAppFiles | Select-Object -ExpandProperty FullName | Write-Information
+          $LibraryAppFilePaths | Write-Information
 
           $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
             [ordered]@{
@@ -604,8 +614,8 @@ stages:
               bcVersion           = $BcVersion
               productPath         = $AppSourceProductPath
               mainAppId           = $MainAppFile.AppId
-              offerAppFilePath    = $MainAppFile.FullName
-              libraryAppFilePaths = @($LibraryAppFiles.FullName)
+              offerAppFilePath    = $MainAppFilePath
+              libraryAppFilePaths = $LibraryAppFilePaths
               credential          = $env:APPSOURCE_CREDENTIAL
             }
           )
