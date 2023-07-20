@@ -72,6 +72,8 @@ parameters:
   values:
   - none
   - softera
+  - lbc
+  - soft4
   default: none
 
 stages:
