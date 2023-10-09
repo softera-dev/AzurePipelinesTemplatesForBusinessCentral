@@ -76,6 +76,21 @@ parameters:
   - soft4
   default: none
 
+
+- name: publishToContainer
+  type: boolean
+  default: false
+- name: ContainerName
+  type: string
+  default: none
+- name: publishToContainer
+  type: boolean
+  default: false  
+- name: Tenants
+  type: object
+  default:
+  - []
+
 stages:
 - stage: Main
   displayName: Main
@@ -473,6 +488,25 @@ stages:
         env:
           LatestFolder: ${{ parameters.latestFolder }}
         displayName: Copy files to Latest folder
+
+
+
+    - ${{ if ne(parameters.publishToContainer, '') }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
+
+          $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
+          if($NamePath.Contains('RELEASE')){
+          $NamePath = $NamePath -replace 'RELEASE-',''
+          }
+           
+   
+         
+        env:
+        displayName: Publishing to Container
+
+
+
     - ${{ if ne(parameters.appSourceProductBcVersion, '') }}:
       - pwsh: |
           Set-StrictMode -Version Latest
