@@ -115,12 +115,6 @@ stages:
     - checkout: self
       clean: true
 
-    - task: DownloadSecureFile@1
-      name: DownloadBCAppSigningCertificate
-      inputs:
-        secureFile: $(BCAppSigningCertificateSecureFileName)
-      displayName: Download certificate for BC app signing
-
     - powershell: |
         Set-StrictMode -Version Latest
         $ErrorActionPreference = 'Stop'
@@ -304,8 +298,6 @@ stages:
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
           memoryLimit                 = $env:DockerMemory
-          codeSignCertPfxFile         = $env:CodeSignCertPfxFile
-          codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
           installApps                 = $AppsFromDependencies
           installTestRunner           = $true
           installTestFramework        = $true
@@ -318,8 +310,6 @@ stages:
         BcVersion: ${{ parameters.bcVersion }}
         BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
-        CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
-        CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
         MainAppFolder: ${{ parameters.mainAppFolder }}
         AppFolders: ${{ convertToJson(parameters.appFolders) }}
         TestFolders: ${{ convertToJson(parameters.testFolders) }}
