@@ -116,13 +116,6 @@ stages:
       clean: true
 
     - task: DotNetCoreCLI@2
-      displayName: 'Install Azure SignTool'
-      inputs:
-        command: custom
-        custom: tool
-        arguments: 'install --global AzureSignTool'
-
-    - task: DotNetCoreCLI@2
       displayName: 'Update Azure SignTool'
       inputs:
         command: custom
