@@ -115,11 +115,20 @@ stages:
     - checkout: self
       clean: true
 
-    - task: DownloadSecureFile@1
-      name: DownloadBCAppSigningCertificate
+    - task: DotNetCoreCLI@2
+      displayName: 'Install Azure SignTool'
       inputs:
-        secureFile: $(BCAppSigningCertificateSecureFileName)
-      displayName: Download certificate for BC app signing
+        command: custom
+        custom: tool
+        arguments: 'install --global AzureSignTool'
+
+    - task: DotNetCoreCLI@2
+      displayName: 'Update Azure SignTool'
+      inputs:
+        command: custom
+        custom: tool
+        arguments: 'update --global AzureSignTool'
+      condition: always()
 
     - powershell: |
         Set-StrictMode -Version Latest
@@ -265,9 +274,6 @@ stages:
           param([hashtable]$Parameters)
 
           Write-Host -Object "Signing BC app in '$(hostname)'..."
-          $env:DOTNET_SKIP_FIRST_TIME_EXPERIENCE = 'true'
-          dotnet tool install --global AzureSignTool
-          dotnet tool update --global AzureSignTool
           Install-NAVSipCryptoProviderFromBcContainer -containerName $Parameters.containerName -Verbose
           azuresigntool.exe sign `
             --azure-key-vault-url 'https://softerabcappsigning.vault.azure.net/' `
