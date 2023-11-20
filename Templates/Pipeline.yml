@@ -261,6 +261,22 @@ stages:
             Set-Content -LiteralPath $AppFolder/app.json
           }
         }
+        $SignBcContainerApp = {
+          param([hashtable]$Parameters)
+
+          Write-Host -Object 'Signing BC app...'
+          Install-NAVSipCryptoProviderFromBcContainer -containerName $Parameters.containerName -Verbose
+          azuresigntool.exe sign `
+            --azure-key-vault-url 'https://softerabcappsigning.vault.azure.net/' `
+            --azure-key-vault-tenant-id 'b2ffa4d2-017d-4706-8e9d-fdda02bf7ffc' `
+            --azure-key-vault-client-id '4bf6ee22-162c-4307-be8b-88f269d74add' `
+            --azure-key-vault-client-secret ([System.Environment]::GetEnvironmentVariable('DevOpsAppSigning ClientSecret', [System.EnvironmentVariableTarget]::Machine)) `
+            --azure-key-vault-certificate 'gs000001' `
+            --timestamp-rfc3161 'http://timestamp.globalsign.com/tsa/r6advanced1' `
+            --timestamp-digest 'sha256' `
+            --verbose `
+            $Parameters.appFile
+        }
         $InstallAppsFolders = $(
           $env:LatestDependencyAppPaths | ConvertFrom-Json
         )
@@ -312,6 +328,7 @@ stages:
           installTestLibraries        = $true
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
+          SignBcContainerApp          = $SignBcContainerApp
         }
         Run-AlPipeline @GetRunAlPipelineParameters
       env:
