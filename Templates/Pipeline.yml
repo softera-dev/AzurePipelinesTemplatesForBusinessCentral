@@ -268,7 +268,7 @@ stages:
 
           Write-Host -Object "Signing BC app in '$(hostname)'..."
           Install-NAVSipCryptoProviderFromBcContainer -containerName $Parameters.containerName -Verbose
-          azuresigntool.exe sign `
+          & 'C:\Users\Azure_Pipelines\.dotnet\tools\azuresigntool.exe' sign `
             --azure-key-vault-url 'https://softerabcappsigning.vault.azure.net/' `
             --azure-key-vault-tenant-id 'b2ffa4d2-017d-4706-8e9d-fdda02bf7ffc' `
             --azure-key-vault-client-id '4bf6ee22-162c-4307-be8b-88f269d74add' `
