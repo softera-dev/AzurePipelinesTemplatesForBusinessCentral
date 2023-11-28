@@ -263,15 +263,10 @@ stages:
             Set-Content -LiteralPath $AppFolder/app.json
           }
         }
-        #$Global:GlobalNavSipCrytoProviderInstalled = $false
         $SignBcContainerApp = {
           param([hashtable]$Parameters)
 
           Write-Host -Object "Signing BC app in '$(hostname)'..."
-          #if (-not $Global:GlobalNavSipCrytoProviderInstalled) {
-          #  Install-NAVSipCryptoProviderFromBcContainer -containerName $Parameters.containerName -Verbose
-          #  $Global:GlobalNavSipCrytoProviderInstalled = $true
-          #}
           & 'C:\Users\Azure_Pipelines\.dotnet\tools\azuresigntool.exe' sign `
             --azure-key-vault-url 'https://softerabcappsigning.vault.azure.net/' `
             --azure-key-vault-tenant-id 'b2ffa4d2-017d-4706-8e9d-fdda02bf7ffc' `
