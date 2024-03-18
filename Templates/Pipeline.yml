@@ -116,11 +116,11 @@ stages:
       clean: true
 
     - task: DotNetCoreCLI@2
-      displayName: 'Update Azure SignTool'
+      displayName: 'Update DotNet Sign'
       inputs:
         command: custom
         custom: tool
-        arguments: 'update --global AzureSignTool'
+        arguments: 'update sign --global --prerelease'
       condition: always()
 
     - powershell: |
@@ -267,15 +267,17 @@ stages:
           param([hashtable]$Parameters)
 
           Write-Host -Object "Signing BC app in '$(hostname)'..."
-          & 'C:\Users\Azure_Pipelines\.dotnet\tools\azuresigntool.exe' sign `
+          & 'C:\Users\Azure_Pipelines\.dotnet\tools\sign.exe' code azure-key-vault `
+            --description 'GlobalSign code signing certificate' `
+            --description-url 'https://www.globalsign.com' `
             --azure-key-vault-url 'https://softerabcappsigning.vault.azure.net/' `
             --azure-key-vault-tenant-id 'b2ffa4d2-017d-4706-8e9d-fdda02bf7ffc' `
             --azure-key-vault-client-id '4bf6ee22-162c-4307-be8b-88f269d74add' `
             --azure-key-vault-client-secret ([System.Environment]::GetEnvironmentVariable('DevOpsAppSigning ClientSecret', [System.EnvironmentVariableTarget]::Machine)) `
             --azure-key-vault-certificate 'gs000001' `
-            --timestamp-rfc3161 'http://timestamp.globalsign.com/tsa/r6advanced1' `
+            --timestamp-url 'http://timestamp.globalsign.com/tsa/r6advanced1' `
             --timestamp-digest 'sha256' `
-            --verbose `
+            --verbosity Debug `
             $Parameters.appFile
         }
         $InstallAppsFolders = $(
