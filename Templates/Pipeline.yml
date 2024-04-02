@@ -152,7 +152,7 @@ stages:
           Select         = 'Latest'
           Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
           Country        = $Matches.Country
-          accept_insiderEula
+          accept_insiderEula = true
         }
         switch ($Matches.Version) {
           'Current' {
@@ -318,7 +318,7 @@ stages:
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
-          artifact                    = $BcArtifactUrl
+          artifact                    = $BcArtifactUrl -accept_insiderEula
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
