@@ -317,7 +317,7 @@ stages:
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
-          artifact                    = $BcArtifactUrl -accept_insiderEula
+          artifact                    = $BcArtifactUrl
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
