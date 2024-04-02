@@ -159,7 +159,7 @@ stages:
             break
           }
           { $_ -in @('NextMinor', 'NextMajor') } {
-            $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
+            # $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
             $GetBcArtifactUrlParameters.Select = $Matches.Version            
             break
           }
@@ -336,7 +336,7 @@ stages:
         Run-AlPipeline @GetRunAlPipelineParameters
       env:
         BcVersion: ${{ parameters.bcVersion }}
-        BcInsiderSasToken: $(BCSasToken)
+       # BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
