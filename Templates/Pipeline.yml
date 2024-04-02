@@ -152,7 +152,6 @@ stages:
           Select         = 'Latest'
           Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
           Country        = $Matches.Country
-          accept_insiderEula = true
         }
         switch ($Matches.Version) {
           'Current' {
