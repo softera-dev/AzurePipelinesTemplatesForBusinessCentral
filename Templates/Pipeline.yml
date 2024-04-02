@@ -152,6 +152,7 @@ stages:
           Select         = 'Latest'
           Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
           Country        = $Matches.Country
+          accept_insiderEula
         }
         switch ($Matches.Version) {
           'Current' {
@@ -172,7 +173,7 @@ stages:
 
         $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters -accept_insiderEula
         
-        $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl -accept_insiderEula
+        $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
         $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
         [version]$Global:PlatformVersion = $BcArtifactManifest.platform
         $NewBCContainer = {
