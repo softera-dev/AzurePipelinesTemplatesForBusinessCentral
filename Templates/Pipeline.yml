@@ -170,7 +170,7 @@ stages:
 
 
 
-        $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
+        $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters -accept_insiderEula
         
         $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
         $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
