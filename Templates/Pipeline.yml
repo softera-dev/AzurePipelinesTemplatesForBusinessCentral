@@ -148,21 +148,11 @@ stages:
         Write-Host -Object "Parsed artifact version: $($Matches.Version)"
         Write-Host -Object "Parsed artifact country: $($Matches.Country)"
         $GetBcArtifactUrlParameters = @{
-          Type           = $Matches.Type
-          Select         = 'Latest'
-          Version        = $Matches.Version -replace 'Current|NextMinor|NextMajor', ''
-          Country        = $Matches.Country
-        }
-        switch ($Matches.Version) {
-          'Current' {
-            $GetBcArtifactUrlParameters.Select = 'Current'
-            break
-          }
-          { $_ -in @('NextMinor', 'NextMajor') } {
-            $GetBcArtifactUrlParameters.SasToken = $env:BcInsiderSasToken
-            $GetBcArtifactUrlParameters.Select = $Matches.Version            
-            break
-          }
+          Type               = $Matches.Type
+          Select             = $Matches.Version -replace '^(?!(?:Current|NextMinor|NextMajor)$).*', 'Latest'
+          Version            = $Matches.Version -replace '^(?:Current|NextMinor|NextMajor)$', ''
+          Country            = $Matches.Country
+          accept_insiderEula = $true
         }
 
         Write-Host
@@ -317,6 +307,7 @@ stages:
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
+          accept_insiderEula          = $true
           artifact                    = $BcArtifactUrl
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $LicensePath
@@ -336,7 +327,7 @@ stages:
         Run-AlPipeline @GetRunAlPipelineParameters
       env:
         BcVersion: ${{ parameters.bcVersion }}
-        BcInsiderSasToken: $(BCSasToken)
+       # BcInsiderSasToken: $(BCSasToken)
         ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
         CodeSignCertPfxFile: $(DownloadBCAppSigningCertificate.SecureFilePath)
         CodeSignCertPfxPassword: $(BCAppSigningCertificatePassword)
