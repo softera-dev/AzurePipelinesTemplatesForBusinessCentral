@@ -115,12 +115,9 @@ stages:
     - checkout: self
       clean: true
 
-    - task: DotNetCoreCLI@2
+    - powershell: |
+        dotnet tool update sign --global --prerelease
       displayName: 'Update DotNet Sign'
-      inputs:
-        command: custom
-        custom: tool
-        arguments: 'update sign --global --prerelease'
       condition: always()
 
     - powershell: |
