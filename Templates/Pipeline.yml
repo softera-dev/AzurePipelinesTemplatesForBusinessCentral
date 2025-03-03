@@ -254,7 +254,7 @@ stages:
           param([hashtable]$Parameters)
 
           Write-Host -Object "Signing BC app in '$(hostname)'..."
-          & 'C:\Users\Azure_Pipelines\.dotnet\tools\sign.exe' code azure-key-vault `
+          & 'C:\Users\Azure_Pipelines\temp-sign\sign.exe' code azure-key-vault `
             --description 'GlobalSign code signing certificate' `
             --description-url 'https://www.globalsign.com' `
             --azure-key-vault-url 'https://softerabcappsigning.vault.azure.net/' `
