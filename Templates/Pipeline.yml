@@ -40,7 +40,7 @@ parameters:
 
 - name: dockerMemory
   type: string
-  default: 8g
+  default: 12g
 - name: dockerIsolation
   type: string
   default: hyperv
