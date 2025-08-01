@@ -250,10 +250,14 @@ stages:
             Set-Content -LiteralPath $AppFolder/app.json
           }
         }
-        $SignBcContainerApp = {
-          param([hashtable]$Parameters)
+        $PostCompileApp = {
+          param(
+            [string] $AppFilePath,
+            [string] $AppType,
+            [hashtable] $CompilationParams
+          )
 
-          Write-Host -Object "Signing BC app in '$(hostname)'..."
+          Write-Host -Object "Signing BC app $AppType '$AppFilePath' in '$(hostname)'..."
           & 'C:\Users\Azure_Pipelines\temp-sign\sign.exe' code azure-key-vault `
             --description 'GlobalSign code signing certificate' `
             --description-url 'https://www.globalsign.com' `
@@ -265,13 +269,7 @@ stages:
             --timestamp-url 'http://timestamp.globalsign.com/tsa/r6advanced1' `
             --timestamp-digest 'sha256' `
             --verbosity Debug `
-            $Parameters.appFile
-        }
-        $PublishBcContainerApp = {
-          param([hashtable]$Parameters)
-
-          $Parameters.skipVerification = $true
-          Publish-BcContainerApp @Parameters
+            $AppFilePath
         }
         $InstallAppsFolders = $(
           $env:LatestDependencyAppPaths | ConvertFrom-Json
@@ -325,9 +323,8 @@ stages:
           installTestFramework        = $true
           installTestLibraries        = $true
           azureDevOps                 = $true
-          NewBCContainer              = $NewBCContainer          
-          PublishBcContainerApp       = $PublishBcContainerApp
-          SignBcContainerApp          = $SignBcContainerApp
+          NewBCContainer              = $NewBCContainer
+          PostCompileApp              = $PostCompileApp
         }
         Run-AlPipeline @GetRunAlPipelineParameters
       env:
