@@ -267,6 +267,12 @@ stages:
             --verbosity Debug `
             $Parameters.appFile
         }
+        $PublishBcContainerApp = {
+          param([hashtable]$Parameters)
+
+          $Parameters.skipVerification = $true
+          Publish-BcContainerApp @Parameters
+        }
         $InstallAppsFolders = $(
           $env:LatestDependencyAppPaths | ConvertFrom-Json
         )
@@ -319,7 +325,8 @@ stages:
           installTestFramework        = $true
           installTestLibraries        = $true
           azureDevOps                 = $true
-          NewBCContainer              = $NewBCContainer
+          NewBCContainer              = $NewBCContainer          
+          PublishBcContainerApp       = $PublishBcContainerApp
           SignBcContainerApp          = $SignBcContainerApp
         }
         Run-AlPipeline @GetRunAlPipelineParameters
