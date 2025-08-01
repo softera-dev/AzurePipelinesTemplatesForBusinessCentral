@@ -310,6 +310,7 @@ stages:
           licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
           testFolders                 = $TestFolders
+          useCompilerFolder           = $true
           memoryLimit                 = $env:DockerMemory
           codeSignCertPfxFile         = $env:CodeSignCertPfxFile
           codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
