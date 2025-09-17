@@ -82,36 +82,12 @@ stages:
   jobs:
   - job: Main
     condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
-    variables:
-    - name: OrganizationName
-      value: ${{ parameters.organizationName }}
-
-    - name: DockerMemory
-      value: ${{ parameters.dockerMemory }}
-
-    - name: IsPullRequest
-      value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
-    - name: MasterBranch
-      value: ${{ parameters.masterBranch }}
-    - name: BcApplicationVersion
-    - name: BcArtifactsCache
-      value: '$(Pipeline.Workspace)\bcartifacts'
-
-    - name: ContainerHelperCache
-      value: '$(Pipeline.Workspace)\containerhelper'
-      value: ''
-    steps:
-    - task: Cache@2
-      displayName: 'Cache BC artifacts'
-      inputs:
-        key: 'bcartifacts | $(BcVersion) | $(Matches.Country)'
-        path: '$(BcArtifactsCache)'
-
-    - task: Cache@2
-      displayName: 'Cache ContainerHelper'
-      inputs:
-        key: 'containerhelper'
-        path: '$(ContainerHelperCache)'
+variables:
+  OrganizationName: ${{ parameters.organizationName }}
+  DockerMemory: ${{ parameters.dockerMemory }}
+  IsPullRequest: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
+  MasterBranch: ${{ parameters.masterBranch }}
+  BcApplicationVersion: ''
     - powershell: |
         $ExitCode = 0
         $FreeDiskSpace = Get-PSDrive -Name C | Select-Object -ExpandProperty Free
@@ -321,20 +297,11 @@ stages:
           Select-Object -First 1 -ExpandProperty ProviderPath
         )
         Write-Host -Object "Selected license path for platform BC$($PlatformVersion.Major): $LicensePath"
-        # Optimizations injected by assistant
-        $hasTests = ($TestFolders -and ($TestFolders.Count -gt 0))
-        if (Get-Command Set-BcContainerHelperConfig -ErrorAction SilentlyContinue) {
-          Set-BcContainerHelperConfig -bcartifactsCacheFolder "$(BcArtifactsCache)" -containerHelperFolder "$(ContainerHelperCache)"
-        }
         $GetRunAlPipelineParameters = @{
           pipelinename                = 'Build'
           containerName               = $Global:ContainerName
           accept_insiderEula          = $true
           artifact                    = $BcArtifactUrl
-          useGenericImage            = $true
-          genericImageName           = "mcr.microsoft.com/businesscentral:$($Matches.Version)-$($Matches.Country)"
-          updateHosts                = $false
-          alwaysPull                 = $false
           baseFolder                  = $env:BUILD_SOURCESDIRECTORY
           licenseFile                 = $LicensePath
           appFolders                  = $AppFolders
@@ -344,10 +311,9 @@ stages:
           codeSignCertPfxFile         = $env:CodeSignCertPfxFile
           codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
           installApps                 = $AppsFromDependencies
-          installTestRunner           = $hasTests
-          installTestFramework        = $hasTests
-          installTestLibraries        = $hasTests
-          doNotRunTests              = -not $hasTests
+          installTestRunner           = $true
+          installTestFramework        = $true
+          installTestLibraries        = $true
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
           PostCompileApp              = $PostCompileApp
