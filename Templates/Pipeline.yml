@@ -388,17 +388,17 @@ stages:
           }
   
           function Copy-Tree {
-            param(
-              [Parameter(Mandatory)][string]$Source,
-              [Parameter(Mandatory)][string]$Destination
-            )
-            Ensure-Dir -Path $Destination
-          
-            $rc = & robocopy "$Source" "$Destination" /MIR /COPY:DAT /DCOPY:DAT /R:2 /W:2 /NFL /NDL /NJH /NJS /NP
-            $exit = $LASTEXITCODE
-          
-            if ($exit -gt 7) { throw "Robocopy failed ($exit) copying from '$Source' to '$Destination'. RC=$rc" }
-          }
+          param([Parameter(Mandatory)][string]$Source,
+                [Parameter(Mandatory)][string]$Destination)
+        
+          Ensure-Dir -Path $Destination
+          $rc = & robocopy "$Source" "$Destination" /MIR /COPY:DAT /DCOPY:DAT /R:2 /W:2 /NFL /NDL /NJH /NJS /NP
+          $exit = $LASTEXITCODE
+        
+          if ($exit -gt 7) { throw "Robocopy failed ($exit) copying from '$Source' to '$Destination'. RC=$rc" }
+        
+          $global:LASTEXITCODE = 0
+        }
   
           $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
           $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
