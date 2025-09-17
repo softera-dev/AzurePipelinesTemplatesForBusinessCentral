@@ -398,7 +398,7 @@ stages:
           if ($exit -gt 7) { throw "Robocopy failed ($exit) copying from '$Source' to '$Destination'. RC=$rc" }
         
           $global:LASTEXITCODE = 0
-        }
+          }
   
           $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
           $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
