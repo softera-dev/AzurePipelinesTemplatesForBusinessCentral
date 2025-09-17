@@ -346,131 +346,131 @@ stages:
       displayName: Run Pipeline
     - ${{ if parameters.publishOutput }}:
       - powershell: |
-        Set-StrictMode -Version Latest
-        $ErrorActionPreference = 'Stop'
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
 
-        function Clear-ReadOnly {
-          param([Parameter(Mandatory)][string]$Path)
-          if (-not (Test-Path -LiteralPath $Path)) { return }
-          Get-ChildItem -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
-            try {
-              if ($_.Attributes -band [IO.FileAttributes]::ReadOnly) {
-                $_.Attributes = ($_.Attributes -bxor [IO.FileAttributes]::ReadOnly)
-              }
-            } catch { }
-          }
-        }
-
-        function Remove-PathSafe {
-          param([Parameter(Mandatory)][string]$Path)
-          if (-not (Test-Path -LiteralPath $Path)) { return }
-          for ($i=1; $i -le 5; $i++) {
-            try {
-              Clear-ReadOnly -Path $Path
-              Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
-              return
-            } catch {
-              Write-Warning "Delete attempt $i failed for '$Path': $($_.Exception.Message)"
-              Start-Sleep -Seconds ([Math]::Min(2*$i, 10))
+          function Clear-ReadOnly {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+            Get-ChildItem -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
+              try {
+                if ($_.Attributes -band [IO.FileAttributes]::ReadOnly) {
+                  $_.Attributes = ($_.Attributes -bxor [IO.FileAttributes]::ReadOnly)
+                }
+              } catch { }
             }
           }
-          try {
-            & cmd.exe /c "rmdir /s /q `"$Path`"" | Out-Null
-          } catch { }
-          if (Test-Path -LiteralPath $Path) { throw "Failed to delete path: $Path" }
-        }
 
-        function Ensure-Dir {
-          param([Parameter(Mandatory)][string]$Path)
-          if (-not (Test-Path -LiteralPath $Path)) {
-            New-Item -ItemType Directory -Path $Path -Force | Out-Null
+          function Remove-PathSafe {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+            for ($i=1; $i -le 5; $i++) {
+              try {
+                Clear-ReadOnly -Path $Path
+                Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+                return
+              } catch {
+                Write-Warning "Delete attempt $i failed for '$Path': $($_.Exception.Message)"
+                Start-Sleep -Seconds ([Math]::Min(2*$i, 10))
+              }
+            }
+            try {
+              & cmd.exe /c "rmdir /s /q `"$Path`"" | Out-Null
+            } catch { }
+            if (Test-Path -LiteralPath $Path) { throw "Failed to delete path: $Path" }
           }
-        }
-
-        function Copy-Tree {
-          param(
-            [Parameter(Mandatory)][string]$Source,
-            [Parameter(Mandatory)][string]$Destination
-          )
-          Ensure-Dir -Path $Destination
-        
-          $rc = & robocopy "$Source" "$Destination" /MIR /COPY:DAT /DCOPY:DAT /R:2 /W:2 /NFL /NDL /NJH /NJS /NP
-          $exit = $LASTEXITCODE
-        
-          if ($exit -gt 7) { throw "Robocopy failed ($exit) copying from '$Source' to '$Destination'. RC=$rc" }
-        }
-
-        $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
-        $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
-        $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
-        [version]$ManifestVersionIs = $MainAppManifest.version
-        $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
-        Write-Host "Manifest minor version: $ManifestVersion"
-
-        $BranchName = if ($env:IsPullRequest -eq 'false') {
-          $env:Build_SourceBranchName
-        } else {
-          $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
-        }
-
-        if ($env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch -match 'release') {
-          $CommonPath      = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-        } else {
-          $CommonPath      = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-        }
-
-        $runSuffix = if ($env:System_JobAttempt) { "$($env:Build_BuildID)-$($env:System_JobAttempt)" } else { "$($env:Build_BuildID)-$(New-Guid)" }
-
-        Write-Host "CommonPath: $CommonPath"
-        Write-Host "FileStoragePath: $FileStoragePath"
-        Write-Host "RunSuffix: $runSuffix"
-
-        # -------- Lokalus (C:\AzureDevOps) kopijavimas --------
-        $TempPath = "$CommonPath-Temporary-$runSuffix"
-        if (Test-Path -LiteralPath $TempPath) { Remove-PathSafe -Path $TempPath }
-        Ensure-Dir -Path $TempPath
-        Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
-
-        $OldPath = "$CommonPath-Old"
-        Remove-PathSafe -Path $OldPath
-
-        $Path = $CommonPath
-        if (Test-Path -LiteralPath $Path) {
-          Ensure-Dir -Path $OldPath
-          Copy-Tree -Source $Path -Destination $OldPath
-          Remove-PathSafe -Path $Path
-        }
-        Ensure-Dir -Path $Path
-        # kopijuojame TURINĮ, o ne laikiną folderį patį
-        Copy-Tree -Source $TempPath -Destination $Path
-        Remove-PathSafe -Path $TempPath
-
-        # -------- (\filestorage) kopijavimas --------
-        $TempPaths = "$FileStoragePath-Temporary-$runSuffix"
-        if (Test-Path -LiteralPath $TempPaths) { Remove-PathSafe -Path $TempPaths }
-        Ensure-Dir -Path $TempPaths
-        Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
-
-        $OldPaths = "$FileStoragePath-Old"    # FIX: buvo neteisingai į $CommonPath-Old
-        Remove-PathSafe -Path $OldPaths
-
-        $Paths = $FileStoragePath
-        if (Test-Path -LiteralPath $Paths) {
-          Ensure-Dir -Path $OldPaths
-          Copy-Tree -Source $Paths -Destination $OldPaths
-          # dažniausia "Access denied" priežastis – ReadOnly atributai arba atviri handle'ai
-          Remove-PathSafe -Path $Paths
-        }
-        Ensure-Dir -Path $Paths
-        Copy-Tree -Source $TempPaths -Destination $Paths
-        Remove-PathSafe -Path $TempPaths
-
-        Write-Host "Copy to BCApps finished successfully."
-    env:
-      MainAppFolder: ${{ parameters.mainAppFolder }}
-    displayName: Copy files to BCApps
+  
+          function Ensure-Dir {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) {
+              New-Item -ItemType Directory -Path $Path -Force | Out-Null
+            }
+          }
+  
+          function Copy-Tree {
+            param(
+              [Parameter(Mandatory)][string]$Source,
+              [Parameter(Mandatory)][string]$Destination
+            )
+            Ensure-Dir -Path $Destination
+          
+            $rc = & robocopy "$Source" "$Destination" /MIR /COPY:DAT /DCOPY:DAT /R:2 /W:2 /NFL /NDL /NJH /NJS /NP
+            $exit = $LASTEXITCODE
+          
+            if ($exit -gt 7) { throw "Robocopy failed ($exit) copying from '$Source' to '$Destination'. RC=$rc" }
+          }
+  
+          $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
+          $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
+          $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
+          [version]$ManifestVersionIs = $MainAppManifest.version
+          $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
+          Write-Host "Manifest minor version: $ManifestVersion"
+  
+          $BranchName = if ($env:IsPullRequest -eq 'false') {
+            $env:Build_SourceBranchName
+          } else {
+            $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+          }
+  
+          if ($env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch -match 'release') {
+            $CommonPath      = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+          } else {
+            $CommonPath      = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+          }
+  
+          $runSuffix = if ($env:System_JobAttempt) { "$($env:Build_BuildID)-$($env:System_JobAttempt)" } else { "$($env:Build_BuildID)-$(New-Guid)" }
+  
+          Write-Host "CommonPath: $CommonPath"
+          Write-Host "FileStoragePath: $FileStoragePath"
+          Write-Host "RunSuffix: $runSuffix"
+  
+          # -------- Lokalus (C:\AzureDevOps) kopijavimas --------
+          $TempPath = "$CommonPath-Temporary-$runSuffix"
+          if (Test-Path -LiteralPath $TempPath) { Remove-PathSafe -Path $TempPath }
+          Ensure-Dir -Path $TempPath
+          Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
+  
+          $OldPath = "$CommonPath-Old"
+          Remove-PathSafe -Path $OldPath
+  
+          $Path = $CommonPath
+          if (Test-Path -LiteralPath $Path) {
+            Ensure-Dir -Path $OldPath
+            Copy-Tree -Source $Path -Destination $OldPath
+            Remove-PathSafe -Path $Path
+          }
+          Ensure-Dir -Path $Path
+          # kopijuojame TURINĮ, o ne laikiną folderį patį
+          Copy-Tree -Source $TempPath -Destination $Path
+          Remove-PathSafe -Path $TempPath
+  
+          # -------- (\filestorage) kopijavimas --------
+          $TempPaths = "$FileStoragePath-Temporary-$runSuffix"
+          if (Test-Path -LiteralPath $TempPaths) { Remove-PathSafe -Path $TempPaths }
+          Ensure-Dir -Path $TempPaths
+          Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
+  
+          $OldPaths = "$FileStoragePath-Old"    # FIX: buvo neteisingai į $CommonPath-Old
+          Remove-PathSafe -Path $OldPaths
+  
+          $Paths = $FileStoragePath
+          if (Test-Path -LiteralPath $Paths) {
+            Ensure-Dir -Path $OldPaths
+            Copy-Tree -Source $Paths -Destination $OldPaths
+            # dažniausia "Access denied" priežastis – ReadOnly atributai arba atviri handle'ai
+            Remove-PathSafe -Path $Paths
+          }
+          Ensure-Dir -Path $Paths
+          Copy-Tree -Source $TempPaths -Destination $Paths
+          Remove-PathSafe -Path $TempPaths
+  
+          Write-Host "Copy to BCApps finished successfully."
+        env:
+          MainAppFolder: ${{ parameters.mainAppFolder }}
+        displayName: Copy files to BCApps
     - ${{ if ne(parameters.latestFolder, '') }}:
       - powershell: |
           Set-StrictMode -Version Latest
