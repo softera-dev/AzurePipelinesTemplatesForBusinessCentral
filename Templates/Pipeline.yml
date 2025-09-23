@@ -672,15 +672,15 @@ stages:
 
           $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
             [ordered]@{
-              productId           = $env:APPSOURCE_PRODUCT_ID
-              bcVersion           = $BcVersion
-              productPath         = $AppSourceProductPath
-              mainAppId           = $MainAppFile.AppId
-              offerAppFilePath    = $MainAppFilePath
-              libraryAppFilePaths = $LibraryAppFilePaths
-              credential          = $env:APPSOURCE_CREDENTIAL
-              doNotCheckVersion   = $false
-              doNotUpdateVersion  = $false
+              productId                 = $env:APPSOURCE_PRODUCT_ID
+              bcVersion                 = $BcVersion
+              productPath               = $AppSourceProductPath
+              mainAppId                 = $MainAppFile.AppId
+              offerAppFilePath          = $MainAppFilePath
+              libraryAppFilePaths       = $LibraryAppFilePaths
+              credential                = $env:APPSOURCE_CREDENTIAL
+              doNotCheckVersionNumber   = $false
+              doNotUpdateVersionNumber  = $false
             }
           )
 
