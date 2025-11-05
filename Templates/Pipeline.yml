@@ -67,6 +67,9 @@ parameters:
 - name: appSourceProductBcVersion
   type: string
   default: ''
+- name: appSourceProductHotfix
+  type: boolean
+  default: false
 - name: appSourceCredential
   type: string
   values:
@@ -679,8 +682,8 @@ stages:
               offerAppFilePath          = $MainAppFilePath
               libraryAppFilePaths       = $LibraryAppFilePaths
               credential                = $env:APPSOURCE_CREDENTIAL
-              doNotCheckVersionNumber   = $false
-              doNotUpdateVersionNumber  = $false
+              doNotCheckVersionNumber   = $env:APPSOURCE_PRODUCT_HOTFIX -eq 'true'
+              doNotUpdateVersionNumber  = $env:APPSOURCE_PRODUCT_HOTFIX -eq 'true'
             }
           )
 
@@ -696,6 +699,7 @@ stages:
           APP_FOLDERS: ${{ convertToJson(parameters.appFolders) }}
           APPSOURCE_PRODUCT_ID: ${{ parameters.appSourceProductId }}
           APPSOURCE_PRODUCT_BC_VERSION: ${{ parameters.appSourceProductBcVersion }}
+          APPSOURCE_PRODUCT_HOTFIX: ${{ parameters.appSourceProductHotfix }}
           APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
         displayName: Prepare AppSource product for publishing
     - powershell: |
