@@ -40,7 +40,7 @@ parameters:
 
 - name: dockerMemory
   type: string
-  default: 12g
+  default: 14g
 - name: dockerIsolation
   type: string
   default: hyperv
@@ -88,7 +88,8 @@ stages:
     variables:
     - name: OrganizationName
       value: ${{ parameters.organizationName }}
-
+    - name: BcContainerHelperContainerStartTimeout
+      value: 1200
     - name: DockerMemory
       value: ${{ parameters.dockerMemory }}
 
