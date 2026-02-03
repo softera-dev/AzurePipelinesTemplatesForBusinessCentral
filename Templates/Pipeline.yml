@@ -40,7 +40,7 @@ parameters:
 
 - name: dockerMemory
   type: string
-  default: 12g
+  default: 14g
 - name: dockerIsolation
   type: string
   default: hyperv
@@ -91,6 +91,9 @@ stages:
 
     - name: DockerMemory
       value: ${{ parameters.dockerMemory }}
+
+    - name: BcContainerHelperContainerStartTimeout
+      value: 1200
 
     - name: IsPullRequest
       value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
