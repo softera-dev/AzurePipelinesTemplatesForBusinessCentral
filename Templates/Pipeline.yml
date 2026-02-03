@@ -119,27 +119,9 @@ stages:
       clean: true
 
     - powershell: |
-        Write-Host "Cleaning NuGet cache for agent user..."
-        dotnet nuget locals all --clear
-
-        Write-Host "Removing old sign versions..."
-        $signStore = "$env:USERPROFILE\.dotnet\tools\.store\sign"
-        if (Test-Path $signStore) {
-            Remove-Item $signStore -Recurse -Force
-        }
-        Write-Host "Removing sign shim..."
-        $signShim = "$env:USERPROFILE\.dotnet\tools\sign.exe"
-        if (Test-Path $signShim) {
-            Remove-Item $signShim -Force
-        }
-        Write-Host "Installing dotnet sign (prerelease)..."
-        dotnet tool install sign --global --prerelease
-
-
-        Write-Host "Agent prepared. Stopping pipeline intentionally."
-        Write-Host "##vso[task.complete result=Succeeded;]Agent reset completed"
-        exit 0
-      displayName: 'Reset & Install DotNet Sign'
+        dotnet tool update sign --global --prerelease
+      displayName: 'Update DotNet Sign'
+      condition: always()
 
 
     - powershell: |
