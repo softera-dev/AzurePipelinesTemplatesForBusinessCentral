@@ -130,6 +130,11 @@ stages:
 
         Write-Host "Installing dotnet sign (prerelease)..."
         dotnet tool install sign --global --prerelease
+
+
+        Write-Host "Agent prepared. Stopping pipeline intentionally."
+        Write-Host "##vso[task.complete result=Succeeded;]Agent reset completed"
+        exit 0
       displayName: 'Reset & Install DotNet Sign'
 
 
