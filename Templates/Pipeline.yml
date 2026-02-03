@@ -124,7 +124,7 @@ stages:
       displayName: 'Who am I & dotnet tools'
 
     - powershell: |
-        dotnet tool install sign --global --prerelease
+        dotnet tool install sign --global --version 0.9.1-beta.26080.1
       displayName: 'Update DotNet Sign'
       condition: always()
 
