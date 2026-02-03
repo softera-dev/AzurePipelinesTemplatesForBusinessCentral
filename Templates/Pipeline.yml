@@ -127,8 +127,8 @@ stages:
         if (Test-Path $signStore) {
             Remove-Item $signStore -Recurse -Force
         }
-       Write-Host "Removing sign shim..."
-      $signShim = "$env:USERPROFILE\.dotnet\tools\sign.exe"
+        Write-Host "Removing sign shim..."
+        $signShim = "$env:USERPROFILE\.dotnet\tools\sign.exe"
         if (Test-Path $signShim) {
             Remove-Item $signShim -Force
         }
