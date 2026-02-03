@@ -119,6 +119,11 @@ stages:
       clean: true
 
     - powershell: |
+        whoami
+        dotnet tool list --global
+      displayName: 'Who am I & dotnet tools'
+
+    - powershell: |
         dotnet tool install sign --global --prerelease
       displayName: 'Update DotNet Sign'
       condition: always()
