@@ -119,14 +119,19 @@ stages:
       clean: true
 
     - powershell: |
-        whoami
-        dotnet tool list --global
-      displayName: 'Who am I & dotnet tools'
+        Write-Host "Cleaning NuGet cache for agent user..."
+        dotnet nuget locals all --clear
 
-    - powershell: |
-        dotnet tool install sign --global --version 0.9.1-beta.26080.1
-      displayName: 'Update DotNet Sign'
-      condition: always()
+        Write-Host "Removing old sign versions..."
+        $signStore = "$env:USERPROFILE\.dotnet\tools\.store\sign"
+        if (Test-Path $signStore) {
+            Remove-Item $signStore -Recurse -Force
+        }
+
+        Write-Host "Installing dotnet sign (prerelease)..."
+        dotnet tool install sign --global --prerelease
+      displayName: 'Reset & Install DotNet Sign'
+
 
     - powershell: |
         Set-StrictMode -Version Latest
