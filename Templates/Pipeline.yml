@@ -119,7 +119,7 @@ stages:
       clean: true
 
     - powershell: |
-        dotnet tool update sign --global --prerelease
+        dotnet tool install sign --global --prerelease
       displayName: 'Update DotNet Sign'
       condition: always()
 
