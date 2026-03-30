@@ -685,7 +685,6 @@ stages:
               offerAppFilePath          = $MainAppFilePath
               libraryAppFilePaths       = $LibraryAppFilePaths
               credential                = $env:APPSOURCE_CREDENTIAL
-              doNotCheckVersionNumber   = $env:APPSOURCE_PRODUCT_HOTFIX -eq 'true'
               doNotUpdateVersionNumber  = $env:APPSOURCE_PRODUCT_HOTFIX -eq 'true'
             }
           )
