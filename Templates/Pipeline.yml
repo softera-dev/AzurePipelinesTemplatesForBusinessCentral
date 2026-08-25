@@ -331,6 +331,12 @@ stages:
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
           PostCompileApp              = $PostCompileApp
+
+          # NOTE: Set build tracking metadata in app file
+          sourceRepositoryUrl = $env:BUILD_REPOSITORY_URI
+          sourceCommit = $env:BUILD_SOURCEVERSION
+          buildUrl = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECT/_build/results?buildId=$env:BUILD_BUILDID"
+          buildBy = "Softera Azure DevOps pipeline"
         }
         Run-AlPipeline @GetRunAlPipelineParameters
       env:
