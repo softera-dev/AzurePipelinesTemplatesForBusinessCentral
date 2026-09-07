@@ -592,13 +592,11 @@ stages:
 
           $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
           if ($NamePath.Contains('RELEASE')) { $NamePath = $NamePath -replace 'RELEASE-', '' }
-          $IsRelease = $env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch -match 'release'
+          $IsRelease = $env:Build_SourceBranch -match '^refs/heads/releases/'
 
           if ($IsRelease) {
-            $LocalLatestPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
             $FileStorageLatestPath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
           } else {
-            $LocalLatestPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
             $FileStorageLatestPath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
           }
 
@@ -606,18 +604,56 @@ stages:
           $OutputApps = @(Get-ChildItem -LiteralPath '.output' -Filter '*.app' -File -ErrorAction Stop)
           if ($OutputApps.Count -eq 0) { throw "No .app files found in '.output'." }
 
-          Write-Host "Updating Latest apps only"
+          Write-Host "Updating shared Latest apps"
           Write-Host "  Shared FileStorage: $FileStorageLatestPath"
           Write-Host "  Apps from build:    $($OutputApps.Count)"
 
-          if (Test-Path -LiteralPath $LocalLatestPath) {
-            Remove-Item -LiteralPath $LocalLatestPath -Recurse -Force -ErrorAction Stop
-          }
-          Ensure-Dir -Path $LocalLatestPath
-          Copy-Item -Path (Join-Path $env:BUILD_SOURCESDIRECTORY '*') -Exclude '.git' -Destination $LocalLatestPath -Recurse -Force -ErrorAction Stop
-
-
           Update-SharedLatestApps -NewApps $OutputApps -DestinationPath $FileStorageLatestPath
+
+          if ($env:BUILD_SOURCEBRANCH -match '^refs/heads/releases/bc(?<BcMajor>\d+)$') {
+            $BcMajor = [int]$Matches.BcMajor
+            $ProjectLatestFolder = "Latest-BC$BcMajor"
+            $ProjectRoot = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name"
+            $ProjectLatestPath = Join-Path $ProjectRoot $ProjectLatestFolder
+
+            Write-Host "Updating project-specific Latest"
+            Write-Host "  Release branch: $env:BUILD_SOURCEBRANCH"
+            Write-Host "  Target folder:  $ProjectLatestPath"
+
+            $ExistingLatestFolders = @(
+              Get-ChildItem -LiteralPath $ProjectRoot -Directory -Filter 'Latest-BC*' -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -match '^Latest-BC\d+$' } |
+              Sort-Object Name
+            )
+
+            if ($ExistingLatestFolders.Count -gt 0) {
+              Write-Host '  Existing Latest folders:'
+              $ExistingLatestFolders | ForEach-Object { Write-Host "    $($_.Name)" }
+            }
+
+            Ensure-Dir -Path $ProjectLatestPath
+
+
+            Get-ChildItem -LiteralPath $ProjectLatestPath -Filter '*.app' -File -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "  Removing old project Latest app: $($_.Name)"
+                Remove-FileSafe -Path $_.FullName
+              }
+
+            foreach ($App in $OutputApps) {
+              $DestinationApp = Join-Path $ProjectLatestPath $App.Name
+              Write-Host "  Publishing project Latest app: $($App.Name)"
+              Copy-Item -LiteralPath $App.FullName -Destination $DestinationApp -Force -ErrorAction Stop
+
+              $SourceInfo = Get-BcAppInfo -AppPath $App.FullName
+              $DestinationInfo = Get-BcAppInfo -AppPath $DestinationApp
+              if ($SourceInfo.Id -ne $DestinationInfo.Id) {
+                throw "Project Latest verification failed for '$DestinationApp'. Expected App ID '$($SourceInfo.Id)', got '$($DestinationInfo.Id)'."
+              }
+            }
+          } else {
+            Write-Host "Project-specific Latest skipped. Branch '$env:BUILD_SOURCEBRANCH' is not releases/bcXX."
+          }
 
           Write-Host 'Latest apps updated successfully.'
         env:
