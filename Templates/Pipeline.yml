@@ -139,6 +139,8 @@ stages:
         )
         Write-Host -Object 'Test app folders:'
         $TestFolders | Out-Host
+        $HasTests = @($TestFolders | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0
+        Write-Host -Object "Tests enabled: $HasTests"
         Write-Host
         Write-Host -Object "BC version given $env:BcVersion"
         $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
@@ -325,9 +327,9 @@ stages:
           codeSignCertPfxFile         = $env:CodeSignCertPfxFile
           codeSignCertPfxPassword     = (ConvertTo-SecureString -String $env:CodeSignCertPfxPassword -AsPlainText -Force)
           installApps                 = $AppsFromDependencies
-          installTestRunner           = $true
-          installTestFramework        = $true
-          installTestLibraries        = $true
+          installTestRunner           = $HasTests
+          installTestFramework        = $HasTests
+          installTestLibraries        = $HasTests
           azureDevOps                 = $true
           NewBCContainer              = $NewBCContainer
           PostCompileApp              = $PostCompileApp
@@ -376,175 +378,287 @@ stages:
           function Remove-PathSafe {
             param([Parameter(Mandatory)][string]$Path)
             if (-not (Test-Path -LiteralPath $Path)) { return }
-            for ($i=1; $i -le 5; $i++) {
+            for ($i = 1; $i -le 5; $i++) {
               try {
                 Clear-ReadOnly -Path $Path
                 Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
                 return
               } catch {
                 Write-Warning "Delete attempt $i failed for '$Path': $($_.Exception.Message)"
-                Start-Sleep -Seconds ([Math]::Min(2*$i, 10))
+                Start-Sleep -Seconds ([Math]::Min(2 * $i, 10))
               }
             }
-            try {
-              & cmd.exe /c "rmdir /s /q `"$Path`"" | Out-Null
-            } catch { }
+            try { & cmd.exe /c "rmdir /s /q `"$Path`"" | Out-Null } catch { }
             if (Test-Path -LiteralPath $Path) { throw "Failed to delete path: $Path" }
           }
-  
+
           function Ensure-Dir {
             param([Parameter(Mandatory)][string]$Path)
             if (-not (Test-Path -LiteralPath $Path)) {
               New-Item -ItemType Directory -Path $Path -Force | Out-Null
             }
           }
-  
+
           function Copy-Tree {
-          param([Parameter(Mandatory)][string]$Source,
-                [Parameter(Mandatory)][string]$Destination)
-        
-          Ensure-Dir -Path $Destination
-          $rc = & robocopy "$Source" "$Destination" /MIR /COPY:DAT /DCOPY:DAT /R:2 /W:2 /NFL /NDL /NJH /NJS /NP
-          $exit = $LASTEXITCODE
-        
-          if ($exit -gt 7) { throw "Robocopy failed ($exit) copying from '$Source' to '$Destination'. RC=$rc" }
-        
-          $global:LASTEXITCODE = 0
+            param(
+              [Parameter(Mandatory)][string]$Source,
+              [Parameter(Mandatory)][string]$Destination,
+              [string[]]$ExcludeDirectories = @()
+            )
+            Ensure-Dir -Path $Destination
+            $arguments = @($Source, $Destination, '/MIR', '/COPY:DAT', '/DCOPY:DAT', '/R:2', '/W:2', '/NFL', '/NDL', '/NJH', '/NJS', '/NP')
+            if ($ExcludeDirectories.Count -gt 0) {
+              $arguments += '/XD'
+              $arguments += $ExcludeDirectories
+            }
+            & robocopy @arguments | Out-Host
+            $exitCode = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
+            if ($exitCode -gt 7) { throw "Robocopy failed ($exitCode) copying from '$Source' to '$Destination'." }
           }
-  
-          $MainAppManifestPath = $env:MainAppFolder | Join-Path -ChildPath 'app.json'
-          $MainAppManifestJson = Get-Content -LiteralPath $MainAppManifestPath -Raw
-          $MainAppManifest = ConvertFrom-Json -InputObject $MainAppManifestJson
-          [version]$ManifestVersionIs = $MainAppManifest.version
-          $ManifestVersion = '{0}.{1}' -f $ManifestVersionIs.Build,$ManifestVersionIs.Revision
-          Write-Host "Manifest minor version: $ManifestVersion"
-  
+
+          function Publish-DirectoryAtomic {
+            param(
+              [Parameter(Mandatory)][string]$StagedPath,
+              [Parameter(Mandatory)][string]$DestinationPath,
+              [Parameter(Mandatory)][string]$RunSuffix
+            )
+            if (-not (Test-Path -LiteralPath $StagedPath)) { throw "Staged path does not exist: $StagedPath" }
+            $OldPath = "$DestinationPath-Old-$RunSuffix"
+            Remove-PathSafe -Path $OldPath
+            try {
+              if (Test-Path -LiteralPath $DestinationPath) {
+                Move-Item -LiteralPath $DestinationPath -Destination $OldPath -Force -ErrorAction Stop
+              }
+              Move-Item -LiteralPath $StagedPath -Destination $DestinationPath -Force -ErrorAction Stop
+            } catch {
+              if ((-not (Test-Path -LiteralPath $DestinationPath)) -and (Test-Path -LiteralPath $OldPath)) {
+                try { Move-Item -LiteralPath $OldPath -Destination $DestinationPath -Force -ErrorAction Stop }
+                catch { Write-Warning "Rollback failed for '$DestinationPath': $($_.Exception.Message)" }
+              }
+              throw
+            }
+            Remove-PathSafe -Path $OldPath
+          }
+
           $BranchName = if ($env:IsPullRequest -eq 'false') {
             $env:Build_SourceBranchName
           } else {
             $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
           }
-  
-          if ($env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch -match 'release') {
-            $CommonPath      = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+          $IsRelease = $env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch -match 'release'
+          $RunSuffix = if ($env:System_JobAttempt) { "$($env:Build_BuildID)-$($env:System_JobAttempt)" } else { "$($env:Build_BuildID)-$(New-Guid)" }
+
+          if ($IsRelease) {
+            $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           } else {
-            $CommonPath      = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
-            $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+            $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
           }
-  
-          $runSuffix = if ($env:System_JobAttempt) { "$($env:Build_BuildID)-$($env:System_JobAttempt)" } else { "$($env:Build_BuildID)-$(New-Guid)" }
-  
-          Write-Host "CommonPath: $CommonPath"
-          Write-Host "FileStoragePath: $FileStoragePath"
-          Write-Host "RunSuffix: $runSuffix"
-  
-         
-          $TempPath = "$CommonPath-Temporary-$runSuffix"
-          if (Test-Path -LiteralPath $TempPath) { Remove-PathSafe -Path $TempPath }
-          Ensure-Dir -Path $TempPath
-          Copy-Item -Path * -Exclude .git -Destination $TempPath -Recurse -Force -ErrorAction SilentlyContinue
-  
-          $OldPath = "$CommonPath-Old"
-          Remove-PathSafe -Path $OldPath
-  
-          $Path = $CommonPath
-          if (Test-Path -LiteralPath $Path) {
-            Ensure-Dir -Path $OldPath
-            Copy-Tree -Source $Path -Destination $OldPath
-            Remove-PathSafe -Path $Path
-          }
-          Ensure-Dir -Path $Path
-          # kopijuojame TURINĮ, o ne laikiną folderį patį
-          Copy-Tree -Source $TempPath -Destination $Path
-          Remove-PathSafe -Path $TempPath
-  
-         
-          $TempPaths = "$FileStoragePath-Temporary-$runSuffix"
-          if (Test-Path -LiteralPath $TempPaths) { Remove-PathSafe -Path $TempPaths }
-          Ensure-Dir -Path $TempPaths
-          Copy-Item -Path * -Exclude .git -Destination $TempPaths -Recurse -Force -ErrorAction SilentlyContinue
-  
-          $OldPaths = "$FileStoragePath-Old"    # FIX: buvo neteisingai į $CommonPath-Old
-          Remove-PathSafe -Path $OldPaths
-  
-          $Paths = $FileStoragePath
-          if (Test-Path -LiteralPath $Paths) {
-            Ensure-Dir -Path $OldPaths
-            Copy-Tree -Source $Paths -Destination $OldPaths
-            # dažniausia "Access denied" priežastis – ReadOnly atributai arba atviri handle'ai
-            Remove-PathSafe -Path $Paths
-          }
-          Ensure-Dir -Path $Paths
-          Copy-Tree -Source $TempPaths -Destination $Paths
-          Remove-PathSafe -Path $TempPaths
-  
-          Write-Host "Copy to BCApps finished successfully."
+          $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+
+          Write-Host "Publishing versioned build"
+          Write-Host "  Local:       $CommonPath"
+          Write-Host "  FileStorage: $FileStoragePath"
+
+          $LocalTempPath = "$CommonPath-Temporary-$RunSuffix"
+          Remove-PathSafe -Path $LocalTempPath
+          Copy-Tree -Source $env:BUILD_SOURCESDIRECTORY -Destination $LocalTempPath -ExcludeDirectories @('.git')
+          Publish-DirectoryAtomic -StagedPath $LocalTempPath -DestinationPath $CommonPath -RunSuffix $RunSuffix
+
+          Write-Host "Mirroring versioned build to FileStorage..."
+          Copy-Tree -Source $CommonPath -Destination $FileStoragePath
+
+          Write-Host 'Versioned build published successfully.'
         env:
           MainAppFolder: ${{ parameters.mainAppFolder }}
-        displayName: Copy files to BCApps
+        displayName: Publish versioned build
     - ${{ if ne(parameters.latestFolder, '') }}:
       - powershell: |
           Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          function Ensure-Dir {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) {
+              New-Item -ItemType Directory -Path $Path -Force | Out-Null
+            }
+          }
+
+          function Get-BcAppInfo {
+            param([Parameter(Mandatory)][string]$AppPath)
+
+            if (-not (Test-Path -LiteralPath $AppPath)) {
+              throw "App file does not exist: $AppPath"
+            }
+
+            [xml]$Manifest = & 'C:\Program Files\7-Zip\7z.exe' e -so $AppPath 'NavxManifest.xml' 2>$null
+            if ($LASTEXITCODE -ne 0 -or -not $Manifest.Package.App.Id) {
+              $global:LASTEXITCODE = 0
+              throw "Failed to read NavxManifest.xml from '$AppPath'."
+            }
+            $global:LASTEXITCODE = 0
+
+            [PSCustomObject]@{
+              Id        = ([Guid]$Manifest.Package.App.Id).ToString().ToLowerInvariant()
+              Name      = [string]$Manifest.Package.App.Name
+              Publisher = [string]$Manifest.Package.App.Publisher
+              Version   = [string]$Manifest.Package.App.Version
+              Path      = $AppPath
+            }
+          }
+
+          function Remove-FileSafe {
+            param([Parameter(Mandatory)][string]$Path)
+
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+
+            for ($i = 1; $i -le 5; $i++) {
+              try {
+                $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+                if ($item.Attributes -band [IO.FileAttributes]::ReadOnly) {
+                  $item.Attributes = ($item.Attributes -bxor [IO.FileAttributes]::ReadOnly)
+                }
+                Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+                return
+              } catch {
+                Write-Warning "Delete attempt $i failed for '$Path': $($_.Exception.Message)"
+                Start-Sleep -Seconds ([Math]::Min(2 * $i, 10))
+              }
+            }
+
+            throw "Failed to delete file: $Path"
+          }
+
+          function Update-SharedLatestApps {
+            param(
+              [Parameter(Mandatory)][System.IO.FileInfo[]]$NewApps,
+              [Parameter(Mandatory)][string]$DestinationPath
+            )
+
+            Ensure-Dir -Path $DestinationPath
+
+            Write-Host "Scanning existing Latest apps in '$DestinationPath'..."
+
+            $ExistingAppsById = @{}
+            $ExistingFiles = @(Get-ChildItem -LiteralPath $DestinationPath -Filter '*.app' -File -ErrorAction SilentlyContinue)
+
+            foreach ($ExistingFile in $ExistingFiles) {
+              try {
+                $ExistingInfo = Get-BcAppInfo -AppPath $ExistingFile.FullName
+                if (-not $ExistingAppsById.ContainsKey($ExistingInfo.Id)) {
+                  $ExistingAppsById[$ExistingInfo.Id] = @()
+                }
+                $ExistingAppsById[$ExistingInfo.Id] += $ExistingFile
+              } catch {
+                Write-Warning "Skipping existing file because App ID could not be read: '$($ExistingFile.FullName)'. $($_.Exception.Message)"
+              }
+            }
+
+            $NewAppsById = @{}
+            foreach ($NewApp in $NewApps) {
+              $NewInfo = Get-BcAppInfo -AppPath $NewApp.FullName
+
+              if ($NewAppsById.ContainsKey($NewInfo.Id)) {
+                throw "Build output contains more than one app with App ID '$($NewInfo.Id)': '$($NewAppsById[$NewInfo.Id].Name)' and '$($NewApp.Name)'."
+              }
+              $NewAppsById[$NewInfo.Id] = $NewApp
+
+              Write-Host "Publishing Latest app:"
+              Write-Host "  Name:      $($NewInfo.Name)"
+              Write-Host "  Publisher: $($NewInfo.Publisher)"
+              Write-Host "  App ID:    $($NewInfo.Id)"
+              Write-Host "  Version:   $($NewInfo.Version)"
+
+              $FinalPath = Join-Path $DestinationPath $NewApp.Name
+
+              Write-Host "  Copying new version: $($NewApp.Name)"
+              Copy-Item -LiteralPath $NewApp.FullName -Destination $FinalPath -Force -ErrorAction Stop
+
+              $PublishedInfo = Get-BcAppInfo -AppPath $FinalPath
+              if ($PublishedInfo.Id -ne $NewInfo.Id) {
+                throw "Published app verification failed for '$FinalPath'. Expected App ID '$($NewInfo.Id)', got '$($PublishedInfo.Id)'."
+              }
+
+              if ($ExistingAppsById.ContainsKey($NewInfo.Id)) {
+                foreach ($OldFile in @($ExistingAppsById[$NewInfo.Id])) {
+                  if ($OldFile.FullName -ne $FinalPath -and (Test-Path -LiteralPath $OldFile.FullName)) {
+                    Write-Host "  Removing old version: $($OldFile.Name)"
+                    Remove-FileSafe -Path $OldFile.FullName
+                  }
+                }
+              }
+            }
+          }
 
           $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
-          if($NamePath.Contains('RELEASE')){
-          $NamePath = $NamePath -replace 'RELEASE-',''
-          }
-           
-          $NameFile =  Get-Item -Path '.output/*' -Exclude .git -ErrorAction SilentlyContinue
-          $outputFile = Split-Path $NameFile -leaf
-          
-          
-          $Outputfilepath = @()
-          if($env:Build_SourceBranchName.Contains('Release') -Or $env:Build_SourceBranch -match 'release')
-          {
-          $Path = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
-          foreach ($i in $outputFile)
-          {
-          $i = $i -replace ".{12}$"
-          $Outputfilepath += "\\filestorage\Projects\DevOps\!Releases\$NamePath\$i"
-          }
-          }
-          
-          else{
-          $Path = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:LatestFolder"
-          $FileStoragePath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
-          foreach ($i in $outputFile)
-          {
-          $i = $i -replace ".{12}$"
-          $Outputfilepath += "\\filestorage\Projects\DevOps\!Prereleases\$NamePath\$i"
-          }
-          }
-          
-          if (-not ([System.IO.Directory]::Exists($FileStoragePath))) {
-              [System.IO.Directory]::CreateDirectory($FileStoragePath)
-          }
-                       
-          foreach ($o2 in $Outputfilepath){
-          if (Test-Path -Path "$o2*") {
-          Write-Host "File Exists" -ForegroundColor red -BackgroundColor white
-          (Get-ChildItem -Path "$o2*").Delete()
-          } 
+          if ($NamePath.Contains('RELEASE')) { $NamePath = $NamePath -replace 'RELEASE-', '' }
+          $IsRelease = $env:Build_SourceBranch -match '^refs/heads/releases/'
+
+          if ($IsRelease) {
+            $FileStorageLatestPath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
+          } else {
+            $FileStorageLatestPath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
           }
 
-          if ([System.IO.Directory]::Exists($Path)) {
-              [System.IO.Directory]::Delete($Path, $true)
-          }
-          if (-not ([System.IO.Directory]::Exists($Path))) {
-              [System.IO.Directory]::CreateDirectory($Path)
-              Copy-Item -Path * -Exclude .git -Destination $Path -Recurse -Force -ErrorAction SilentlyContinue
-          }
-              
-          if ([System.IO.Directory]::Exists($FileStoragePath)) {
-              Copy-Item -Path '.output/*' -Exclude .git -Destination $FileStoragePath -Recurse -Force -ErrorAction SilentlyContinue
+          if (-not (Test-Path -LiteralPath '.output')) { throw "Output folder '.output' does not exist." }
+          $OutputApps = @(Get-ChildItem -LiteralPath '.output' -Filter '*.app' -File -ErrorAction Stop)
+          if ($OutputApps.Count -eq 0) { throw "No .app files found in '.output'." }
+
+          Write-Host "Updating shared Latest apps"
+          Write-Host "  Shared FileStorage: $FileStorageLatestPath"
+          Write-Host "  Apps from build:    $($OutputApps.Count)"
+
+          Update-SharedLatestApps -NewApps $OutputApps -DestinationPath $FileStorageLatestPath
+
+          if ($env:BUILD_SOURCEBRANCH -match '^refs/heads/releases/bc(?<BcMajor>\d+)$') {
+            $BcMajor = [int]$Matches.BcMajor
+            $ProjectLatestFolder = "Latest-BC$BcMajor"
+            $ProjectRoot = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name"
+            $ProjectLatestPath = Join-Path $ProjectRoot $ProjectLatestFolder
+
+            Write-Host "Updating project-specific Latest"
+            Write-Host "  Release branch: $env:BUILD_SOURCEBRANCH"
+            Write-Host "  Target folder:  $ProjectLatestPath"
+
+            $ExistingLatestFolders = @(
+              Get-ChildItem -LiteralPath $ProjectRoot -Directory -Filter 'Latest-BC*' -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -match '^Latest-BC\d+$' } |
+              Sort-Object Name
+            )
+
+            if ($ExistingLatestFolders.Count -gt 0) {
+              Write-Host '  Existing Latest folders:'
+              $ExistingLatestFolders | ForEach-Object { Write-Host "    $($_.Name)" }
+            }
+
+            Ensure-Dir -Path $ProjectLatestPath
+
+
+            Get-ChildItem -LiteralPath $ProjectLatestPath -Filter '*.app' -File -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "  Removing old project Latest app: $($_.Name)"
+                Remove-FileSafe -Path $_.FullName
+              }
+
+            foreach ($App in $OutputApps) {
+              $DestinationApp = Join-Path $ProjectLatestPath $App.Name
+              Write-Host "  Publishing project Latest app: $($App.Name)"
+              Copy-Item -LiteralPath $App.FullName -Destination $DestinationApp -Force -ErrorAction Stop
+
+              $SourceInfo = Get-BcAppInfo -AppPath $App.FullName
+              $DestinationInfo = Get-BcAppInfo -AppPath $DestinationApp
+              if ($SourceInfo.Id -ne $DestinationInfo.Id) {
+                throw "Project Latest verification failed for '$DestinationApp'. Expected App ID '$($SourceInfo.Id)', got '$($DestinationInfo.Id)'."
+              }
+            }
+          } else {
+            Write-Host "Project-specific Latest skipped. Branch '$env:BUILD_SOURCEBRANCH' is not releases/bcXX."
           }
 
-         
+          Write-Host 'Latest apps updated successfully.'
         env:
           LatestFolder: ${{ parameters.latestFolder }}
-        displayName: Copy files to Latest folder
+        displayName: Publish Latest
     - ${{ if ne(parameters.appSourceProductBcVersion, '') }}:
       - pwsh: |
           Set-StrictMode -Version Latest
@@ -610,7 +724,8 @@ stages:
             Join-Path -ChildPath 'Apps'
           )
           New-Item -ItemType Directory -Path $AppSourceProductAppsPath -Force | Out-Null
-          Remove-Item -Path ($AppSourceProductAppsPath | Join-Path -ChildPath '*')
+          Get-ChildItem -LiteralPath $AppSourceProductAppsPath -Force -ErrorAction SilentlyContinue |
+          Remove-Item -Recurse -Force -ErrorAction Stop
 
           Write-Information -MessageData "Copying AppSource product apps to '$AppSourceProductAppsPath'..."
           Get-Item -Path $OutputAppsPath |
@@ -711,8 +826,13 @@ stages:
           APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
         displayName: Prepare AppSource product for publishing
     - powershell: |
-        Remove-BcContainer -containerName $env:ContainerName
-        Flush-ContainerHelperCache -KeepDays 1
+        $ErrorActionPreference = 'Continue'
+
+        if (-not [string]::IsNullOrWhiteSpace($env:ContainerName)) {
+          Remove-BcContainer -containerName $env:ContainerName
+        }
+
+        Flush-ContainerHelperCache -KeepDays 7
       condition: always()
       env:
         ContainerName: $(ContainerName)
