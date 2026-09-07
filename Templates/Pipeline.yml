@@ -465,10 +465,8 @@ stages:
           Copy-Tree -Source $env:BUILD_SOURCESDIRECTORY -Destination $LocalTempPath -ExcludeDirectories @('.git')
           Publish-DirectoryAtomic -StagedPath $LocalTempPath -DestinationPath $CommonPath -RunSuffix $RunSuffix
 
-          $FileStorageTempPath = "$FileStoragePath-Temporary-$RunSuffix"
-          Remove-PathSafe -Path $FileStorageTempPath
-          Copy-Tree -Source $CommonPath -Destination $FileStorageTempPath
-          Publish-DirectoryAtomic -StagedPath $FileStorageTempPath -DestinationPath $FileStoragePath -RunSuffix $RunSuffix
+          Write-Host "Mirroring versioned build to FileStorage..."
+          Copy-Tree -Source $CommonPath -Destination $FileStoragePath
 
           Write-Host 'Versioned build published successfully.'
         env:
@@ -571,23 +569,24 @@ stages:
               Write-Host "  App ID:    $($NewInfo.Id)"
               Write-Host "  Version:   $($NewInfo.Version)"
 
-              if ($ExistingAppsById.ContainsKey($NewInfo.Id)) {
-                foreach ($OldFile in @($ExistingAppsById[$NewInfo.Id])) {
-                  Write-Host "  Removing old version: $($OldFile.Name)"
-                  Remove-FileSafe -Path $OldFile.FullName
-                }
-              }
-
-              $TemporaryFileName = ".{0}.tmp-{1}" -f $NewApp.Name, $env:Build_BuildID
-              $TemporaryPath = Join-Path $DestinationPath $TemporaryFileName
-              Remove-FileSafe -Path $TemporaryPath
+              $FinalPath = Join-Path $DestinationPath $NewApp.Name
 
               Write-Host "  Copying new version: $($NewApp.Name)"
-              Copy-Item -LiteralPath $NewApp.FullName -Destination $TemporaryPath -Force -ErrorAction Stop
+              Copy-Item -LiteralPath $NewApp.FullName -Destination $FinalPath -Force -ErrorAction Stop
 
-              $FinalPath = Join-Path $DestinationPath $NewApp.Name
-              Remove-FileSafe -Path $FinalPath
-              Move-Item -LiteralPath $TemporaryPath -Destination $FinalPath -Force -ErrorAction Stop
+              $PublishedInfo = Get-BcAppInfo -AppPath $FinalPath
+              if ($PublishedInfo.Id -ne $NewInfo.Id) {
+                throw "Published app verification failed for '$FinalPath'. Expected App ID '$($NewInfo.Id)', got '$($PublishedInfo.Id)'."
+              }
+
+              if ($ExistingAppsById.ContainsKey($NewInfo.Id)) {
+                foreach ($OldFile in @($ExistingAppsById[$NewInfo.Id])) {
+                  if ($OldFile.FullName -ne $FinalPath -and (Test-Path -LiteralPath $OldFile.FullName)) {
+                    Write-Host "  Removing old version: $($OldFile.Name)"
+                    Remove-FileSafe -Path $OldFile.FullName
+                  }
+                }
+              }
             }
           }
 
@@ -616,6 +615,7 @@ stages:
           }
           Ensure-Dir -Path $LocalLatestPath
           Copy-Item -Path (Join-Path $env:BUILD_SOURCESDIRECTORY '*') -Exclude '.git' -Destination $LocalLatestPath -Recurse -Force -ErrorAction Stop
+
 
           Update-SharedLatestApps -NewApps $OutputApps -DestinationPath $FileStorageLatestPath
 
