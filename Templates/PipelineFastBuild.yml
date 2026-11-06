@@ -1,0 +1,1265 @@
+parameters:
+- name: bcVersion
+  type: string
+- name: alLanguageExtensionFileName
+  type: string
+  default: ''
+
+- name: organizationName
+  type: string
+  default: ''
+- name: appFolders
+  type: object
+  default:
+  - MainApp
+- name: testFolders
+  type: object
+  default: []
+- name: masterBranch
+  type: string
+  default: WIP
+- name: mainAppFolder
+  type: string
+  default: MainApp
+- name: appReleaseVersionFormat
+  type: string
+  default: '{Manifest.Build}.{Manifest.Revision}'
+- name: appVersionFormat
+  type: string
+  default: '{Container.Major}.{Manifest.Minor}.{Release.Major}.{Release.Minor}'
+- name: customAppVersion
+  type: string
+  default: '0.0.0.0'
+- name: manifestVersionMismatchAction
+  type: string
+  default: error
+  values:
+  - error
+  - warning
+  - none
+- name: checkoutSubmodules
+  type: boolean
+  default: false
+
+- name: dockerMemory
+  type: string
+  default: 14g
+- name: dockerIsolation
+  type: string
+  default: hyperv
+  values:
+  - hyperv
+  - process
+
+- name: publishOutput
+  type: boolean
+  default: true
+- name: latestFolder
+  type: string
+  default: Latest
+- name: beforeAppsInstallScript
+  type: string
+  default: ''
+- name: latestDependencyAppPaths
+  type: object
+  default: []
+
+- name: appSourceProductId
+  type: string
+  default: ''
+- name: appSourceProductBcVersion
+  type: string
+  default: ''
+- name: appSourceProductHotfix
+  type: boolean
+  default: false
+- name: appSourceCredential
+  type: string
+  values:
+  - none
+  - softera
+  - lbc
+  - soft4
+  default: none
+
+# NOTE: PipelineFastBuild specific parameters
+- name: runTests
+  type: boolean
+  default: true
+- name: failOnTestFailures
+  type: boolean
+  default: false
+- name: keepWarmContainerRunning
+  type: boolean
+  default: true
+- name: maxWarmContainersPerAgent
+  type: number
+  default: 2
+- name: timeoutInMinutes
+  type: number
+  default: 120
+- name: alRunnerTests
+  type: boolean
+  default: false
+- name: alRunnerVersion
+  type: string
+  default: '3.0.0-alpha.13'
+- name: alRunnerSha256
+  type: string
+  default: 'c24094cc57a837cefe4ba7a488e0045653462ef29a8136899778fd476cea44d5'
+
+stages:
+- stage: Main
+  displayName: Main
+  jobs:
+  - job: Main
+    condition: or(startsWith(variables['Build.SourceBranchName'], variables['MasterBranch']), startsWith(variables['Build.SourceBranchName'], variables['merge']), startsWith(variables['Build.SourceVersionMessage'], 'Merge WIP to Release-'))
+    timeoutInMinutes: ${{ parameters.timeoutInMinutes }}
+    variables:
+    - name: OrganizationName
+      value: ${{ parameters.organizationName }}
+
+    - name: DockerMemory
+      value: ${{ parameters.dockerMemory }}
+
+    - name: BcContainerHelperContainerStartTimeout
+      value: 1200
+
+    - name: IsPullRequest
+      value: $[ ne(variables['System.PullRequest.PullRequestId'], '') ]
+    - name: MasterBranch
+      value: ${{ parameters.masterBranch }}
+    - name: BcApplicationVersion
+      value: ''
+    steps:
+    - powershell: |
+        $ExitCode = 0
+        $FreeDiskSpace = Get-PSDrive -Name C | Select-Object -ExpandProperty Free
+        if ($FreeDiskSpace -lt 10gb) {
+            Write-Host -Object '##[error]There is no free disk space left. There must be atleast 10 GB.'
+            $ExitCode = 1
+        }
+        Add-Type -AssemblyName Microsoft.VisualBasic
+        $ComputerInfo = [Microsoft.VisualBasic.Devices.ComputerInfo]::new()
+        if ($ComputerInfo.AvailablePhysicalMemory -lt 4gb) {
+            Write-Host -Object '##[error]There is no free memory space left. There must be atleast 4 GB.'
+            $ExitCode = 1
+        }
+        exit($ExitCode)
+      condition: always()
+      displayName: Checking free disk and ram space
+    - checkout: self
+      clean: true
+      submodules: ${{ parameters.checkoutSubmodules }}
+
+    - powershell: |
+        dotnet tool update sign --global --prerelease
+      displayName: 'Update DotNet Sign'
+    - powershell: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        $AppFolders = $(
+          $env:AppFolders | ConvertFrom-Json
+        )
+        Write-Host -Object 'App folders:'
+        $AppFolders | Out-Host
+        Write-Host
+        Write-Host -Object "BC version given $env:BcVersion"
+        $Pattern = '^(?<Type>OnPrem|Sandbox)\/(?<Version>Current|NextMinor|NextMajor|\d+(?:\.\d+){0,3})\/(?<Country>base|w1|[a-zA-Z]{2})$'
+        if ($env:BcVersion -notmatch $Pattern) {
+          Write-Host -Object 'BC version expected pattern ''<OnPrem|Sandbox>/<Current|NextMinor|NextMajor|Numeric version, eg 16.3>/<base or w1 or country>'' (case sensitive)'
+          throw 'BC version doesn''t match pattern. '
+        }
+        Write-Host
+        Write-Host -Object "Parsed artifact type:    $($Matches.Type)"
+        Write-Host -Object "Parsed artifact version: $($Matches.Version)"
+        Write-Host -Object "Parsed artifact country: $($Matches.Country)"
+        $GetBcArtifactUrlParameters = @{
+          Type               = $Matches.Type
+          Select             = $Matches.Version -replace '^(?!(?:Current|NextMinor|NextMajor)$).*', 'Latest'
+          Version            = $Matches.Version -replace '^(?:Current|NextMinor|NextMajor)$', ''
+          Country            = $Matches.Country
+          accept_insiderEula = $true
+        }
+        Write-Host
+        Write-Host -Object ($GetBcArtifactUrlParameters | ConvertTo-Json -Depth 1)
+
+        $BcArtifactUrl = Get-BCArtifactUrl @GetBcArtifactUrlParameters
+        if (-not $BcArtifactUrl) {
+          throw "No BC artifact found for '$env:BcVersion'."
+        }
+        Write-Host -Object "BC artifact URL: $BcArtifactUrl"
+        Write-Host -Object "##vso[task.setvariable variable=BcArtifactUrl;]$BcArtifactUrl"
+
+        $ApplicationArtifactPath = Download-Artifacts -artifactUrl $BcArtifactUrl
+        $BcArtifactManifest = Get-Content -LiteralPath ($ApplicationArtifactPath | Join-Path -ChildPath 'manifest.json') | ConvertFrom-Json
+        [version]$PlatformVersion = $BcArtifactManifest.platform
+
+        $LicensePath = $(
+          ($PlatformVersion.Major)..12 |
+          ForEach-Object -Process {
+            $LicenseFileExtension = 'bclicense'
+            if ($_ -lt 20) {
+              $LicenseFileExtension = 'flf'
+            }
+            "\\filestorage\Projects\DevOps\!Pipeline\Licenses\BC$_.$LicenseFileExtension"
+          } |
+          Resolve-Path |
+          Select-Object -First 1 -ExpandProperty ProviderPath
+        )
+        Write-Host -Object "Selected license path for platform BC$($PlatformVersion.Major): $LicensePath"
+        Write-Host -Object "##vso[task.setvariable variable=LicensePath;]$LicensePath"
+
+        foreach ($AppFolder in $AppFolders) {
+          Write-Host
+          Write-Host -Object "Updating app version in '$AppFolder'..."
+          [version]$CustomAppVersion = $env:CustomAppVersion
+          [version]$ManifestVersion = $(
+            Get-Content -Path $AppFolder/app.json |
+            ConvertFrom-Json |
+            Select-Object -ExpandProperty version
+          )
+          $VersionNumberPattern = '\{(?<Identifier>[a-zA-Z.]+)\}'
+          [System.Text.RegularExpressions.MatchEvaluator]$VersionNumberEvaluator = {
+            param(
+              [System.Text.RegularExpressions.Match]$Match
+            )
+            switch -CaseSensitive ($Match.Groups['Identifier'].Value) {
+              'Manifest.Major' { $ManifestVersion.Major }
+              'Manifest.Minor' { $ManifestVersion.Minor }
+              'Manifest.Build' { $ManifestVersion.Build }
+              'Manifest.Revision' { $ManifestVersion.Revision }
+              'Container.Major' { $PlatformVersion.Major }
+              'Container.Minor' { $PlatformVersion.Minor }
+              'Container.Build' { $PlatformVersion.Build }
+              'Container.Revision' { $PlatformVersion.Revision }
+              'Custom.Major' { $CustomAppVersion.Major }
+              'Custom.Minor' { $CustomAppVersion.Minor }
+              'Custom.Build' { $CustomAppVersion.Build }
+              'Custom.Revision' { $CustomAppVersion.Revision }
+              'Release.Major' { $SelectedAppReleaseVersion.Major }
+              'Release.Minor' { $SelectedAppReleaseVersion.Minor }
+              'Release.Build' { $SelectedAppReleaseVersion.Build }
+              'Release.Revision' { $SelectedAppReleaseVersion.Revision }
+            }
+          }
+          [version]$SelectedAppReleaseVersion = [regex]::Replace($env:AppReleaseVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
+          [version]$SelectedAppVersion = [regex]::Replace($env:AppVersionFormat, $VersionNumberPattern, $VersionNumberEvaluator)
+          if ($ManifestVersion.Major -ne $SelectedAppVersion.Major -or `
+              $ManifestVersion.Minor -notin @(0, $SelectedAppVersion.Minor) -or `
+              $ManifestVersion.Build -ne $SelectedAppVersion.Build -and `
+              $ManifestVersion.Revision -ne $SelectedAppVersion.Revision) {
+            if ($env:ManifestVersionMismatchAction -in @('warning', 'error')) {
+              Write-Warning -Message "Manifest app version $ManifestVersion does not match selected app version $SelectedAppVersion."
+            }
+            if ($env:ManifestVersionMismatchAction -eq 'error') {
+              throw 'Manifest app version does not match selected app version.'
+            }
+          }
+          Write-Host -Object "Selected application release version: $SelectedAppReleaseVersion"
+          Write-Host -Object "Selected application version: $SelectedAppVersion"
+          if ($AppFolder -eq $env:MainAppFolder) {
+            Write-Host -Object "##vso[task.setvariable variable=AppReleaseVersion;]$SelectedAppReleaseVersion"
+            Write-Host -Object "##vso[task.setvariable variable=BcApplicationVersion;]$SelectedAppVersion"
+          }
+          $ManifestApp = $(
+            Get-Content -Path $AppFolder/app.json -Raw -Encoding UTF8 |
+            ConvertFrom-Json )
+          $ManifestApp.Version = [string]$SelectedAppVersion
+          $ManifestApp |
+          ConvertTo-Json -Depth 20 |
+          Set-Content -LiteralPath $AppFolder/app.json -Encoding UTF8
+        }
+      env:
+        BcVersion: ${{ parameters.bcVersion }}
+        MainAppFolder: ${{ parameters.mainAppFolder }}
+        AppFolders: ${{ convertToJson(parameters.appFolders) }}
+        AppReleaseVersionFormat: ${{ parameters.appReleaseVersionFormat }}
+        AppVersionFormat: ${{ parameters.appVersionFormat }}
+        CustomAppVersion: ${{ parameters.customAppVersion }}
+        ManifestVersionMismatchAction: ${{ parameters.manifestVersionMismatchAction }}
+      displayName: Resolve BC artifact and set app versions
+
+    - powershell: |
+        Set-StrictMode -Version Latest
+        $ErrorActionPreference = 'Stop'
+        $AppFolders = $(
+          $env:AppFolders | ConvertFrom-Json
+        )
+        $TestFolders = $(
+          $env:TestFolders | ConvertFrom-Json
+        )
+        $HasTests = @($TestFolders | Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }).Count -gt 0
+        Write-Host -Object "Tests enabled: $HasTests"
+
+        $PostCompileApp = {
+          param(
+            [string] $AppFilePath,
+            [string] $AppType,
+            [hashtable] $CompilationParams
+          )
+
+          Write-Host -Object "Signing BC app $AppType '$AppFilePath' in '$(hostname)'..."
+          & 'C:\Users\Azure_Pipelines\temp-sign\sign.exe' code azure-key-vault `
+            --description 'GlobalSign code signing certificate' `
+            --description-url 'https://www.globalsign.com' `
+            --azure-key-vault-url 'https://softerabcappsigning.vault.azure.net/' `
+            --azure-key-vault-tenant-id 'b2ffa4d2-017d-4706-8e9d-fdda02bf7ffc' `
+            --azure-key-vault-client-id '4bf6ee22-162c-4307-be8b-88f269d74add' `
+            --azure-key-vault-client-secret ([System.Environment]::GetEnvironmentVariable('DevOpsAppSigning ClientSecret', [System.EnvironmentVariableTarget]::Machine)) `
+            --azure-key-vault-certificate 'gs000001' `
+            --timestamp-url 'http://timestamp.globalsign.com/tsa/r6advanced1' `
+            --timestamp-digest 'sha256' `
+            --verbosity Debug `
+            $AppFilePath
+          if ($LASTEXITCODE -ne 0) {
+            throw "Signing '$AppFilePath' failed with exit code $LASTEXITCODE."
+          }
+        }
+        $InstallAppsFolders = $(
+          $env:LatestDependencyAppPaths | ConvertFrom-Json
+        )
+        $AppsFromDependencies = @(
+          $InstallAppsFolders |
+          Where-Object -FilterScript { $_ } |
+          ForEach-Object -Process {
+            $AppFiles = `
+              Get-ChildItem -LiteralPath $_ -Filter '*.app' -Recurse |
+            Select-Object -ExpandProperty FullName
+            if ($AppFiles) {
+              $AppFiles
+            } else {
+              Write-Host -Object "No app files found in folder $_."
+              throw 'No app files found in folder.'
+            }
+          }
+        )
+        Write-Host -Object "Installed apps folders: $($InstallAppsFolders -join ', ')"
+
+        # NOTE: Only names the compiler folder. useCompilerFolder + doNotPublishApps means no container is created.
+        $CompilerFolderName = -join [char[]]([char]'a'..[char]'z' | Get-Random -Count 8)
+        Write-Host -Object "##vso[task.setvariable variable=CompilerFolderName;]$CompilerFolderName"
+        $RunAlPipelineParameters = @{
+          pipelinename         = 'Build'
+          containerName        = $CompilerFolderName
+          accept_insiderEula   = $true
+          artifact             = $env:BcArtifactUrl
+          baseFolder           = $env:BUILD_SOURCESDIRECTORY
+          appFolders           = $AppFolders
+          testFolders          = $TestFolders
+          useCompilerFolder    = $true
+          doNotPublishApps     = $true
+          doNotRunTests        = $true
+          doNotRunBcptTests    = $true
+          installApps          = $AppsFromDependencies
+          installTestRunner    = $HasTests
+          installTestFramework = $HasTests
+          installTestLibraries = $HasTests
+          azureDevOps          = $true
+          PostCompileApp       = $PostCompileApp
+
+          # NOTE: Set build tracking metadata in app file
+          sourceRepositoryUrl = $env:BUILD_REPOSITORY_URI
+          sourceCommit = $env:BUILD_SOURCEVERSION
+          buildUrl = "$env:SYSTEM_COLLECTIONURI$env:SYSTEM_TEAMPROJECT/_build/results?buildId=$env:BUILD_BUILDID"
+          buildBy = "Softera Azure DevOps pipeline"
+        }
+        if (-not [string]::IsNullOrEmpty($env:ALLanguageExtensionFileName)) {
+          $RunAlPipelineParameters['vsixFile'] = $env:ALLanguageExtensionFileName
+        }
+        Run-AlPipeline @RunAlPipelineParameters
+      env:
+        BcArtifactUrl: $(BcArtifactUrl)
+        ALLanguageExtensionFileName: ${{ parameters.alLanguageExtensionFileName }}
+        AppFolders: ${{ convertToJson(parameters.appFolders) }}
+        TestFolders: ${{ convertToJson(parameters.testFolders) }}
+        LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
+      displayName: Compile and sign apps (no container)
+
+    # NOTE: Experimental. AL Runner (community, alpha) runs AL tests without a BC service tier. Never fails the build.
+    - ${{ if and(parameters.alRunnerTests, gt(length(parameters.testFolders), 0)) }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+          [Net.ServicePointManager]::SecurityProtocol = [Net.ServicePointManager]::SecurityProtocol -bor [Net.SecurityProtocolType]::Tls12
+
+          $ToolRoot = Join-Path $env:ProgramData "SofteraBcPipeline\al-runner\$env:AlRunnerVersion"
+          $Exe = Join-Path $ToolRoot 'al-runner.exe'
+          if (-not (Test-Path -LiteralPath $Exe)) {
+            $Archive = "al-runner-$env:AlRunnerVersion-x86_64-pc-windows-msvc.zip"
+            $Url = "https://github.com/aldevtools/BusinessCentral.AL.Runner/releases/download/v$env:AlRunnerVersion/$Archive"
+            $TempArchive = Join-Path $env:AGENT_TEMPDIRECTORY $Archive
+            Write-Host -Object "Downloading $Url"
+            Invoke-WebRequest -Uri $Url -OutFile $TempArchive -UseBasicParsing
+            $ActualHash = (Get-FileHash -LiteralPath $TempArchive -Algorithm SHA256).Hash.ToLowerInvariant()
+            if ($ActualHash -ne $env:AlRunnerSha256.ToLowerInvariant()) {
+              throw "Checksum mismatch for ${Archive}: got $ActualHash, expected $env:AlRunnerSha256."
+            }
+            New-Item -ItemType Directory -Path $ToolRoot -Force | Out-Null
+            Expand-Archive -LiteralPath $TempArchive -DestinationPath $ToolRoot -Force
+            Unblock-File -LiteralPath $Exe
+          }
+          & $Exe --version
+
+          $AppFolders = @($(
+            $env:AppFolders | ConvertFrom-Json
+          ))
+          $TestFolders = @(
+            $(
+              $env:TestFolders | ConvertFrom-Json
+            ) |
+            Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+          )
+          $DependencyFolders = @(
+            $(
+              $env:LatestDependencyAppPaths | ConvertFrom-Json
+            ) |
+            Where-Object { $_ }
+          )
+          if ($env:BcArtifactUrl -notmatch '/(?<Version>\d+(?:\.\d+){3})/(?<Country>[^/?]+)') {
+            throw "Cannot read BC version and country from '$env:BcArtifactUrl'."
+          }
+          $ResultsFile = Join-Path $env:BUILD_SOURCESDIRECTORY 'ALRunnerResults.xml'
+          $CacheDir = Join-Path $env:ProgramData 'SofteraBcPipeline\al-runner-cache'
+
+          $Arguments = @('test') + @(
+            $AppFolders + $TestFolders |
+            ForEach-Object -Process { Join-Path $env:BUILD_SOURCESDIRECTORY $_ }
+          )
+          foreach ($DependencyFolder in $DependencyFolders) {
+            $Arguments += '--dep', $DependencyFolder
+          }
+          $Arguments += @(
+            '--bc-version', $Matches.Version
+            '--country', $Matches.Country
+            '--cache-dir', $CacheDir
+            '--junit', $ResultsFile
+            '--allow-not-run'
+            '--verbose'
+            '--timings'
+            '--top-refusals', '30'
+            '--top-failures', '30'
+          )
+          Write-Host -Object "al-runner $($Arguments -join ' ')"
+
+          $ErrorActionPreference = 'Continue'
+          $Stopwatch = [System.Diagnostics.Stopwatch]::StartNew()
+          & $Exe @Arguments
+          $ExitCode = $LASTEXITCODE
+          Write-Host -Object "AL Runner finished in $([int]$Stopwatch.Elapsed.TotalSeconds) seconds with exit code $ExitCode."
+          $Meaning = switch ($ExitCode) {
+            0 { 'all selected tests passed' }
+            1 { 'some tests failed' }
+            2 { 'bad invocation, or the run could not start' }
+            3 { 'apps do not compile under AL Runner, no tests ran' }
+            6 { 'no tests matched' }
+            7 { 'some tests were not run' }
+            8 { 'some tests were not run because the .NET helper was unavailable' }
+            default { 'unknown exit code' }
+          }
+          if ($ExitCode -ne 0) {
+            Write-Host -Object "##vso[task.logissue type=warning]AL Runner exit code ${ExitCode}: $Meaning."
+          }
+          if ($ExitCode -eq 2) {
+            & $Exe test --help
+          }
+          exit 0
+        env:
+          AlRunnerVersion: ${{ parameters.alRunnerVersion }}
+          AlRunnerSha256: ${{ parameters.alRunnerSha256 }}
+          BcArtifactUrl: $(BcArtifactUrl)
+          AppFolders: ${{ convertToJson(parameters.appFolders) }}
+          TestFolders: ${{ convertToJson(parameters.testFolders) }}
+          LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
+        continueOnError: true
+        timeoutInMinutes: 45
+        displayName: Run tests with AL Runner (experimental)
+      - task: PublishTestResults@2
+        condition: succeededOrFailed()
+        inputs:
+          testResultsFormat: JUnit
+          testResultsFiles: ALRunnerResults.xml
+          searchFolder: $(Build.SourcesDirectory)
+          testRunTitle: AL Runner (experimental)
+          failTaskOnMissingResultsFile: false
+        displayName: Publish AL Runner test results
+    - ${{ if and(parameters.runTests, gt(length(parameters.testFolders), 0)) }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $ProgressPreference = 'SilentlyContinue'
+
+          function Get-BcAppInfo {
+            param([Parameter(Mandatory)][string]$AppPath)
+            [xml]$Manifest = & 'C:\Program Files\7-Zip\7z.exe' e -so $AppPath 'NavxManifest.xml' 2>$null
+            if ($LASTEXITCODE -ne 0 -or -not $Manifest.Package.App.Id) {
+              $global:LASTEXITCODE = 0
+              throw "Failed to read NavxManifest.xml from '$AppPath'."
+            }
+            [PSCustomObject]@{
+              Id   = ([Guid]$Manifest.Package.App.Id).ToString().ToLowerInvariant()
+              Name = [string]$Manifest.Package.App.Name
+              Path = $AppPath
+            }
+          }
+
+          function Get-WarmContainers {
+            @(
+              docker ps -a --filter "label=softera.pipeline.agent=$AgentName" --format '{{.Names}}|{{.State}}' |
+              Where-Object { $_ } |
+              ForEach-Object {
+                $Name, $State = $_ -split '\|', 2
+                [PSCustomObject]@{ Name = $Name; Running = $State -eq 'running' }
+              }
+            )
+          }
+
+          function Get-WarmContainerState {
+            param([Parameter(Mandatory)][string]$Name)
+            $StatePath = Join-Path $StateRoot "$Name.json"
+            if (Test-Path -LiteralPath $StatePath) {
+              Get-Content -LiteralPath $StatePath -Raw | ConvertFrom-Json
+            }
+          }
+
+          function Save-WarmContainerState {
+            param([Parameter(Mandatory)][string]$Name)
+            $State = [ordered]@{
+              Name          = $Name
+              ArtifactUrl   = $env:BcArtifactUrl
+              Repository    = $env:BUILD_REPOSITORY_NAME
+              CreatedUtc    = [string](Get-Date).ToUniversalTime().ToString('o')
+              LastUsedUtc   = [string](Get-Date).ToUniversalTime().ToString('o')
+            }
+            $Existing = Get-WarmContainerState -Name $Name
+            if ($Existing) {
+              $State.CreatedUtc = $Existing.CreatedUtc
+            }
+            [PSCustomObject]$State | ConvertTo-Json | Set-Content -LiteralPath (Join-Path $StateRoot "$Name.json") -Encoding UTF8
+          }
+
+          function Remove-WarmContainer {
+            param([Parameter(Mandatory)][string]$Name)
+            Write-Host -Object "Removing warm container '$Name'..."
+            Remove-BcContainer -containerName $Name
+            foreach ($Path in @((Join-Path $StateRoot "$Name.json"), (Join-Path $StateRoot "$Name.credential.xml"))) {
+              if (Test-Path -LiteralPath $Path) {
+                Remove-Item -LiteralPath $Path -Force
+              }
+            }
+          }
+
+          function New-WarmContainer {
+            Write-Host -Object "Creating warm container '$ContainerName' (one-off cost for this artifact and dependency set)..."
+            $PasswordChars = [char[]]'abcdefghijkmnopqrstuvwxyzABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+            $Password = (-join ($PasswordChars | Get-Random -Count 20)) + '!9a'
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList 'admin', (ConvertTo-SecureString -String $Password -AsPlainText -Force)
+
+            $NewBcContainerParameters = @{
+              accept_eula          = $true
+              accept_insiderEula   = $true
+              containerName        = $ContainerName
+              artifactUrl          = $env:BcArtifactUrl
+              imageName            = 'my'
+              auth                 = 'NavUserPassword'
+              Credential           = $Credential
+              licenseFile          = $env:LicensePath
+              memoryLimit          = $env:DockerMemory
+              isolation            = $env:DockerIsolation
+              updateHosts          = $true
+              shortcuts            = 'None'
+              additionalParameters = @("--label=softera.pipeline.agent=$AgentName")
+            }
+            New-BcContainer @NewBcContainerParameters
+
+            if ($env:BeforeAppsInstallScript) {
+              Write-Host -Object "Running script inside container: $env:BeforeAppsInstallScript"
+              Invoke-ScriptInBcContainer -containerName $ContainerName -argumentList $env:BeforeAppsInstallScript -scriptBlock {
+                param(
+                  $BeforeAppsInstallScript
+                )
+                Invoke-Expression -Command $BeforeAppsInstallScript
+              }
+            }
+
+            Import-TestToolkitToBcContainer -containerName $ContainerName -credential $Credential -includeTestLibrariesOnly
+
+            if ($SnapshotApps) {
+              $SortedSnapshotApps = Sort-AppFilesByDependencies -appFiles $SnapshotApps
+              Publish-BcContainerApp -containerName $ContainerName -appFile $SortedSnapshotApps -sync -install -skipVerification
+            }
+
+            Backup-BcContainerDatabases -containerName $ContainerName -bakFolder $SnapshotFolder
+            $Credential | Export-Clixml -LiteralPath $CredentialPath
+            Save-WarmContainerState -Name $ContainerName
+            $Credential
+          }
+
+          function Initialize-WarmContainer {
+            $Existing = @(Get-WarmContainers | Where-Object -Property Name -EQ -Value $ContainerName)
+            $IsReady = $Existing -and
+              (Test-Path -LiteralPath $CredentialPath) -and
+              (Get-WarmContainerState -Name $ContainerName) -and
+              (Test-Path -LiteralPath $SnapshotFolder)
+            if ($Existing -and -not $IsReady) {
+              Write-Host -Object "Warm container '$ContainerName' exists but its snapshot is incomplete."
+              Remove-WarmContainer -Name $ContainerName
+              $Existing = @()
+            }
+            if (-not $Existing) {
+              return New-WarmContainer
+            }
+
+            Write-Host -Object "Reusing warm container '$ContainerName'."
+            $Credential = Import-Clixml -LiteralPath $CredentialPath
+            if (-not $Existing[0].Running) {
+              Start-BcContainer -containerName $ContainerName
+            }
+            Write-Host -Object 'Restoring clean database snapshot...'
+            Restore-DatabasesInBcContainer -containerName $ContainerName -bakFolder $SnapshotFolder
+            $Credential
+          }
+
+          $AgentName = ($env:AGENT_NAME -replace '[^a-zA-Z0-9_.-]', '-')
+          $StateRoot = Join-Path $env:ProgramData "SofteraBcPipeline\$AgentName"
+          New-Item -ItemType Directory -Path $StateRoot -Force | Out-Null
+
+          $TestFolders = @(
+            $(
+              $env:TestFolders | ConvertFrom-Json
+            ) |
+            Where-Object { -not [string]::IsNullOrWhiteSpace([string]$_) }
+          )
+          $RepositoryAppFolders = @($(
+            $env:AppFolders | ConvertFrom-Json
+          )) + $TestFolders
+          $RepositoryAppIds = @(
+            foreach ($AppFolder in $RepositoryAppFolders) {
+              ([Guid](Get-Content -LiteralPath (Join-Path $env:BUILD_SOURCESDIRECTORY "$AppFolder\app.json") -Raw | ConvertFrom-Json).id).ToString().ToLowerInvariant()
+            }
+          )
+
+          # NOTE: Apps built by this repository are left out of the snapshot so every build installs them fresh.
+          $InstallAppsFolders = $(
+            $env:LatestDependencyAppPaths | ConvertFrom-Json
+          )
+          $SnapshotApps = @(
+            $InstallAppsFolders |
+            Where-Object -FilterScript { $_ } |
+            ForEach-Object -Process {
+              Get-ChildItem -LiteralPath $_ -Filter '*.app' -Recurse |
+              Select-Object -ExpandProperty FullName
+            } |
+            Where-Object -FilterScript {
+              $AppInfo = Get-BcAppInfo -AppPath $_
+              if ($AppInfo.Id -in $RepositoryAppIds) {
+                Write-Host -Object "Skipping dependency built by this repository: $($AppInfo.Name)"
+                $false
+              } else {
+                $true
+              }
+            }
+          )
+
+          $KeyMaterial = @(
+            'warm-container-v1'
+            $AgentName
+            $env:BcArtifactUrl
+            $env:LicensePath
+            (Get-Item -LiteralPath $env:LicensePath).LastWriteTimeUtc.Ticks
+            $env:DockerIsolation
+            $env:DockerMemory
+            $env:BeforeAppsInstallScript
+          ) + @(
+            $SnapshotApps |
+            ForEach-Object -Process {
+              $AppFile = Get-Item -LiteralPath $_
+              '{0}|{1}|{2}' -f $AppFile.Name, $AppFile.Length, $AppFile.LastWriteTimeUtc.Ticks
+            } |
+            Sort-Object
+          )
+          $Sha256 = [System.Security.Cryptography.SHA256]::Create()
+          $HashBytes = $Sha256.ComputeHash([System.Text.Encoding]::UTF8.GetBytes(($KeyMaterial -join "`n")))
+          $ContainerName = 'bc' + (-join ($HashBytes[0..4] | ForEach-Object { $_.ToString('x2') }))
+          $SnapshotFolder = Join-Path $env:ProgramData "BcContainerHelper\Extensions\$ContainerName\snapshot"
+          $CredentialPath = Join-Path $StateRoot "$ContainerName.credential.xml"
+          Write-Host -Object "Warm container key: $ContainerName"
+          Write-Host -Object "##vso[task.setvariable variable=WarmContainerName;]$ContainerName"
+
+          # NOTE: Only the current warm container may use memory; older ones are stopped, least recently used ones removed.
+          $OtherContainers = @(Get-WarmContainers | Where-Object -Property Name -NE -Value $ContainerName)
+          foreach ($Other in @($OtherContainers | Where-Object -Property Running)) {
+            Write-Host -Object "Stopping warm container '$($Other.Name)'..."
+            Stop-BcContainer -containerName $Other.Name
+          }
+          $MaxOtherContainers = [Math]::Max(0, [int]$env:MaxWarmContainersPerAgent - 1)
+          $OtherContainers |
+          Sort-Object -Descending -Property {
+            $State = Get-WarmContainerState -Name $_.Name
+            if ($State) { [datetime]$State.LastUsedUtc } else { [datetime]::MinValue }
+          } |
+          Select-Object -Skip $MaxOtherContainers |
+          ForEach-Object -Process { Remove-WarmContainer -Name $_.Name }
+
+          try {
+            $Credential = Initialize-WarmContainer
+          } catch {
+            Write-Warning -Message "Warm container could not be reused: $($_.Exception.Message)"
+            if (@(Get-WarmContainers | Where-Object -Property Name -EQ -Value $ContainerName)) {
+              Remove-WarmContainer -Name $ContainerName
+            }
+            $Credential = New-WarmContainer
+          }
+          $Credential = @($Credential | Where-Object { $_ -is [System.Management.Automation.PSCredential] })[-1]
+
+          $OutputApps = @(
+            Get-ChildItem -LiteralPath (Join-Path $env:BUILD_SOURCESDIRECTORY '.output') -Filter '*.app' -File |
+            Select-Object -ExpandProperty FullName
+          )
+          if (-not $OutputApps) {
+            throw "No .app files found in '.output'."
+          }
+          $SortedOutputApps = Sort-AppFilesByDependencies -appFiles $OutputApps
+          Publish-BcContainerApp -containerName $ContainerName -appFile $SortedOutputApps -sync -install -skipVerification
+
+          $ContainerResultsFile = Join-Path $env:ProgramData "BcContainerHelper\Extensions\$ContainerName\TestResults.xml"
+          if (Test-Path -LiteralPath $ContainerResultsFile) {
+            Remove-Item -LiteralPath $ContainerResultsFile -Force
+          }
+          $AllPassed = $true
+          foreach ($TestFolder in $TestFolders) {
+            $TestAppId = (Get-Content -LiteralPath (Join-Path $env:BUILD_SOURCESDIRECTORY "$TestFolder\app.json") -Raw | ConvertFrom-Json).id
+            Write-Host -Object "Running tests for app $TestAppId in $TestFolder"
+            $Passed = Run-TestsInBcContainer `
+              -containerName $ContainerName `
+              -credential $Credential `
+              -extensionId $TestAppId `
+              -JUnitResultFileName $ContainerResultsFile `
+              -AppendToJUnitResultFile `
+              -AzureDevOps 'error' `
+              -detailed `
+              -returnTrueIfAllPassed
+            if (@($Passed)[-1] -ne $true) {
+              $AllPassed = $false
+            }
+          }
+          if (Test-Path -LiteralPath $ContainerResultsFile) {
+            Copy-Item -LiteralPath $ContainerResultsFile -Destination (Join-Path $env:BUILD_SOURCESDIRECTORY 'TestResults.xml') -Force
+          }
+
+          Save-WarmContainerState -Name $ContainerName
+          if ($env:KeepWarmContainerRunning -ne 'True') {
+            Stop-BcContainer -containerName $ContainerName
+          }
+
+          if (-not $AllPassed) {
+            if ($env:FailOnTestFailures -eq 'True') {
+              throw 'There are test failures (failOnTestFailures is on, the build stops).'
+            }
+            Write-Host -Object '##vso[task.logissue type=warning]There are test failures. Set failOnTestFailures: true to stop the build on them.'
+          }
+        env:
+          BcArtifactUrl: $(BcArtifactUrl)
+          LicensePath: $(LicensePath)
+          AppFolders: ${{ convertToJson(parameters.appFolders) }}
+          TestFolders: ${{ convertToJson(parameters.testFolders) }}
+          LatestDependencyAppPaths: ${{ convertToJson(parameters.latestDependencyAppPaths) }}
+          DockerMemory: $(DockerMemory)
+          DockerIsolation: ${{ parameters.dockerIsolation }}
+          BeforeAppsInstallScript: ${{ parameters.beforeAppsInstallScript }}
+          KeepWarmContainerRunning: ${{ parameters.keepWarmContainerRunning }}
+          MaxWarmContainersPerAgent: ${{ parameters.maxWarmContainersPerAgent }}
+          FailOnTestFailures: ${{ parameters.failOnTestFailures }}
+        displayName: Run tests in warm container
+      - task: PublishTestResults@2
+        condition: succeededOrFailed()
+        inputs:
+          testResultsFormat: JUnit
+          testResultsFiles: TestResults.xml
+          searchFolder: $(Build.SourcesDirectory)
+          testRunTitle: BC container
+          failTaskOnMissingResultsFile: false
+        displayName: Publish test results
+    - ${{ if parameters.publishOutput }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          function Clear-ReadOnly {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+            Get-ChildItem -LiteralPath $Path -Recurse -Force -ErrorAction SilentlyContinue | ForEach-Object {
+              try {
+                if ($_.Attributes -band [IO.FileAttributes]::ReadOnly) {
+                  $_.Attributes = ($_.Attributes -bxor [IO.FileAttributes]::ReadOnly)
+                }
+              } catch { }
+            }
+          }
+
+          function Remove-PathSafe {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+            for ($i = 1; $i -le 5; $i++) {
+              try {
+                Clear-ReadOnly -Path $Path
+                Remove-Item -LiteralPath $Path -Recurse -Force -ErrorAction Stop
+                return
+              } catch {
+                Write-Warning "Delete attempt $i failed for '$Path': $($_.Exception.Message)"
+                Start-Sleep -Seconds ([Math]::Min(2 * $i, 10))
+              }
+            }
+            try { & cmd.exe /c "rmdir /s /q `"$Path`"" | Out-Null } catch { }
+            if (Test-Path -LiteralPath $Path) { throw "Failed to delete path: $Path" }
+          }
+
+          function Ensure-Dir {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) {
+              New-Item -ItemType Directory -Path $Path -Force | Out-Null
+            }
+          }
+
+          function Copy-Tree {
+            param(
+              [Parameter(Mandatory)][string]$Source,
+              [Parameter(Mandatory)][string]$Destination,
+              [string[]]$ExcludeDirectories = @()
+            )
+            Ensure-Dir -Path $Destination
+            $arguments = @($Source, $Destination, '/MIR', '/COPY:DAT', '/DCOPY:DAT', '/R:2', '/W:2', '/NFL', '/NDL', '/NJH', '/NJS', '/NP')
+            if ($ExcludeDirectories.Count -gt 0) {
+              $arguments += '/XD'
+              $arguments += $ExcludeDirectories
+            }
+            & robocopy @arguments | Out-Host
+            $exitCode = $LASTEXITCODE
+            $global:LASTEXITCODE = 0
+            if ($exitCode -gt 7) { throw "Robocopy failed ($exitCode) copying from '$Source' to '$Destination'." }
+          }
+
+          function Publish-DirectoryAtomic {
+            param(
+              [Parameter(Mandatory)][string]$StagedPath,
+              [Parameter(Mandatory)][string]$DestinationPath,
+              [Parameter(Mandatory)][string]$RunSuffix
+            )
+            if (-not (Test-Path -LiteralPath $StagedPath)) { throw "Staged path does not exist: $StagedPath" }
+            $OldPath = "$DestinationPath-Old-$RunSuffix"
+            Remove-PathSafe -Path $OldPath
+            try {
+              if (Test-Path -LiteralPath $DestinationPath) {
+                Move-Item -LiteralPath $DestinationPath -Destination $OldPath -Force -ErrorAction Stop
+              }
+              Move-Item -LiteralPath $StagedPath -Destination $DestinationPath -Force -ErrorAction Stop
+            } catch {
+              if ((-not (Test-Path -LiteralPath $DestinationPath)) -and (Test-Path -LiteralPath $OldPath)) {
+                try { Move-Item -LiteralPath $OldPath -Destination $DestinationPath -Force -ErrorAction Stop }
+                catch { Write-Warning "Rollback failed for '$DestinationPath': $($_.Exception.Message)" }
+              }
+              throw
+            }
+            Remove-PathSafe -Path $OldPath
+          }
+
+          $BranchName = if ($env:IsPullRequest -eq 'false') {
+            $env:Build_SourceBranchName
+          } else {
+            $env:System_PullRequest_TargetBranch -replace 'refs/heads/', ''
+          }
+          $IsRelease = $env:Build_SourceBranchName.Contains('Release') -or $env:Build_SourceBranch -match 'release'
+          $RunSuffix = if ($env:System_JobAttempt) { "$($env:Build_BuildID)-$($env:System_JobAttempt)" } else { "$($env:Build_BuildID)-$(New-Guid)" }
+
+          if ($IsRelease) {
+            $CommonPath = "C:\AzureDevOps\!Releases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+          } else {
+            $CommonPath = "C:\AzureDevOps\!Prereleases\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+          }
+          $FileStoragePath = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name\$env:AppReleaseVersion\$BranchName-$env:BcApplicationVersion"
+
+          Write-Host "Publishing versioned build"
+          Write-Host "  Local:       $CommonPath"
+          Write-Host "  FileStorage: $FileStoragePath"
+
+          $LocalTempPath = "$CommonPath-Temporary-$RunSuffix"
+          Remove-PathSafe -Path $LocalTempPath
+          Copy-Tree -Source $env:BUILD_SOURCESDIRECTORY -Destination $LocalTempPath -ExcludeDirectories @('.git')
+          Publish-DirectoryAtomic -StagedPath $LocalTempPath -DestinationPath $CommonPath -RunSuffix $RunSuffix
+
+          Write-Host "Mirroring versioned build to FileStorage..."
+          Copy-Tree -Source $CommonPath -Destination $FileStoragePath
+
+          Write-Host 'Versioned build published successfully.'
+        env:
+          MainAppFolder: ${{ parameters.mainAppFolder }}
+        displayName: Publish versioned build
+    - ${{ if ne(parameters.latestFolder, '') }}:
+      - powershell: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+
+          function Ensure-Dir {
+            param([Parameter(Mandatory)][string]$Path)
+            if (-not (Test-Path -LiteralPath $Path)) {
+              New-Item -ItemType Directory -Path $Path -Force | Out-Null
+            }
+          }
+
+          function Get-BcAppInfo {
+            param([Parameter(Mandatory)][string]$AppPath)
+
+            if (-not (Test-Path -LiteralPath $AppPath)) {
+              throw "App file does not exist: $AppPath"
+            }
+
+            [xml]$Manifest = & 'C:\Program Files\7-Zip\7z.exe' e -so $AppPath 'NavxManifest.xml' 2>$null
+            if ($LASTEXITCODE -ne 0 -or -not $Manifest.Package.App.Id) {
+              $global:LASTEXITCODE = 0
+              throw "Failed to read NavxManifest.xml from '$AppPath'."
+            }
+            $global:LASTEXITCODE = 0
+
+            [PSCustomObject]@{
+              Id        = ([Guid]$Manifest.Package.App.Id).ToString().ToLowerInvariant()
+              Name      = [string]$Manifest.Package.App.Name
+              Publisher = [string]$Manifest.Package.App.Publisher
+              Version   = [string]$Manifest.Package.App.Version
+              Path      = $AppPath
+            }
+          }
+
+          function Remove-FileSafe {
+            param([Parameter(Mandatory)][string]$Path)
+
+            if (-not (Test-Path -LiteralPath $Path)) { return }
+
+            for ($i = 1; $i -le 5; $i++) {
+              try {
+                $item = Get-Item -LiteralPath $Path -Force -ErrorAction Stop
+                if ($item.Attributes -band [IO.FileAttributes]::ReadOnly) {
+                  $item.Attributes = ($item.Attributes -bxor [IO.FileAttributes]::ReadOnly)
+                }
+                Remove-Item -LiteralPath $Path -Force -ErrorAction Stop
+                return
+              } catch {
+                Write-Warning "Delete attempt $i failed for '$Path': $($_.Exception.Message)"
+                Start-Sleep -Seconds ([Math]::Min(2 * $i, 10))
+              }
+            }
+
+            throw "Failed to delete file: $Path"
+          }
+
+          function Update-SharedLatestApps {
+            param(
+              [Parameter(Mandatory)][System.IO.FileInfo[]]$NewApps,
+              [Parameter(Mandatory)][string]$DestinationPath
+            )
+
+            Ensure-Dir -Path $DestinationPath
+
+            Write-Host "Scanning existing Latest apps in '$DestinationPath'..."
+
+            $ExistingAppsById = @{}
+            $ExistingFiles = @(Get-ChildItem -LiteralPath $DestinationPath -Filter '*.app' -File -ErrorAction SilentlyContinue)
+
+            foreach ($ExistingFile in $ExistingFiles) {
+              try {
+                $ExistingInfo = Get-BcAppInfo -AppPath $ExistingFile.FullName
+                if (-not $ExistingAppsById.ContainsKey($ExistingInfo.Id)) {
+                  $ExistingAppsById[$ExistingInfo.Id] = @()
+                }
+                $ExistingAppsById[$ExistingInfo.Id] += $ExistingFile
+              } catch {
+                Write-Warning "Skipping existing file because App ID could not be read: '$($ExistingFile.FullName)'. $($_.Exception.Message)"
+              }
+            }
+
+            $NewAppsById = @{}
+            foreach ($NewApp in $NewApps) {
+              $NewInfo = Get-BcAppInfo -AppPath $NewApp.FullName
+
+              if ($NewAppsById.ContainsKey($NewInfo.Id)) {
+                throw "Build output contains more than one app with App ID '$($NewInfo.Id)': '$($NewAppsById[$NewInfo.Id].Name)' and '$($NewApp.Name)'."
+              }
+              $NewAppsById[$NewInfo.Id] = $NewApp
+
+              Write-Host "Publishing Latest app:"
+              Write-Host "  Name:      $($NewInfo.Name)"
+              Write-Host "  Publisher: $($NewInfo.Publisher)"
+              Write-Host "  App ID:    $($NewInfo.Id)"
+              Write-Host "  Version:   $($NewInfo.Version)"
+
+              $FinalPath = Join-Path $DestinationPath $NewApp.Name
+
+              Write-Host "  Copying new version: $($NewApp.Name)"
+              Copy-Item -LiteralPath $NewApp.FullName -Destination $FinalPath -Force -ErrorAction Stop
+
+              $PublishedInfo = Get-BcAppInfo -AppPath $FinalPath
+              if ($PublishedInfo.Id -ne $NewInfo.Id) {
+                throw "Published app verification failed for '$FinalPath'. Expected App ID '$($NewInfo.Id)', got '$($PublishedInfo.Id)'."
+              }
+
+              if ($ExistingAppsById.ContainsKey($NewInfo.Id)) {
+                foreach ($OldFile in @($ExistingAppsById[$NewInfo.Id])) {
+                  if ($OldFile.FullName -ne $FinalPath -and (Test-Path -LiteralPath $OldFile.FullName)) {
+                    Write-Host "  Removing old version: $($OldFile.Name)"
+                    Remove-FileSafe -Path $OldFile.FullName
+                  }
+                }
+              }
+            }
+          }
+
+          $NamePath = 'Latest-' + $env:Build_SourceBranchName.ToUpper()
+          if ($NamePath.Contains('RELEASE')) { $NamePath = $NamePath -replace 'RELEASE-', '' }
+          $IsRelease = $env:Build_SourceBranch -match '^refs/heads/releases/'
+
+          if ($IsRelease) {
+            $FileStorageLatestPath = "\\filestorage\Projects\DevOps\!Releases\$NamePath"
+          } else {
+            $FileStorageLatestPath = "\\filestorage\Projects\DevOps\!Prereleases\$NamePath"
+          }
+
+          if (-not (Test-Path -LiteralPath '.output')) { throw "Output folder '.output' does not exist." }
+          $OutputApps = @(Get-ChildItem -LiteralPath '.output' -Filter '*.app' -File -ErrorAction Stop)
+          if ($OutputApps.Count -eq 0) { throw "No .app files found in '.output'." }
+
+          Write-Host "Updating shared Latest apps"
+          Write-Host "  Shared FileStorage: $FileStorageLatestPath"
+          Write-Host "  Apps from build:    $($OutputApps.Count)"
+
+          Update-SharedLatestApps -NewApps $OutputApps -DestinationPath $FileStorageLatestPath
+
+          if ($env:BUILD_SOURCEBRANCH -match '^refs/heads/releases/bc(?<BcMajor>\d+)$') {
+            $BcMajor = [int]$Matches.BcMajor
+            $ProjectLatestFolder = "Latest-BC$BcMajor"
+            $ProjectRoot = "\\filestorage\Projects\DevOps\$env:OrganizationName\$env:System_TeamProject\$env:Build_Repository_Name"
+            $ProjectLatestPath = Join-Path $ProjectRoot $ProjectLatestFolder
+
+            Write-Host "Updating project-specific Latest"
+            Write-Host "  Release branch: $env:BUILD_SOURCEBRANCH"
+            Write-Host "  Target folder:  $ProjectLatestPath"
+
+            $ExistingLatestFolders = @(
+              Get-ChildItem -LiteralPath $ProjectRoot -Directory -Filter 'Latest-BC*' -ErrorAction SilentlyContinue |
+              Where-Object { $_.Name -match '^Latest-BC\d+$' } |
+              Sort-Object Name
+            )
+
+            if ($ExistingLatestFolders.Count -gt 0) {
+              Write-Host '  Existing Latest folders:'
+              $ExistingLatestFolders | ForEach-Object { Write-Host "    $($_.Name)" }
+            }
+
+            Ensure-Dir -Path $ProjectLatestPath
+
+
+            Get-ChildItem -LiteralPath $ProjectLatestPath -Filter '*.app' -File -ErrorAction SilentlyContinue |
+              ForEach-Object {
+                Write-Host "  Removing old project Latest app: $($_.Name)"
+                Remove-FileSafe -Path $_.FullName
+              }
+
+            foreach ($App in $OutputApps) {
+              $DestinationApp = Join-Path $ProjectLatestPath $App.Name
+              Write-Host "  Publishing project Latest app: $($App.Name)"
+              Copy-Item -LiteralPath $App.FullName -Destination $DestinationApp -Force -ErrorAction Stop
+
+              $SourceInfo = Get-BcAppInfo -AppPath $App.FullName
+              $DestinationInfo = Get-BcAppInfo -AppPath $DestinationApp
+              if ($SourceInfo.Id -ne $DestinationInfo.Id) {
+                throw "Project Latest verification failed for '$DestinationApp'. Expected App ID '$($SourceInfo.Id)', got '$($DestinationInfo.Id)'."
+              }
+            }
+          } else {
+            Write-Host "Project-specific Latest skipped. Branch '$env:BUILD_SOURCEBRANCH' is not releases/bcXX."
+          }
+
+          Write-Host 'Latest apps updated successfully.'
+        env:
+          LatestFolder: ${{ parameters.latestFolder }}
+        displayName: Publish Latest
+    - ${{ if ne(parameters.appSourceProductBcVersion, '') }}:
+      - pwsh: |
+          Set-StrictMode -Version Latest
+          $ErrorActionPreference = 'Stop'
+          $InformationPreference = 'Continue'
+
+          if (-not $env:APPSOURCE_PRODUCT_ID) {
+            Write-Error -Message 'AppSource product ID was not specified.'
+            return
+          }
+
+          Write-Information -MessageData "Ref: $env:BUILD_SOURCEBRANCH"
+
+          $RefType, $RefName = $(
+            if ($env:BUILD_SOURCEBRANCH -cmatch '^refs/(?<Type>\w+)s/(?<Name>.*)$') {
+              $Matches['Type', 'Name']
+            }
+          )
+          Write-Information -MessageData "Ref Type: $RefType"
+          Write-Information -MessageData "Ref Name: $RefName"
+          if ((-not $RefType) -and (-not $RefName)) {
+            Write-Warning -Message 'Unrecognized source code version.'
+            return
+          }
+
+          $BcVersion = $env:APPSOURCE_PRODUCT_BC_VERSION
+          $RefSuitableForAppSourcePublishing = $(
+            (($RefType -ceq 'head') -and ($RefName -ceq "code/$BcVersion")) -or
+            (($RefType -ceq 'tag') -and ($RefName -clike "prerelease/*/$BcVersion"))
+          )
+          if (-not $RefSuitableForAppSourcePublishing) {
+            Write-Information -Message 'Source code ref is not suitable for AppSource publishing.'
+            return
+          }
+
+          $OutputAppsPath = '.output' | Join-Path -ChildPath '*.app'
+          if (-not (Test-Path -Path $OutputAppsPath)) {
+            Write-Warning -Message 'No apps to publish.'
+            return
+          }
+
+          $FilestorageAppSourcePath = '\\filestorage\Projects\DevOps\!Pipeline\AppSource'
+          $AppSourceProductPath = $(
+            $FilestorageAppSourcePath |
+            Join-Path -ChildPath 'Products' |
+            Join-Path -ChildPath $env:APPSOURCE_PRODUCT_ID |
+            Join-Path -ChildPath $BcVersion |
+            Join-Path -ChildPath 'Prerelease'
+          )
+          Write-Information -MessageData "Initializing AppSource product folder '$AppSourceProductPath'..."
+          New-Item -ItemType Directory -Path $AppSourceProductPath -Force | Out-Null
+
+          $AppSourcePrereleaseManifestPath = $(
+            $AppSourceProductPath |
+            Join-Path -ChildPath 'manifest.json'
+          )
+          if (Test-Path -LiteralPath $AppSourcePrereleaseManifestPath) {
+            Remove-Item -LiteralPath $AppSourcePrereleaseManifestPath
+          }
+
+          $AppSourceProductAppsPath = $(
+            $AppSourceProductPath |
+            Join-Path -ChildPath 'Apps'
+          )
+          New-Item -ItemType Directory -Path $AppSourceProductAppsPath -Force | Out-Null
+          Get-ChildItem -LiteralPath $AppSourceProductAppsPath -Force -ErrorAction SilentlyContinue |
+          Remove-Item -Recurse -Force -ErrorAction Stop
+
+          Write-Information -MessageData "Copying AppSource product apps to '$AppSourceProductAppsPath'..."
+          Get-Item -Path $OutputAppsPath |
+          Copy-Item -Destination $AppSourceProductAppsPath
+
+          $MainAppManifestPath = $(
+            $PWD.ProviderPath |
+            Join-Path -ChildPath $env:MAIN_APP_FOLDER |
+            Join-Path -ChildPath 'app.json'
+          )
+          $MainAppManifest = $(
+            Get-Content -LiteralPath $MainAppManifestPath -Raw |
+            ConvertFrom-Json
+          )
+
+          Write-Information -MessageData 'Reading apps...'
+          $AppFiles = @(
+            Get-ChildItem -LiteralPath $AppSourceProductAppsPath
+          )
+          foreach ($AppFile in $AppFiles) {
+            [xml]$AppManifest = & 'C:\Program Files\7-Zip\7z.exe' e -so $AppFile.FullName 'NavxManifest.xml'
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppId -Value $AppManifest.Package.App.Id
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppName -Value $AppManifest.Package.App.Name
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppPublisher -Value $AppManifest.Package.App.Publisher
+            $AppFile | Add-Member -MemberType NoteProperty -Name AppVersionText -Value $AppManifest.Package.App.Version
+          }
+          $AppFiles |
+          Select-Object -Property AppId, AppName, AppPublisher, FullName |
+          Format-Table -AutoSize |
+          Out-String -Width 1000 |
+          Write-Information
+
+          $AppFolders = @(
+            $env:APP_FOLDERS | ConvertFrom-Json
+          )
+          $AppIds = @(
+            foreach ($AppFolder in $AppFolders) {
+              $AppManifestPath = $(
+                $PWD.ProviderPath |
+                Join-Path -ChildPath $AppFolder |
+                Join-Path -ChildPath 'app.json'
+              )
+              [psobject]$AppManifest = $(
+                Get-Content -LiteralPath $AppManifestPath -Raw |
+                ConvertFrom-Json
+              )
+              $AppManifest.id
+            }
+          )
+
+          $MainAppFile = $AppFiles | Where-Object -Property AppId -EQ -Value $MainAppManifest.id
+          $LibraryAppFiles = @(
+            $AppFiles |
+            Where-Object -Property AppId -NE -Value $MainAppManifest.id |
+            Where-Object -Property AppId -In -Value $AppIds
+          )
+
+          $MainAppFilePath = $MainAppFile.FullName
+          $LibraryAppFilePaths = @(
+            if ($LibraryAppFiles) {
+              $LibraryAppFiles | Select-Object -ExpandProperty FullName
+            } else {
+              @()
+            }
+          )
+
+          Write-Information -MessageData 'Offer App:'
+          Write-Information -MessageData $MainAppFilePath
+          Write-Information -MessageData 'Library Apps:'
+          $LibraryAppFilePaths | Write-Information
+
+          $AppSourcePrereleaseManifest = New-Object -TypeName psobject -Property $(
+            [ordered]@{
+              productId                 = $env:APPSOURCE_PRODUCT_ID
+              bcVersion                 = $BcVersion
+              productPath               = $AppSourceProductPath
+              mainAppId                 = $MainAppFile.AppId
+              offerAppFilePath          = $MainAppFilePath
+              libraryAppFilePaths       = $LibraryAppFilePaths
+              credential                = $env:APPSOURCE_CREDENTIAL
+              doNotUpdateVersionNumber  = $env:APPSOURCE_PRODUCT_HOTFIX -eq 'true'
+            }
+          )
+
+          Write-Information -MessageData "Writing AppSource prerelease manifest to '$AppSourcePrereleaseManifestPath'..."
+          $AppSourcePrereleaseManifest |
+          ConvertTo-Json |
+          Out-File -LiteralPath $AppSourcePrereleaseManifestPath -Encoding utf8
+
+          Write-Information -MessageData ''
+          Write-Information -MessageData 'To publish app to AppSource run ''\\filestorage\Projects\DevOps\!Tools\Publish BC App to AppSource.bat''.'
+        env:
+          MAIN_APP_FOLDER: ${{ parameters.mainAppFolder }}
+          APP_FOLDERS: ${{ convertToJson(parameters.appFolders) }}
+          APPSOURCE_PRODUCT_ID: ${{ parameters.appSourceProductId }}
+          APPSOURCE_PRODUCT_BC_VERSION: ${{ parameters.appSourceProductBcVersion }}
+          APPSOURCE_PRODUCT_HOTFIX: ${{ parameters.appSourceProductHotfix }}
+          APPSOURCE_CREDENTIAL: ${{ parameters.appSourceCredential }}
+        displayName: Prepare AppSource product for publishing
+    - powershell: |
+        $ErrorActionPreference = 'Continue'
+
+        if (-not [string]::IsNullOrWhiteSpace($env:CompilerFolderName)) {
+          $CompilerFolder = Join-Path $env:ProgramData "BcContainerHelper\compiler\$env:CompilerFolderName"
+          if (Test-Path -LiteralPath $CompilerFolder) {
+            Remove-Item -LiteralPath $CompilerFolder -Recurse -Force
+          }
+        }
+
+        Flush-ContainerHelperCache -KeepDays 7
+      condition: always()
+      env:
+        CompilerFolderName: $(CompilerFolderName)
+      displayName: 'Cleanup'
