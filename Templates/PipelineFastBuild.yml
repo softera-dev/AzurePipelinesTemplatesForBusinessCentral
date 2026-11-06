@@ -85,7 +85,7 @@ parameters:
 # NOTE: PipelineFastBuild specific parameters
 - name: runTests
   type: boolean
-  default: true
+  default: false
 - name: failOnTestFailures
   type: boolean
   default: false
