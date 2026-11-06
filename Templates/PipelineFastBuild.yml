@@ -100,7 +100,7 @@ parameters:
   default: 120
 - name: alRunnerTests
   type: boolean
-  default: false
+  default: true
 - name: alRunnerVersion
   type: string
   default: '3.0.0-alpha.13'
